@@ -7,13 +7,15 @@ The current v1.0 release is a working prototype that captures line-level audio f
 
 ## Project Status
 
-**Version:** v1.0.0
-**Status:** Working prototype
-**Platform:** ESP32-S3 sender + ESP32-WROOM receiver
-**Primary LED target:** WS2815 / WS2812-style individually addressable LEDs
-**Communication:** ESP-NOW
-**Audio input:** PCM1808 I2S ADC
-**Web UI:** Built-in ESP32 web server
+| Field | Value |
+|---|---|
+| Version | v1.0.0 |
+| Status | Working prototype |
+| Platform | ESP32-S3 sender + ESP32-WROOM receiver |
+| Primary LED target | WS2815 / WS2812-style addressable LEDs |
+| Communication | ESP-NOW |
+| Audio input | PCM1808 I2S ADC |
+| Web UI | Built-in ESP32 web server |
 
 ## System Overview
 
