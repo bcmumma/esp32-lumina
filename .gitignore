@@ -25,3 +25,28 @@ Thumbs.db
 # Secrets
 secrets.h
 wifi_config.h
+
+# --- Lumina: public repo, keep private things out ---
+.env
+*.env
+!.env.example
+**/secrets.h
+!**/secrets.example.h
+*.local.*
+!*.local.example.*
+CLAUDE.local.md
+.claude/settings.local.json
+
+# Packet captures and logs (contain LAN addresses)
+captures/
+*.pcap
+*.pcapng
+logs/
+*.log
+
+# PlatformIO build output in subprojects
+**/.pio/
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
