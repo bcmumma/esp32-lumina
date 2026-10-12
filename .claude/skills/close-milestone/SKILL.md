@@ -1,6 +1,6 @@
 ---
 name: close-milestone
-description: Finish the current Lumina phase. Verify the gate, confirm owner checks, commit on the v23 branch, record the hash, update docs, and push. Run when a phase's pass checklist is complete.
+description: Finish the current Lumina phase. Verify the gate, confirm owner checks, commit on the v3 branch, record the hash, update docs, and push. Run when a phase's pass checklist is complete.
 disable-model-invocation: true
 ---
 

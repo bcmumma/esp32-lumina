@@ -1,10 +1,10 @@
-# Roadmap — Lumina v23
+# Roadmap — Lumina v3
 
 **Reference only.** Don't build anything here until `docs/PROJECT_STATE.md` says the phase is current and authorized, or I ask. Rules are in `docs/PROJECT_INSTRUCTIONS.md`. Each phase gets a full pass checklist when it starts; the gates below are the minimum.
 
 | # | Phase | Who | Completion gate | Status |
 |---|---|---|---|---|
-| 0 | Preserve known-good Lumina | Owner | v22 backed up and on GitHub; pinout preserved | **Done** |
+| 0 | Preserve known-good Lumina | Owner | v2 backed up and on GitHub; pinout preserved | **Done** |
 | 1 | Prepare the Mac | Owner | Mac stable for DJ and dev work; Serato data backed up | **Done** |
 | 2 | Verify Serato + DDJ-FLX4 | Owner | FLX4 works; playback, mixing, Spotify, cue points, and beatgrids all work | **Done** |
 | 3 | Connect SoundSwitch to Serato | Owner | Connected; green in Performance Mode | **Done (enough to proceed)** |
@@ -12,7 +12,7 @@
 | 5 | Art-Net capture setup (Windows PC) | Owner + Claude Code | Wireshark/`tshark` on the PC sees SoundSwitch's Art-Net (broadcast, or unicast to the PC); the Mac, PC, and S3 share a subnet | |
 | 6 | Prove SoundSwitch emits Art-Net | Owner + Claude Code | `Serato → SoundSwitch → Art-Net → capture` works; source, destination, universe, length, rate, and broadcast-or-unicast all recorded | |
 | 7 | PlatformIO environment (Windows PC) | Claude Code | Trivial projects build and upload to both the S3 and the WROOM from the PC | |
-| 8 | Port v22 to PlatformIO, no behavior change | Claude Code + owner checks | Every parity check passes on hardware | |
+| 8 | Port v2 to PlatformIO, no behavior change | Claude Code + owner checks | Every parity check passes on hardware | |
 | 9 | Modularize | Claude Code + owner checks | Modular firmware behaves like Phase 8; builds after every extraction | |
 | 10 | First Art-Net receiver on the S3 | Claude Code | S3-parsed DMX values equal the Wireshark capture | |
 | 11 | Network validation | Claude Code + owner | Art-Net stays stable on the real network (ping, RSSI, packet consistency, VLAN and firewall path) | |

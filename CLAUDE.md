@@ -6,9 +6,9 @@ This file is a digest of `docs/PROJECT_INSTRUCTIONS.md`. That file is canonical 
 
 ## What this is
 A distributed smart-lighting platform:
-- An ESP32-S3 sender takes PCM1808 audio input, serves a web UI on home Wi-Fi, and (in v23) receives Art-Net from SoundSwitch.
+- An ESP32-S3 sender takes PCM1808 audio input, serves a web UI on home Wi-Fi, and (in v3) receives Art-Net from SoundSwitch.
 - It sends lighting state over ESP-NOW to an ESP32-WROOM receiver, which drives four LED strands.
-- v22 (Arduino `.ino`) is stable on `main`. v23 is the PlatformIO rebuild on `develop-v23` and feature branches.
+- v2 (Arduino `.ino`) is stable on `main`. v3 is the PlatformIO rebuild on `develop-v23` and feature branches.
 
 ## Execution gate
 - Requests to review, discuss, research, or plan are read-only.

@@ -1,6 +1,6 @@
 # Project State
 
-_Last updated: 2026-10-11_
+_Last updated: 2026-10-12_
 
 ## Current
 
@@ -9,17 +9,17 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
 | Track | Phase | Status | Authorization |
 |---|---|---|---|
 | DJ (Mac + PC capture) | 4 — Minimum SoundSwitch workflow (owner-led, guided from the Lumina Project chat) | In progress | Not authorized in this workflow yet |
-| Firmware (Windows PC) | 7 — PlatformIO environment | Not started | Not authorized |
+| Firmware (Windows PC) | 7 — PlatformIO environment | In progress | Authorized 2026-10-12 for Phase 7 |
 
 - Authorize a phase with `/start-milestone Phase <N>` in Claude Code. Until then, everything is read-only.
-- **Branch:** `main` holds v22 unchanged. All v23 work, docs included, lives on `develop-v23` (created during setup). Firmware phases use feature branches off it.
+- **Branch:** `main` holds v2 unchanged. All v3 work, docs included, lives on `develop-v23` (created and pushed 2026-10-12). Firmware phases use feature branches off it. Phase 7 is toolchain-only (no Lumina code changes), so it works on `develop-v23`; Phase 8 starts `feature/platformio-migration`.
 - **Last verified commit:** none recorded in this workflow.
 
 ## What works
 
 - The v14 prototype (Lumina v1.0) was proven.
 - Confirmed working: the PCM1808 input, ESP-NOW, the four strands (GPIO 33/25/26/27, RGB, 800 kHz), the v20.1 config saving, and home Wi-Fi control.
-- v22 is backed up on GitHub, but it was never confirmed to compile and run after the rebuild.
+- v2 is backed up on GitHub (`firmware/sender/lumina_sender_v2.ino`, `firmware/receiver/lumina_receiver_v2.ino`), but it was never confirmed to compile and run after the rebuild.
 - Phases 0–3 are done. Serato + FLX4 + Spotify work, and SoundSwitch connects (green in Performance Mode).
 
 ## Research finding (2026-10-11)
@@ -61,14 +61,14 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
 
 Ask Claude Code for a **repo audit** that changes nothing. It should answer:
 
-- Which v22 sender and receiver files are committed, with which tags and branches.
+- Which v2 sender and receiver files are committed, with which tags and branches.
 - The ESP-NOW packet version.
 - Whether the receiver uses a fixed or auto-scanned Wi-Fi channel.
 - Whether the dual-slot CRC config and the white/saturation fix are intact.
 - Whether the S3 status RGB feature is present.
 - Whether a license file exists.
 - **Whether any committed file, in any branch or in history, contains a hardcoded Wi-Fi SSID or password, a home IP, or other personal details.** The repo is public. If a password was ever pushed, tell me to change it on the router; rotating it matters more than rewriting history.
-- Whether the v22 sketches follow the Arduino folder rule (each `.ino` in a folder with the same name). If not, propose the `legacy/v22/` layout from `docs/DECISIONS.md`.
+- ~~Whether the v2 sketches follow the Arduino folder rule.~~ Settled 2026-10-12: they don't, and they stay in place (see `docs/DECISIONS.md`).
 
 Record the answers here and in `docs/KNOWN_ISSUES.md`.
 
@@ -80,7 +80,7 @@ The Phase 4 steps above.
 
 - Mac model, macOS version, Serato version, and SoundSwitch version (needed to check features).
 - Is the Windows PC on the same VLAN and subnet as the Mac and the S3? (Phase 5 needs it for Art-Net capture.)
-- Does v22 compile and run as committed? Answered in Phase 7–8, or partly by the audit.
+- Does v2 compile and run as committed? Answered in Phase 7–8, or partly by the audit.
 - Board models for the S3 and the WROOM, and the S3 onboard RGB pin. This matters because GPIO48 is the PCM1808 DOUT.
 - LED count per strand, strip types, PSU rating, fusing and injection, and level shifter or resistors.
 - Are the Mac, the Windows PC, and the S3 on the same VLAN? Which IP does the S3 use today?

@@ -4,10 +4,10 @@
 
 | Issue | Impact | Plan |
 |---|---|---|
-| v22 was rebuilt but never confirmed to compile or run on hardware | The port baseline is uncertain | Repo audit now; build in Phase 7–8 |
+| v2 was rebuilt but never confirmed to compile or run on hardware | The port baseline is uncertain | Repo audit now; build in Phase 7–8 |
 | SoundSwitch can't autoscript streaming tracks | Spotify tracks can't be used for Phase 4 scripting | Use local test files (see `docs/DECISIONS.md`) |
 | The SoundSwitch connection only shows green in Performance Mode, and Edit Mode doesn't mirror Serato playback | Confusing workflow | Probably expected: Performance Mode is live, Edit Mode is the editor. Confirm in Phase 4. |
-| ESP-NOW channel behavior in v22 is unknown (fixed channel 1 or auto-scan) | Sender and receiver must share a channel | Check in the repo audit |
+| ESP-NOW channel behavior in v2 is unknown (fixed channel 1 or auto-scan) | Sender and receiver must share a channel | Check in the repo audit |
 | The S3 onboard RGB may share GPIO48 with PCM1808 DOUT | The status LED could break audio | Confirm the board's RGB pin; keep the status LED disabled if it conflicts |
 | Strip power, fusing, and level shifting are undocumented | Safety and reliability | Inspect before calling the build product-ready |
 | Post-antenna-fix latency was never measured | No baseline for Phase 11 | Measure in Phase 11 |

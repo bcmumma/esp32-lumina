@@ -2,7 +2,7 @@
 
 Rules live in `docs/PROJECT_INSTRUCTIONS.md`. This file describes how Lumina fits together. Home-specific addresses are in `CLAUDE.local.md`, not here.
 
-## Current Proven Path (v14–v22)
+## Current Proven Path (v1.0–v2)
 
 ```text
 DDJ-FLX4 RCA line out ─► PCM1808 ─I2S─► ESP32-S3 ─ESP-NOW─► ESP32-WROOM ─► Strands 1–4
@@ -17,7 +17,7 @@ The sender doesn't stream pixel values. It sends compact feature and control pac
 - **Sender (S3):** capture PCM1808 audio, analyze it (energy, bands, onsets), host the web UI, store settings, and send ESP-NOW packets.
 - **Receiver (WROOM):** receive ESP-NOW packets, parse lighting settings, render effects, apply color calibration, and drive the LED strands.
 
-## Planned DJ Path (v23)
+## Planned DJ Path (v3)
 
 ```text
 DDJ-FLX4 ─USB─► Mac: Serato DJ Pro ─► SoundSwitch ─Art-Net/UDP 6454─► ESP32-S3 ─ESP-NOW─► ESP32-WROOM ─► LEDs
@@ -74,7 +74,7 @@ See the Phase 9 note in `docs/ROADMAP.md`.
 
 ## Effects
 
-These are v22's intended effects. They were provided but never verified, so check them in the repo.
+These are v2's intended effects. They were provided but never verified, so check them in the repo.
 
 - **Normal:** Solid Color, Aurora Drift, Starfield, Neon Scanner, Off.
 - **Rave:** Laser Sweep, Rave Chase, Bass Cannons, DnB Chopper, Acid Chase, Portal Pulse, Spectrum Sparks, Hyper Strobe, Cyber Tunnel, White Lightning, DnB Split, Rave Tiles, Pulse Train, Void Bloom.

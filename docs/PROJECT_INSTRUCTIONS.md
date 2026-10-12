@@ -46,15 +46,15 @@ When instructions conflict, follow this order:
 
 ### Terminology
 
-- **v22, v23:** firmware generations. v22 is the stable Arduino build on `main`; v23 is the PlatformIO rebuild.
-- **Phase:** one small, independently verifiable step of the v23 roadmap, with its own completion gate. Phases are the unit of work here.
+- **v2, v3:** firmware generations. v2 is the stable Arduino build on `main`; v3 is the PlatformIO rebuild.
+- **Phase:** one small, independently verifiable step of the v3 roadmap, with its own completion gate. Phases are the unit of work here.
 - **Owner check:** a verification step only I can perform, written as exact steps plus the expected result.
 
 ### Pacing and order
 
 - **One phase per track at a time** unless I batch-authorize. The DJ track (Phases 4–6) and firmware track (Phases 7–9) run in parallel until Phase 10 (see `docs/ROADMAP.md`). Finish, verify the gate, then stop.
 - **Order is fixed for firmware:**
-  1. Port v22 to PlatformIO with no behavior change (Phase 8).
+  1. Port v2 to PlatformIO with no behavior change (Phase 8).
   2. Modularize, one subsystem at a time, compiling after each extraction (Phase 9).
   3. Only then add Art-Net (Phase 10 onward).
 
@@ -84,7 +84,7 @@ A phase is complete when all applicable items are true:
 - Automated items are verified with evidence, and owner checks are recorded with my reported result.
 - For firmware phases, the **parity checks** still pass: PCM1808 levels, Wi-Fi join, web UI, settings save and load, ESP-NOW, all four strands in order, correct RGB, and correct white.
 - Limitations are recorded in `docs/KNOWN_ISSUES.md`, and the architecture, hardware, and decision docs are updated where needed.
-- Code is one coherent, verified commit **on the v23 branch** (never directly on `main`). Its hash is recorded in `docs/MILESTONES.md` and `docs/PROJECT_STATE.md` in a follow-up docs commit (a file can't contain the hash of its own commit). Both commits are pushed.
+- Code is one coherent, verified commit **on the v3 branch** (never directly on `main`). Its hash is recorded in `docs/MILESTONES.md` and `docs/PROJECT_STATE.md` in a follow-up docs commit (a file can't contain the hash of its own commit). Both commits are pushed.
 - `docs/PROJECT_STATE.md` names the exact next step, and the working tree is clean.
 
 ### Verification
@@ -106,7 +106,7 @@ After two **materially different** failed fixes for the same problem, stop: summ
 
 ### Pushback (required)
 
-Tell me directly when something is unrealistic, over-engineered, risky, or a poor fit. That includes scope creep before v23 parity, bandwidth limits (pixel frames over ESP-NOW), network fragility for live shows, and electrical or flashing-light safety.
+Tell me directly when something is unrealistic, over-engineered, risky, or a poor fit. That includes scope creep before v3 parity, bandwidth limits (pixel frames over ESP-NOW), network fragility for live shows, and electrical or flashing-light safety.
 
 ### Research and decision records
 
@@ -128,7 +128,7 @@ For each consequential decision, add an entry to `docs/DECISIONS.md` covering:
 - Never commit Wi-Fi credentials, IP addresses, MAC addresses, packet captures, or personal details.
 - Credentials go in a gitignored secrets header or build-time config, with a committed example file.
 - Keep raw captures out of Git; commit only sanitized summaries.
-- Preserve stable code on `main`. All v23 work, docs included, happens on `develop-v23` and feature branches. Merging to `main` is my decision.
+- Preserve stable code on `main`. All v3 work, docs included, happens on `develop-v23` and feature branches. Merging to `main` is my decision.
 - Before publishing anything that looks commercially differentiating, pause and ask me.
 
 **Machines and network**
@@ -193,7 +193,7 @@ Mark each one Accept, Accept with edits, Defer, or Reject.
 | `CLAUDE.local.md` | IPs, serial ports, Mac details. Gitignored; never commit. |
 | `docs/PROJECT_INSTRUCTIONS.md` | Standing rules (this file). |
 | `docs/PROJECT_STATE.md` | **Most important.** Active phase, authorization, last verified commit and branch, what works, next step, owner checklist, open questions. Under one page. |
-| `docs/ROADMAP.md` | v23 phases with completion gates. Reference only. |
+| `docs/ROADMAP.md` | v3 phases with completion gates. Reference only. |
 | `docs/ARCHITECTURE.md` | Data paths, operating modes, Art-Net, fixture profile, pixel mode, module plan, effects. |
 | `docs/HARDWARE.md` | Boards, pin maps, LED protocol, strips, power, and unknowns. |
 | `docs/DECISIONS.md` | Decisions with reasons and rejected alternatives. |
@@ -215,7 +215,7 @@ Lumina started as a music-reactive ESP32 LED system and is growing into a distri
   - It sends lighting state over ESP-NOW to an ESP32-WROOM.
   - The WROOM drives four LED strands.
   - The S3 hosts a phone-friendly web UI on home Wi-Fi.
-- **v23:**
+- **v3:**
   - Serato DJ Pro and SoundSwitch on the Mac send Art-Net.
   - The S3 becomes the central controller, receiving Art-Net and sending compact intelligent-fixture commands over ESP-NOW.
   - The PCM1808 remains as the universal audio-reactive fallback.
@@ -233,7 +233,7 @@ Lumina started as a music-reactive ESP32 LED system and is growing into a distri
 ## 6. Development Approach
 
 - **Firmware:** VS Code and PlatformIO on the Windows PC, using normal `.cpp`/`.h` modules (no `.ino` auto-prototypes). There are two environments, the S3 sender and the WROOM receiver, and both live in the repo.
-- **Libraries:** keep what v22 uses during the port (Adafruit_NeoPixel, the Arduino-ESP32 `ESP_I2S`). Pin versions in `platformio.ini`. Derive board IDs, framework version, and USB behavior from the actual boards; don't guess.
+- **Libraries:** keep what v2 uses during the port (Adafruit_NeoPixel, the Arduino-ESP32 `ESP_I2S`). Pin versions in `platformio.ini`. Derive board IDs, framework version, and USB behavior from the actual boards; don't guess.
 - **Commands:** PowerShell on the Windows PC. Board COM ports are recorded in `CLAUDE.local.md`.
 - **Art-Net capture:** SoundSwitch runs on the Mac, so the Windows PC only sees its Art-Net if it's broadcast on the shared subnet or unicast to the PC's IP. For Phases 5–6, point SoundSwitch's output at the PC (or broadcast). Retarget it to the S3 from Phase 10.
 - **Branches:** `main` stays stable; `develop-v23` is the integration branch; feature branches are `feature/platformio-migration`, `feature/artnet-receiver`, `feature/intelligent-fixture`, `feature/control-router`, and `feature/pixel-mode`.
