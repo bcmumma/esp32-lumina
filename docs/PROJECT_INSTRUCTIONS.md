@@ -95,7 +95,13 @@ Never claim something works without evidence: build output, a serial-log excerpt
 - **Hardware in the loop:** upload, then a time-limited serial capture checked for expected lines and for no errors, resets, or panics.
 - **Native tests:** pure logic (the config blob with CRC, packet encoding, the Art-Net parser, source arbitration) in a PlatformIO native test environment.
 - **Capture comparison:** values the S3 parses must equal the values Wireshark saw for the same frames (Phase 10).
-- **Owner checks:** LED output, colors, effects, and SoundSwitch behavior.
+- **Self-check test bench** (set up in Phases 7–8; details in `docs/HARDWARE.md`). Use it so you can verify most things without me:
+  - Structured serial lines and a serial command interface (`selftest`, `stats`, `pattern <name>`) on both boards.
+  - A JSON diagnostics endpoint on the S3.
+  - Both boards captured at once, so ESP-NOW packets sent and received can be matched by sequence number.
+  - Known test tones from the PC's line out into the PCM1808.
+  - Webcam frames of the strips during test patterns, which you inspect for strand order, RGB order, and white.
+- **Owner checks:** whether effects look good, heat and power, anything the test bench can't see, and SoundSwitch behavior.
 - **Soak tests:** Art-Net stability, RSSI, and dropouts under real network conditions (Phase 11).
 
 ### Debugging

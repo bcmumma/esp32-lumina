@@ -11,7 +11,7 @@
 | 4 | Minimum SoundSwitch workflow | Owner + chat | One track runs a saved SoundSwitch show synced to Serato playback | **Current** |
 | 5 | Art-Net capture setup (Windows PC) | Owner + Claude Code | Wireshark/`tshark` on the PC sees SoundSwitch's Art-Net (broadcast, or unicast to the PC); the Mac, PC, and S3 share a subnet | |
 | 6 | Prove SoundSwitch emits Art-Net | Owner + Claude Code | `Serato → SoundSwitch → Art-Net → capture` works; source, destination, universe, length, rate, and broadcast-or-unicast all recorded | |
-| 7 | PlatformIO environment (Windows PC) | Claude Code | Trivial projects build and upload to both the S3 and the WROOM from the PC | |
+| 7 | PlatformIO environment + test bench (Windows PC) | Claude Code | Trivial projects build and upload to both boards from the PC. Dual serial capture, webcam frame capture, and test-tone playback all work. | |
 | 8 | Port v2 to PlatformIO, no behavior change | Claude Code + owner checks | Every parity check passes on hardware | |
 | 9 | Modularize | Claude Code + owner checks | Modular firmware behaves like Phase 8; builds after every extraction | |
 | 10 | First Art-Net receiver on the S3 | Claude Code | S3-parsed DMX values equal the Wireshark capture | |
@@ -31,7 +31,9 @@ Phases 4–6 (**DJ track**: SoundSwitch on the Mac, plus capture on the PC) and 
 
 **Phase 5–6.** Install Wireshark on the PC (it includes Npcap, which capture needs). If SoundSwitch only unicasts to one IP, set it to the PC's IP for these phases. Save the capture outside Git and commit only a sanitized summary to `docs/ARCHITECTURE.md`: universe, channel count, packet rate, and broadcast or unicast.
 
-**Phase 8 parity checks.** The port is done when all of these still work:
+**Phase 8 diagnostics exception.** Diagnostics-only additions are allowed in Phase 8 because they don't change lighting behavior: structured log lines, the serial command interface, the diagnostics endpoint, and a test-pattern mode. Keep them command-gated or behind a build flag.
+
+**Phase 8 parity checks.** Run these through the test bench wherever possible. The port is done when all of these still work:
 
 - PCM1808 levels.
 - Wi-Fi station join.

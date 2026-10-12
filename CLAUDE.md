@@ -35,6 +35,7 @@ A distributed smart-lighting platform:
 ## Verification
 - No success claims without evidence: build output, a serial-log excerpt, a capture summary, test output, or my reported observation.
 - Firmware parity checks: PCM1808 levels, Wi-Fi join, web UI, save/load, ESP-NOW, strands 33/25/26/27 in order, RGB order, and white rendering as white.
+- Self-check first: serial logs and commands, the diagnostics endpoint, dual-board capture, test tones, and webcam frames (`docs/HARDWARE.md`). Ask me only for what the test bench can't see.
 
 ## Commands
 - PowerShell on the Windows PC.

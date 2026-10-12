@@ -56,6 +56,21 @@
 - Keep the ESP32 antennas clear of proto boards, wiring, and enclosures.
 - A blocked antenna once caused 3–347 ms ping swings and 0.24–0.46 s API calls. Unblocking it fixed the problem. Updated numbers haven't been recorded.
 
+## Self-Check Test Bench (Phase 7)
+
+| Check | How | Verifies |
+|---|---|---|
+| Boot, version, heap, errors | Structured serial lines from both boards on their COM ports | Firmware runs, no resets or panics |
+| Self-test | Serial `selftest` command and an S3 diagnostics endpoint (JSON) | Config CRC, Wi-Fi, ESP-NOW, PCM1808 state |
+| ESP-NOW | Capture both boards at once; match sequence numbers sent and received | Delivery and loss rate |
+| Audio | PC line out → PCM1808 input (3.5 mm-to-RCA cable) playing known tones, e.g. 60 Hz, 1 kHz, 8 kHz, silence, left only, right only | Bass, mid, treble, left/right, noise floor |
+| LEDs | USB webcam aimed at the strips; `pattern` command (e.g. strand 1 red, 2 green, 3 blue, 4 white, then chases); Claude inspects captured frames | Strand order, RGB vs GRB, white not red, all strands alive |
+| Persistence | Change a setting over HTTP, reset the board over serial, read it back | The save/load config blob |
+
+- **Webcam:** lock exposure and white balance if possible, run the strips at low brightness, and judge order and hue rather than exact color.
+- **Audio:** the PC's line out replaces the FLX4 only during tests. Watch for hum from a ground loop.
+- **What still needs me:** whether effects look good, heat and power, physical wiring, and SoundSwitch.
+
 ## Boards (to confirm in Phase 7)
 
 The exact S3 and WROOM dev board models, their USB-serial chips, and their PlatformIO board IDs are all unknown. Record them here once known. The serial ports go in `CLAUDE.local.md`.

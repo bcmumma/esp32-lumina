@@ -55,7 +55,11 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
 - [ ] Choose the repo layout for the two firmware projects or environments, and record it in `docs/DECISIONS.md` *(Claude)*
 - [ ] A trivial S3 project builds, uploads, and logs over serial *(Claude)*
 - [ ] A trivial WROOM project builds, uploads, and logs over serial *(Claude)*
-- [ ] Both boards blink or log as expected *(owner)*
+- [ ] Test bench: both COM ports captured at once *(Claude)*
+- [ ] Test bench: a webcam frame of the strips captured and inspected *(Claude; owner aims the camera)*
+- [ ] Test bench: tones play from the PC's line out (owner connects the cable to the PCM1808) *(Claude)*
+- [ ] Both boards blink or log as expected *(owner, once, to confirm the camera view is trustworthy)*
+- Parts: a USB webcam and a 3.5 mm-to-RCA cable. Installing ffmpeg (for camera capture) is a system-wide install, so ask first.
 
 ## Before Phase 7 (read-only)
 
