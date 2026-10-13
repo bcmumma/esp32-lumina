@@ -36,6 +36,12 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
    - [ ] With power off, connect strips to outputs 2–4. Claude then cycles all four strands on camera.
 5. **Remaining audit questions (read-only, small):** v2 tags, and the S3 status RGB code path.
 
+## Where we stopped (2026-10-13)
+
+- **Guide Part 1:** 1.1–1.4 done. The fixture passes Check Fixture without a `MASTER` cell. At **1.5.4** the Serato link shows green, pulsing, but nothing visibly changes on screen; check 2 (does SoundSwitch show the track title and a moving playhead) is unanswered.
+- **Next:** guide Part 2. Claude starts `artnet_listen.py` on the PC, and you answer the Windows firewall prompt (Private networks only). On the Mac: Preferences → Hardware, look for Art-Net or "Lumina PC Monitor", assign Universe One, play the "Red" Autoloop. Art-Net values changing with Serato playback would also settle the 1.5.4 question.
+- A first monitor run (2026-10-13, 50 s) received nothing, as expected: SoundSwitch Art-Net hadn't been turned on yet.
+
 ## Phase 4 checklist (DJ track, all owner steps; click-by-click in the guide, Part 1)
 
 Use local files: SoundSwitch's article "Music Streaming with SoundSwitch" (undated; check it against your installed version) says streaming tracks can't be autoscripted, and Spotify isn't listed for Serato. Autoscripts are stored as a tag inside the audio file. Your Spotify cue points stay as they are.
