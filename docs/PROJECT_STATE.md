@@ -50,15 +50,18 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
 
 ## Phase 7 draft checklist (firmware track)
 
-- [ ] VS Code + PlatformIO work on the PC; `pio --version` runs in Claude Code's terminal *(Claude)*
-- [ ] Identify both boards (chip, flash, PSRAM, USB-serial chip) and their COM ports, and record them in `docs/HARDWARE.md` and `CLAUDE.local.md` *(Claude)*
-- [ ] Choose the repo layout for the two firmware projects or environments, and record it in `docs/DECISIONS.md` *(Claude)*
-- [ ] A trivial S3 project builds, uploads, and logs over serial *(Claude)*
-- [ ] A trivial WROOM project builds, uploads, and logs over serial *(Claude)*
-- [ ] Test bench: both COM ports captured at once *(Claude)*
-- [ ] Test bench: a webcam frame of the strips captured and inspected *(Claude; owner aims the camera)*
-- [ ] Test bench: tones play from the PC's line out (owner connects the cable to the PCM1808) *(Claude)*
-- [ ] Both boards blink or log as expected *(owner, once, to confirm the camera view is trustworthy)*
+- [x] VS Code + PlatformIO work on the PC; `pio --version` runs in Claude Code's terminal *(Claude)*. PlatformIO Core 6.2.0. `pio` isn't on PATH, so it runs by its full path (see `CLAUDE.local.md`).
+- [x] Identify both boards (chip, flash, PSRAM, USB-serial chip) and their COM ports, and record them in `docs/HARDWARE.md` and `CLAUDE.local.md` *(Claude)*. Done 2026-10-12: S3 = ESP32-S3-WROOM-1 N16R8 on a CH343; WROOM = ESP32-D0WD-V3 with 4 MB flash on a CP210x. The dev board models are still UNVERIFIED.
+- [x] Choose the repo layout for the two firmware projects or environments, and record it in `docs/DECISIONS.md` *(Claude)*. Root `platformio.ini` with `sender` and `receiver` environments, on pioarduino 55.03.312-1 (Arduino 3.3.12 / IDF 5.5.5).
+- [x] A trivial S3 project builds, uploads, and logs over serial *(Claude)*. 2026-10-12: `LUMINA-P7 flash=16MB psram=8192KB arduino=3.3.12 idf=v5.5.5`.
+- [x] A trivial WROOM project builds, uploads, and logs over serial *(Claude)*. 2026-10-12: `LUMINA-P7 chip=ESP32-D0WD-V3 flash=4MB arduino=3.3.12 idf=v5.5.5`.
+- [x] Test bench: both COM ports captured at once *(Claude)*. Passed 2026-10-12 on the boards' current v22 firmware, with a tone sweep. The receiver's vol/bass/mid/treb matched the S3 within one status line. About 29 packets/s arrived, with roughly 3% loss and `bad=0`, at 40–41 fps.
+- [x] Test bench: a webcam frame of the strips captured and inspected *(Claude; owner aims the camera)*. Passed 2026-10-12 with an HD264 USB webcam and OpenCV at exposure -7. Frames synced to the serial log showed strand 1's 10 LEDs as red, green, and blue, each strongest in its own channel, and white raising all three. Frames go to `captures/webcam/` (gitignored).
+- [x] Test bench: tones play from the PC's line out (owner connects the cable to the PCM1808) *(Claude)*. Passed 2026-10-12 on the S3's v22 firmware. Audio chain: PC → Schiit Modi 3E (USB DAC, the Windows default output) → Magni (amp) → its output → PCM1808. There are no speakers. Readings depend on the Magni volume setting. Tones at 25% amplitude read 100 Hz: bass 220 / mid 120 / treble 0; 1 kHz: bass 0 / mid 254 / treble 166; 6 kHz: bass 0 / mid 179 / treble 255; silence: all 0.
+- [x] Both boards blink or log as expected *(owner, once, to confirm the camera view is trustworthy)*. 2026-10-12: the owner saw strand 1 cycle red, green, blue, white, off on all 10 LEDs, and the camera frames agree.
+- Test-bench scripts: `tools/testbench/serial_capture.py`, `tone_sweep.py`, and `webcam_frame.py`. Run them with the repo venv `.venv\Scripts\python.exe` (gitignored; has opencv-python-headless and pyserial). PlatformIO's Python also runs the two serial scripts.
+- **Both boards now run Phase 7 test programs, not v2. The receiver cycles the first 10 LEDs of strand 1. The LEDs won't react to music until the Phase 8 port is uploaded.**
+- Open (owner): after 12 V touched the receiver's level converter, check the converter (LV side about 3.3 V, HV side about 5 V, no damage) and test strands 2–4. See `docs/HARDWARE.md`.
 - Parts: a USB webcam and a 3.5 mm-to-RCA cable. Installing ffmpeg (for camera capture) is a system-wide install, so ask first.
 
 ## Before Phase 7 (read-only)

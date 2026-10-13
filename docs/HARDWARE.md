@@ -16,6 +16,12 @@
 - The PCM1808 needs MCLK, which is why the S3 handles audio (the classic ESP32 was awkward).
 - The audio source is the DDJ-FLX4's RCA line out.
 - The S3 is powered and programmed over USB.
+- **Bench audio source (2026-10-12):** PC → Schiit Modi 3E (USB DAC) → Schiit Magni (amp) → the Magni's output → PCM1808 input. There are no speakers in the chain. The Magni is an amplifier, so its output can exceed the PCM1808's line-level input range. Keep its volume at a fixed position.
+  - **Measured 2026-10-12, Magni knob about at the middle, Windows volume unchanged.** Phase 7 meter (`src/sender/main.cpp`), dBFS of the ADC's true 32-bit full scale:
+    - a tone sweep at -12 dBFS digital (25%) read **-24.8 dBFS peak** and -28 dBFS RMS on both channels, at 100 Hz, 1 kHz, and 6 kHz alike;
+    - 0 clips;
+    - silence read -55 dBFS peak and -67 dBFS RMS.
+  - So a full-scale 0 dBFS track would peak around -13 dBFS at the ADC: about 13 dB of headroom and no clipping. This holds only if the knob and the Windows volume stay where they are.
 - **Unknown:** the exact S3 dev board model and the onboard RGB LED pin. If the onboard RGB is on GPIO48, it conflicts with PCM1808 DOUT, so the status LED must stay disabled.
 
 ## Receiver: ESP32-WROOM + Four Strands
@@ -27,7 +33,12 @@
 | 3 | 26 |
 | 4 | 27 |
 
-- Soldered and tested on a proto board.
+- Soldered and tested on a proto board. Data path: GPIO → level converter → 330 Ω → strip DIN.
+- **2026-10-12 incident:** 12 V touched wires at the level converter. Afterwards:
+  - The WROOM boots and logs normally.
+  - GPIO 33/25/26/27 all drive high and low correctly. Their internal pull-downs read 1, which fits the pull-up resistors on a BSS138-style converter's channels (UNVERIFIED, depends on the converter type).
+  - Strand 1 (first 10 LEDs, level 24/255) showed red, green, blue, and white correctly (owner-observed).
+  - The converter channels for strands 2–4 haven't been tested with a strip yet.
 - This is the **physical** order. The sender defaults and the receiver output must both match it.
 - **Color order is RGB**, not GRB. Data rate is 800 kHz.
 
@@ -40,8 +51,8 @@
   - PSU voltage and current rating;
   - fusing;
   - power-injection layout;
-  - whether there's a level shifter (74AHCT125 or 74HCT245, 3.3 V → 5 V);
-  - data series resistors;
+  - the level converter's part number. The owner confirmed one is fitted (2026-10-12), type not yet known: a 74AHCT125/74HCT245 buffer, or a BSS138-style bidirectional module;
+  - 330 Ω data series resistors are fitted (owner, 2026-10-12);
   - bulk capacitors at the strips.
 - **Recommendations for a permanent or product build:**
   - common ground;
@@ -73,4 +84,25 @@
 
 ## Boards (to confirm in Phase 7)
 
-The exact S3 and WROOM dev board models, their USB-serial chips, and their PlatformIO board IDs are all unknown. Record them here once known. The serial ports go in `CLAUDE.local.md`.
+The serial ports go in `CLAUDE.local.md`.
+
+### S3 sender (read with esptool `flash_id`, 2026-10-12)
+
+- Chip: ESP32-S3 (QFN56), revision v0.2, 40 MHz crystal.
+- Flash: 16 MB, quad (4 data lines), 3.3 V.
+- PSRAM: 8 MB embedded (AP_3v3).
+- USB-serial: WCH CH343 (VID:PID `1A86:55D3`). Windows already has its driver.
+- Onboard RGB: GPIO48, per the v20.1 boot log. This confirms the conflict with PCM1808 DOUT, so the status LED stays disabled.
+- Firmware on the board: the boot banner says `Lumina v20.1`, but the committed v22 sender prints that same stale banner (`lumina_sender_v2.ino` line 3507), so the board is probably running v22. `AudioLedPacket` size is 107, and the dual-slot CRC config loads slot `cfgA`.
+- Module: **ESP32-S3-WROOM-1 N16R8** (owner read the shield label, 2026-10-12). Espressif's ESP32-S3-WROOM-1 datasheet ordering table lists the N16R8 as 16 MB quad flash with 8 MB **octal** PSRAM. PlatformIO therefore needs `qio_opi` memory (flash QIO, PSRAM OPI). With octal PSRAM, GPIO35–37 are used internally and aren't free.
+- **UNVERIFIED:** the dev board carrying the module. The PlatformIO board ID gets chosen in the S3 test project.
+
+### WROOM receiver (read with esptool `flash_id`, 2026-10-12)
+
+- Chip: ESP32-D0WD-V3 (revision v3.1), dual core, 240 MHz, 40 MHz crystal.
+- Flash: 4 MB. No PSRAM reported.
+- USB-serial: Silicon Labs CP210x (VID:PID `10C4:EA60`). Windows already has its driver.
+- **UNVERIFIED:** the dev board model. A D0WD-V3 with 4 MB flash and a CP210x matches the common ESP32-DevKitC / ESP32-WROOM-32E boards (PlatformIO `esp32dev`). Check the module label.
+- Firmware on the board: `Lumina LED Receiver V22`, which matches the committed `lumina_receiver_v2.ino`. It expects a 107-byte packet. It scans channels 1–11, then locks to the sender (it locked on channel 6).
+- Saved config: 4 strands, pins 33/25/26/27, 150 LEDs each, `WS2815/WS2812 RGB 800k`, `rgbScale=[128,255,126]`.
+- Baseline (15 s capture with the S3 sending): `fps=41` and `show=23566us`. Writing 4 × 150 LEDs one strand after another takes about 23.6 ms, which caps the frame rate near 42 fps. Receive loss was 8 out of 290 (about 3%), with `bad=0`.
