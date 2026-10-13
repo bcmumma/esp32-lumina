@@ -21,3 +21,4 @@ extern uint32_t packets_per_sec;
 
 void setup_espnow();
 void maybe_send_espnow(AudioLedPacket &p);
+void update_packet_rate(uint32_t now);

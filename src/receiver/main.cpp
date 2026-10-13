@@ -46,7 +46,7 @@ void setup() {
   delay(1500);
 
   Serial.println();
-  Serial.println("Lumina LED Receiver V22 - rave/electronic effects and VU tuning tools");
+  Serial.println("Lumina v3 receiver: four strands, rave/electronic effects (PlatformIO build of v2/v22)");
   Serial.print("Expected packet size: ");
   Serial.println(sizeof(AudioLedPacket));
   Serial.println("Default data pins: Strand 1=GPIO33, Strand 2=GPIO25, Strand 3=GPIO26, Strand 4=GPIO27.");

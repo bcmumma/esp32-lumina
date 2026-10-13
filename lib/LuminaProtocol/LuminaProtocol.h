@@ -86,7 +86,12 @@ struct __attribute__((packed)) AudioLedPacket {
   uint8_t beatBpm;        // integer BPM, 0 when tempo is not locked
 
   StrandSettings strand[MAX_STRANDS];
-  uint16_t reserved;
+
+  // Sender's current Wi-Fi/ESP-NOW channel (1-13), so the receiver can lock
+  // straight to it. 0 = unknown (older senders); the receiver then surveys.
+  // Was the low byte of a zero-filled reserved field, so packet version 12 holds.
+  uint8_t senderChannel;
+  uint8_t reserved;
 };
 
 static_assert(sizeof(AudioLedPacket) < 250, "AudioLedPacket must fit in an ESP-NOW v1 payload");

@@ -6,17 +6,22 @@
 |---|---|---|
 | SoundSwitch can't autoscript streaming tracks | Spotify tracks can't be used for Phase 4 scripting | Use local test files (see `docs/DECISIONS.md`) |
 | The SoundSwitch connection only shows green in Performance Mode, and Edit Mode doesn't mirror Serato playback | Confusing workflow | Probably expected: Performance Mode is live, Edit Mode is the editor. Confirm in Phase 4. |
-| The receiver auto-scans channels 1–11; the sender uses the router's channel (6 on 2026-10-12). Since Phase 8 the receiver surveys a full sweep and locks to the channel with the strongest average RSSI. At centimetre range, channels ±1 from the sender arrive within 1–3 dB, so it may lock one channel off (seen: 5 instead of 6). Loss there measured about 0–1.5%, at or below the v2 baseline | One-channel-off lock at short range; not measured at install distance | Phase 9 or later: the sender writes its channel into the packet and the receiver jumps to it (a protocol change for both boards). Check lock and loss at install distance |
+| The receiver auto-scans channels 1–11 until the first packet. Since 2026-10-12 every packet carries `senderChannel`, so the receiver locks straight to it (6 in all tests, about 4 s after a receiver reset) and retunes if it ever differs. The RSSI survey (Phase 8) remains only as a fallback for a sender that announces 0 | None seen at the bench; not yet measured at install distance | Check lock and loss at install distance |
 | The S3 onboard RGB is on GPIO48, the same pin as PCM1808 DOUT (confirmed from the v20.1 boot log, 2026-10-12) | The status LED would break audio | Keep the status LED disabled unless DOUT moves to another free GPIO |
-| The S3 serial status line shows `pps=0`, because `packets_per_sec` is only recalculated inside the `/api/state` and `/api/live` handlers | The serial log misreports ESP-NOW as idle. On 2026-10-12, `/api/live` showed about 33 pps, `enqErr=0` and `cbFail=0` | Don't trust serial `pps`; poll `/api/live`. Fix the counter in Phase 9 or later (no behavior change in Phase 8) |
-| Cosmetic: the sender banner still says `v20.1` in the v22 code. (Since the Arduino 3.3.12 build, the receiver MAC prints correctly; it no longer prints zeros. The receiver also logs a harmless `[E][STA.cpp] disconnect(): STA not started!` at boot) | Misleading logs | Fix in Phase 9 or later |
 | Receiver frame rate is capped at about 41 fps, because `show` takes 23.6 ms for 4 × 150 LEDs written one strand at a time | Limits smoothness and latency | Baseline for Phase 11. Parallel output (RMT/I2S) is an option later, not in Phase 8 |
-| On boot, the S3 reports `Wi-Fi connected` with a blank SSID and 0 dBm, then drops right away. It reconnects about 10 s later and stays on at -73 to -77 dBm (40 s capture, 2026-10-12) | The boot log is misleading; the first ~10 s have no Wi-Fi; the signal is weak | No change in the Phase 8 port (parity first). Look at it in Phase 9 or later. Check antenna placement first, since -75 dBm is marginal |
+| The S3's first Wi-Fi join takes about 6 s: on every boot, the first attempt fails with `Reason 202 AUTH_FAIL` (+0.9 s), the next with `Reason 2 AUTH_EXPIRE` (+5.2 s), then it joins (debug log, 2026-10-12, with the correct password). Deterministic, so probably not signal. Suspect a WPA3/PMF negotiation with the AP | Sender is offline for about 6 s after boot | Owner: report the AP's security mode (WPA2 / WPA2-WPA3 mixed / WPA3). Then try pinning the auth mode (e.g. `WiFi.setMinSecurity`) |
 | On 2026-10-12, 12 V touched the receiver's level converter. Strand 1 is proven afterwards (RGB and white on camera in Phase 8). The converter channels for strands 2–4 are untested: the owner waived them in Phase 8 and expects easy passes. GPIO 33/25/26/27 internal pull-downs read 1 (likely the converter's pull-ups, UNVERIFIED) | A damaged converter channel would look like a firmware fault | Owner checks the converter rails (LV about 3.3 V, HV about 5 V) and its part number; test strands 2–4 on camera when they're connected |
 | Strip power, fusing, and level shifting are undocumented | Safety and reliability | Inspect before calling the build product-ready |
 | Post-antenna-fix latency was never measured | No baseline for Phase 11 | Measure in Phase 11 |
-| Build warnings: 2 in the sender and 4 in the receiver, all `'++' expression of 'volatile'-qualified type is deprecated` (C++20) on v2 counters | None (warnings only) | Phase 9 was a pure move, so they're still present. Fix them with the first small behavior-change batch (as `x = x + 1`, or `std::atomic`) |
 | Receiver app uses 71% of its 1.25 MB partition (`esp32dev` default 4 MB layout) | Room for growth is limited | Consider a larger app partition before Phase 12 features |
+
+## Resolved
+
+- Wrong-channel lock: fixed 2026-10-12 by `senderChannel` in the packet (receiver locked to 6 on every boot; it had locked 4, then 5 or 6 by survey)
+- Serial `pps=0` / API pps spikes: fixed 2026-10-12. `update_packet_rate()` runs once a second from `loop()`; serial and API both read about 28
+- Stale `v20.1` / `V22` banners: now `Lumina v3 sender` / `Lumina v3 receiver` (2026-10-12)
+- Boot Wi-Fi drop (blank SSID, 0 dBm, rejoin about 8 s later): fixed 2026-10-12. `esp_wifi_set_bandwidth(HT20)` after the join made the station leave (`Reason 8 ASSOC_LEAVE`); it now runs before `WiFi.begin()`
+- `volatile` `++` deprecation warnings: fixed 2026-10-12 (`x = x + 1`); both builds are warning-free
 
 ## Regression Traps (don't reintroduce)
 

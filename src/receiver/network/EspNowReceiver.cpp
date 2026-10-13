@@ -32,11 +32,14 @@ volatile uint32_t badPackets = 0;
 volatile uint32_t packetGeneration = 0;
 uint32_t lastPacketMs = 0;
 
+// Channel the sender announces in each packet (0 = none yet / older sender).
+volatile uint8_t announcedChannel = 0;
+
 static void reset_channel_survey();
 
 static void copy_packet_from_callback(const uint8_t *mac, const uint8_t *data, int len, int rssi) {
   if (len != sizeof(AudioLedPacket)) {
-    badPackets++;
+    badPackets = badPackets + 1;
     return;
   }
 
@@ -44,8 +47,12 @@ static void copy_packet_from_callback(const uint8_t *mac, const uint8_t *data, i
   memcpy(&p, data, sizeof(p));
 
   if (p.magic != PACKET_MAGIC || p.version != PACKET_VERSION || p.size != sizeof(AudioLedPacket)) {
-    badPackets++;
+    badPackets = badPackets + 1;
     return;
+  }
+
+  if (p.senderChannel >= FIRST_WIFI_CHANNEL && p.senderChannel <= LAST_WIFI_CHANNEL) {
+    announcedChannel = p.senderChannel;
   }
 
   if (AUTO_CHANNEL_SCAN && !wifiChannelLocked) {
@@ -60,8 +67,8 @@ static void copy_packet_from_callback(const uint8_t *mac, const uint8_t *data, i
   latestPacket = p;
   memcpy(latestMac, mac, 6);
   havePacket = true;
-  goodPackets++;
-  packetGeneration++;
+  goodPackets = goodPackets + 1;
+  packetGeneration = packetGeneration + 1;
   portEXIT_CRITICAL(&packetMux);
 }
 
@@ -130,6 +137,18 @@ static void reset_channel_survey() {
 void maintain_channel_discovery(uint32_t now) {
   if (!AUTO_CHANNEL_SCAN) return;
 
+  // Sender-announced channel wins over the survey: lock (or retune) straight to it.
+  uint8_t announced = announcedChannel;
+  if (announced != 0 && (!wifiChannelLocked || lockedWifiChannel != announced)) {
+    Serial.printf("Sender announced Wi-Fi channel %u%s\n", (unsigned int)announced, wifiChannelLocked ? "; retuning" : "");
+    channelSurveying = false;
+    reset_channel_survey();
+    set_receiver_channel(announced);
+    lockedWifiChannel = announced;
+    wifiChannelLocked = true;
+    return;
+  }
+
   if (wifiChannelLocked) {
     if (lockedWifiChannel != 0 && currentWifiChannel != lockedWifiChannel) {
       set_receiver_channel(lockedWifiChannel);
@@ -142,6 +161,7 @@ void maintain_channel_discovery(uint32_t now) {
       lastChannelHopMs = 0;
       channelSurveying = false;
       reset_channel_survey();
+      announcedChannel = 0;  // don't snap back to a channel that went quiet
     }
     return;
   }

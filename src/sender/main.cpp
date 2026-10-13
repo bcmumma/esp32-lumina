@@ -18,7 +18,7 @@ void setup() {
   delay(1500);
 
   Serial.println();
-  Serial.println("Lumina v20.1: home-Wi-Fi PCM1808 FFT sender + dual-slot CRC saved configuration + simplified UI");
+  Serial.println("Lumina v3 sender: home-Wi-Fi PCM1808 sender, dual-slot CRC config (PlatformIO build of v2/v22)");
   Serial.print("AudioLedPacket size: ");
   Serial.println(sizeof(AudioLedPacket));
 
@@ -72,6 +72,7 @@ void loop() {
   server.handleClient();
 
   uint32_t now = millis();
+  update_packet_rate(now);
   static uint32_t last_print_ms = 0;
   if (now - last_print_ms > 1000) {
     last_print_ms = now;

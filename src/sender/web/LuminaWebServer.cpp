@@ -237,13 +237,6 @@ static void append_led_json(String &s) {
 static void handle_state() {
   uint32_t now = millis();
 
-  if (now - last_pps_ms >= 1000) {
-    uint32_t current = send_enqueue_ok;
-    packets_per_sec = current - last_pps_count;
-    last_pps_count = current;
-    last_pps_ms = now;
-  }
-
   String s;
   s.reserve(7500);
 
@@ -318,13 +311,6 @@ static void handle_state() {
 static void handle_live() {
   uint32_t startedUs = micros();
   uint32_t now = millis();
-
-  if (now - last_pps_ms >= 1000) {
-    uint32_t current = send_enqueue_ok;
-    packets_per_sec = current - last_pps_count;
-    last_pps_count = current;
-    last_pps_ms = now;
-  }
 
   // Fixed buffer avoids repeated heap allocation/fragmentation on the
   // frequently-polled endpoint.

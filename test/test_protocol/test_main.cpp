@@ -26,7 +26,8 @@ static void test_packet_field_offsets() {
   TEST_ASSERT_EQUAL_UINT(25, offsetof(AudioLedPacket, colorMap));
   TEST_ASSERT_EQUAL_UINT(32, offsetof(AudioLedPacket, beatBpm));
   TEST_ASSERT_EQUAL_UINT(33, offsetof(AudioLedPacket, strand));
-  TEST_ASSERT_EQUAL_UINT(105, offsetof(AudioLedPacket, reserved));
+  TEST_ASSERT_EQUAL_UINT(105, offsetof(AudioLedPacket, senderChannel));
+  TEST_ASSERT_EQUAL_UINT(106, offsetof(AudioLedPacket, reserved));
 }
 
 static void test_strand_field_offsets() {

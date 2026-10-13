@@ -70,7 +70,7 @@ The web UI can override the source manually. Diagnostics show the active source.
 
 ## Firmware Modules (v3, since Phase 9)
 
-One PlatformIO project (`platformio.ini`): the `sender` env builds `src/sender/`, and the `receiver` env builds `src/receiver/`. Both include `lib/LuminaProtocol/LuminaProtocol.h`, the single definition of the 107-byte ESP-NOW packet (version 12), which `static_assert` guards.
+One PlatformIO project (`platformio.ini`): the `sender` env builds `src/sender/`, and the `receiver` env builds `src/receiver/`. Both include `lib/LuminaProtocol/LuminaProtocol.h`, the single definition of the 107-byte ESP-NOW packet (version 12), which `static_assert` guards. Byte 105, `senderChannel`, carries the sender's Wi-Fi channel so the receiver can lock straight to it.
 
 | Sender (`src/sender/`) | Owns |
 |---|---|
@@ -87,7 +87,7 @@ One PlatformIO project (`platformio.ini`): the `sender` env builds `src/sender/`
 | Receiver (`src/receiver/`) | Owns |
 |---|---|
 | `main.cpp` | `setup()`, packet hand-off, loss counting, the frame loop and its statistics |
-| `network/EspNowReceiver` | Receive callback, channel scan and survey lock, Wi-Fi radio setup |
+| `network/EspNowReceiver` | Receive callback, channel scan, lock to the announced `senderChannel` (RSSI survey as fallback), Wi-Fi radio setup |
 | `lighting/LedOutput` | NeoPixel strands (33/25/26/27, RGB 800 kHz), packet-driven hardware and color calibration, boot test |
 | `lighting/Renderer` | Per-frame mode dispatch |
 | `lighting/Effects` | The render modes |

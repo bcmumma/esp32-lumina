@@ -38,16 +38,26 @@ uint32_t packets_per_sec = 0;
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 5, 0)
 void on_espnow_sent(const esp_now_send_info_t *tx_info, esp_now_send_status_t status) {
   espnow_busy = false;
-  if (status == ESP_NOW_SEND_SUCCESS) send_cb_ok++;
-  else send_cb_fail++;
+  if (status == ESP_NOW_SEND_SUCCESS) send_cb_ok = send_cb_ok + 1;
+  else send_cb_fail = send_cb_fail + 1;
 }
 #else
 void on_espnow_sent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   espnow_busy = false;
-  if (status == ESP_NOW_SEND_SUCCESS) send_cb_ok++;
-  else send_cb_fail++;
+  if (status == ESP_NOW_SEND_SUCCESS) send_cb_ok = send_cb_ok + 1;
+  else send_cb_fail = send_cb_fail + 1;
 }
 #endif
+
+// Packets queued per second, measured once per second from loop() so the
+// serial log and /api/* agree (it used to update only inside the HTTP handlers).
+void update_packet_rate(uint32_t now) {
+  if (now - last_pps_ms < 1000) return;
+  uint32_t current = send_enqueue_ok;
+  packets_per_sec = current - last_pps_count;
+  last_pps_count = current;
+  last_pps_ms = now;
+}
 
 void maybe_send_espnow(AudioLedPacket &p) {
   uint32_t now = millis();
@@ -70,6 +80,9 @@ void maybe_send_espnow(AudioLedPacket &p) {
   // Sequence numbers now identify transmitted packets, not every audio block.
   // This makes receiver loss statistics meaningful.
   p.sequence = sequence_num;
+  uint8_t primary = 0;
+  wifi_second_chan_t second = WIFI_SECOND_CHAN_NONE;
+  p.senderChannel = (esp_wifi_get_channel(&primary, &second) == ESP_OK) ? primary : 0;
   esp_err_t err = esp_now_send(BROADCAST_ADDR, (const uint8_t *)&p, sizeof(p));
 
   if (err == ESP_OK) {

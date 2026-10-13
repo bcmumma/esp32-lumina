@@ -110,6 +110,9 @@ void setup_wifi() {
   delay(100);
 
   esp_wifi_set_ps(WIFI_PS_NONE);
+  // Set HT20 before joining. v2 set it after the join, which made the station
+  // leave the AP (Reason 8 ASSOC_LEAVE) and rejoin ~8 s later (docs/KNOWN_ISSUES.md).
+  esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT20);
 
   if (USE_STATIC_IP) {
     bool configOk = WiFi.config(local_ip, gateway, subnet, dns1, dns2);
@@ -140,7 +143,6 @@ void setup_wifi() {
 
   active_wifi_channel = WiFi.channel();
   wifiWasConnected = true;
-  esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT20);
   show_connected_rgb();
 
   Serial.println();
