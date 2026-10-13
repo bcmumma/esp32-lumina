@@ -41,6 +41,7 @@ A distributed smart-lighting platform:
 - PowerShell on the Windows PC.
 - Build: `pio run -e <env>`. Upload: `pio run -e <env> -t upload --upload-port COM<n>`.
 - Capture serial with a time-limited, non-interactive capture, not the interactive monitor. My serial monitor must be closed while you upload or capture.
+- Test bench (`tools/testbench/`, run with the gitignored `.venv`): `serial_capture.py <secs> COM<a> [COM<b>]`, `tone_sweep.py COM<a> [COM<b>]`, `webcam_frame.py`. Frames and logs go in gitignored `captures/`.
 - Art-Net capture: `tshark` on UDP 6454, on the PC. SoundSwitch on the Mac must broadcast or unicast to the PC. Raw captures stay outside Git.
 <!-- Fill in during Phases 5–7: env names, board IDs, COM ports (in CLAUDE.local.md), tshark path and interface, capture script, test command. -->
 
