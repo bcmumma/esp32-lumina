@@ -63,8 +63,8 @@ Use local files: SoundSwitch's article "Music Streaming with SoundSwitch" (undat
 
 ## Open questions
 
-- Mac model, macOS version, Serato version, and SoundSwitch version (needed to check features).
-- Are the Mac, the Windows PC, and the S3 on the same VLAN/subnet? (The PC reaches the S3's web UI; whether they share a subnet isn't confirmed.) Phases 5 and 10 need this.
+- Mac model. (Recorded 2026-10-13: macOS Tahoe 26.71, SoundSwitch 2.11, which has Art-Net since 2.1, and Serato DJ Pro 4.0.4.)
+- Resolved 2026-10-13: the Mac (Wi-Fi), the PC (Ethernet), and the S3 share one subnet (details in `CLAUDE.local.md`).
 - Dev board models (the modules are known: S3-WROOM-1 N16R8 and ESP32-D0WD-V3).
 - Strip types and LED counts per strand (saved config says 150 per strand), PSU rating, fusing, and power injection. A level converter and 330 Ω resistors are fitted.
 - Channel lock and loss at the real install distance.

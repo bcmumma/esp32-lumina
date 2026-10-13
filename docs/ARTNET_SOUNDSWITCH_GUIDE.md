@@ -97,7 +97,7 @@ Build it as a **multi-cell** fixture so SoundSwitch can color each strand separa
    - Give each cell Red, Green, and Blue on the channels in the table above. Strand 1 is 1/2/3, Strand 2 is 4/5/6, and so on.
    - In SoundSwitch's RGB example, the channel number goes in the **Coarse** column.
    - Tip: build Strand 1 completely, then right-click it and choose **Duplicate**. Change the channel numbers on each copy.
-7. Create a cell named exactly **`MASTER`** (uppercase). SoundSwitch uses that name for the master dimmer and strobe. Lumina has no dimmer or strobe channel, so leave it empty. **UNVERIFIED:** whether an empty `MASTER` cell passes the check. If it fails in step 9, tell Claude Code exactly what the error says.
+7. **Don't create a `MASTER` cell.** SoundSwitch's article adds one for a master dimmer and strobe, but Lumina has neither. In SoundSwitch 2.11, **Check Fixture fails with an empty `MASTER` cell and passes without it** (verified by the owner, 2026-10-13).
 8. Remove any default attributes you didn't add.
 9. Click **Fixtures → Check Fixture**. The result appears in the bottom-left corner of the window.
 10. If it passes, click **File → Save Workspace**. Don't use "Transfer to Public Cloud"; this profile is only for you.
