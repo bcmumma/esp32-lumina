@@ -9,32 +9,32 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
 | Track | Phase | Status | Authorization |
 |---|---|---|---|
 | DJ (Mac + PC capture) | 4 — Minimum SoundSwitch workflow (owner-led, guided from the Lumina Project chat) | In progress | Not authorized in this workflow yet |
-| Firmware (Windows PC) | 9 — Modularize | In progress | Authorized 2026-10-12 for Phase 9 |
+| Firmware (Windows PC) | 10 — First Art-Net receiver on the S3 | Not started; **blocked until DJ Phases 4–6 are done** (ROADMAP: both tracks finish before Phase 10) | Not authorized |
 
 - Authorize a phase with `/start-milestone Phase <N>` in Claude Code. Until then, everything is read-only.
-- **Branch:** `main` holds v2 unchanged. Phase 9 works on `feature/platformio-migration` (off `develop-v23`), after the Phase 8 port. Merging into `develop-v23` is your call.
-- **Last verified commit:** `35449ae` on `feature/platformio-migration` (Phase 8, closed 2026-10-12).
-- **Both boards run the Phase 8 port** (v2 behavior, plus the receiver channel survey). The lights react to music again.
+- **Branch:** `main` holds v2 unchanged. `feature/platformio-migration` (off `develop-v23`) holds Phases 8–9. Merging it into `develop-v23` is your call.
+- **Last verified commit:** `7ab46e6` on `feature/platformio-migration` (Phase 9, closed 2026-10-12).
+- **Both boards run the Phase 9 modular firmware** (v2 behavior plus the receiver channel survey).
 
 ## What works
 
-- The v3 PlatformIO build of v2 runs on both boards with parity:
-  - boot, Wi-Fi (channel 6), web UI and API, and dual-slot save/load;
-  - PCM1808 levels and ESP-NOW (0–1.5% loss once locked);
-  - strand 1 RGB and white on camera.
-- Strands 2–4 were waived by the owner (expected to pass).
-- Credentials and LAN addresses live in gitignored `include/secrets.h`. History has no real Wi-Fi credentials.
-- Test bench (`tools/testbench/`): dual serial capture, tone sweep (`--amplitude 1.0` for music level with the Magni at the middle), and webcam frames.
-- Phases 0–3, 7, and 8 are done.
+- The v3 firmware is modular (`docs/ARCHITECTURE.md`) and has parity with v2 on hardware:
+  - boot, Wi-Fi, the web UI and API, and dual-slot save/load;
+  - PCM1808 levels (clip 0) and ESP-NOW (about 1–3% loss once locked);
+  - strand 1 RGB and white on camera. Strands 2–4 are waived (expected to pass).
+- One shared packet header; on-device unit tests (`pio test -e sender_test`) for the packet layout and config CRC.
+- Test bench (`tools/testbench/`): dual serial capture, tone sweep (`--amplitude 1.0`), webcam frames, and `strand_colors.py`.
+- Phases 0–3 and 7–9 are done.
 
 ## Next step
 
-1. **Your call:** merge `feature/platformio-migration` into `develop-v23`. `main` stays v2 until you decide v3 replaces it.
-2. **Owner hardware checks, when convenient:**
+1. **DJ track:** the Phase 4 owner steps below, then Phases 5–6 (Art-Net capture on the PC). Phase 10 waits on these.
+2. **Your call:** merge `feature/platformio-migration` into `develop-v23`.
+3. **Optional firmware work while Phase 10 is blocked** (a separate change request; each changes behavior slightly): the `pps` serial counter, the `v20.1` banner, the `volatile` warnings, the boot Wi-Fi drop, and the sender announcing its channel in the packet.
+4. **Owner hardware checks, when convenient:**
    - [ ] Level converter: LV side about 3.3 V, HV side about 5 V, no damage; report its part number.
    - [ ] With power off, connect strips to outputs 2–4. Claude then cycles all four strands on camera.
-3. **Remaining audit questions (read-only, small):** v2 tags, whether the CRC config and white fix are intact in code, and the S3 status RGB code path. Already answered: packet version and size (107), channel scan, history credentials, and license.
-4. **Phase 9**, once authorized.
+5. **Remaining audit questions (read-only, small):** v2 tags, and the S3 status RGB code path.
 
 ## Phase 4 checklist (DJ track, all owner steps)
 
@@ -52,31 +52,27 @@ Use local files: SoundSwitch's article "Music Streaming with SoundSwitch" (undat
 
 **Gate:** one track runs its saved show in sync with Serato.
 
-## Phase 9 draft checklist (firmware track)
+## Phase 10 draft checklist (firmware track; starts only after Phases 4–6)
 
-Goal: same behavior as Phase 8, split into modules (see `docs/ROADMAP.md`). One subsystem per step; build, upload, and run the Phase 8 parity checks after each.
-
-- [x] Branch: continue on `feature/platformio-migration` (the instructions list no separate modularize branch)
-- [x] Shared `lib/LuminaProtocol` header for `AudioLedPacket`, with `static_assert` checks for 107 and 18 bytes *(Claude)*
-- [x] Sender modules: `audio/PCM1808`, `audio/AudioAnalyzer`, `network/WiFiManager`, `network/EspNowSender`, `web/LuminaWebServer` (+ `web/IndexHtml`), `lighting/LightingState`, `config/ConfigManager`, `util/Clamp.h`; `main.cpp` is 101 lines of setup/loop *(Claude)*
-- [x] Receiver modules: `network/EspNowReceiver`, `lighting/Renderer`, `lighting/Effects`, `lighting/LedOutput`, `lighting/Color.h`, `lighting/EffectState.h`. No receiver `ConfigManager`: the receiver persists nothing, and its packet-driven hardware and calibration live in `LedOutput` *(Claude)*
-- [x] Unit tests on the S3 (`pio test -e sender_test`; no host compiler is installed): 3 protocol layout tests and 5 config CRC blob tests, all PASSED (2026-10-12) *(Claude)*
-- [x] Parity rerun after the last extraction (2026-10-12): no crashes; config `cfgB seq 10` loaded; lock ch 6 with 3.1% loss over 10 s; all routes 200 (page 56,359 B); save/load round trip `cfgA seq 11`; full-scale sweep matches Phase 8 within ±2, clip 0 over 48 polls; strand 1 R/G/B/white on camera unchanged *(Claude)*
-- Each extraction was built, uploaded, and smoke-tested (boot, settings load, Wi-Fi, ESP-NOW pps and errors, receiver lock), plus audio and camera checks after the audio and LED moves.
-- Not in Phase 9 unless you approve separately (each changes behavior): the `pps` serial counter, the `v20.1` banner, the boot Wi-Fi drop, and the channel number in the packet.
+- [ ] Prerequisites: a Phase 5–6 capture summary in `docs/ARCHITECTURE.md` (universe, channel count, packet rate, broadcast or unicast), and the network path from the Mac to the S3 confirmed *(owner + Claude)*
+- [ ] Branch `feature/artnet-receiver` off the merged v3 branch *(owner OK)*
+- [ ] Art-Net module on the S3: UDP 6454 listener, ArtDmx parse (universe, sequence, length, DMX data), and stats on the diagnostics endpoint. Parse and report only; it doesn't drive the lights yet *(Claude)*
+- [ ] Parser unit tests built from captured frames (sanitized byte arrays, not raw captures) *(Claude)*
+- [ ] Gate: values the S3 parses equal the `tshark` capture for the same frames *(Claude)*
+- [ ] Parity unchanged: audio, ESP-NOW, web, and save/load still pass *(Claude)*
 
 ## Open questions
 
 - Mac model, macOS version, Serato version, and SoundSwitch version (needed to check features).
-- Are the Mac, the Windows PC, and the S3 on the same VLAN/subnet? (The PC reaches the S3's web UI; whether they share a subnet isn't confirmed.) Phase 5 needs this.
+- Are the Mac, the Windows PC, and the S3 on the same VLAN/subnet? (The PC reaches the S3's web UI; whether they share a subnet isn't confirmed.) Phases 5 and 10 need this.
 - Dev board models (the modules are known: S3-WROOM-1 N16R8 and ESP32-D0WD-V3).
 - Strip types and LED counts per strand (saved config says 150 per strand), PSU rating, fusing, and power injection. A level converter and 330 Ω resistors are fitted.
-- Channel lock and loss at the real install distance (the survey may lock one channel off at close range).
+- Channel lock and loss at the real install distance.
 
 ## Recent decisions
 
 See `docs/DECISIONS.md`. Latest (2026-10-12):
+- The Phase 9 module layout, with its deviations: `LuminaWebServer`, and no receiver config module.
+- Unit tests run on the S3 instead of a native env (no host compiler installed).
+- Receiver channel survey: an owner-approved Phase 8 exception.
 - Secrets live in gitignored `include/secrets.h`.
-- Receiver channel survey: an owner-approved exception to Phase 8's "no behavior change".
-- The sender announcing its channel in the packet is deferred to Phase 9+ as a protocol change.
-- PlatformIO: one root project, pioarduino 55.03.312-1 (Arduino 3.3.12).
