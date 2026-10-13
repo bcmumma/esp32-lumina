@@ -9,36 +9,32 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
 | Track | Phase | Status | Authorization |
 |---|---|---|---|
 | DJ (Mac + PC capture) | 4 — Minimum SoundSwitch workflow (owner-led, guided from the Lumina Project chat) | In progress | Not authorized in this workflow yet |
-| Firmware (Windows PC) | 8 — Port v2 to PlatformIO, no behavior change | In progress | Authorized 2026-10-12 for Phase 8 |
+| Firmware (Windows PC) | 9 — Modularize | Not started | Not authorized |
 
 - Authorize a phase with `/start-milestone Phase <N>` in Claude Code. Until then, everything is read-only.
-- **Branch:** `main` holds v2 unchanged. v3 work lives on `develop-v23`. Phase 8 works on `feature/platformio-migration` (created 2026-10-12 from `develop-v23`).
-- **Phase 8 waiver (owner, 2026-10-12):** strands 2–4 aren't tested in Phase 8. Strand parity is strand 1 on camera, plus the receiver logging pins `[33,25,26,27]`. Strands 2–4 are checked later.
-- **History check (2026-10-12):** every Wi-Fi SSID/password line in history is a placeholder, and the real SSID appears in no commit, so no password change is needed. Home LAN IPs are in the v2 sender on `main` and in 3 commits; Phase 8 moves them into gitignored `secrets.h`. History is left as is (private RFC1918 addresses, low risk).
-- **Last verified commit:** `948fa05` on `develop-v23` (Phase 7, closed 2026-10-12).
-- **The boards run Phase 7 bench programs, not v2.** The S3 runs a PCM1808 level meter; the WROOM runs a pin check and cycles strand 1 (10 LEDs). The lights won't react to music until Phase 8 uploads the port.
+- **Branch:** `main` holds v2 unchanged. `feature/platformio-migration` (off `develop-v23`) holds the Phase 8 port. Merging it into `develop-v23` is your call; Phase 9 continues from it.
+- **Last verified commit:** `35449ae` on `feature/platformio-migration` (Phase 8, closed 2026-10-12).
+- **Both boards run the Phase 8 port** (v2 behavior, plus the receiver channel survey). The lights react to music again.
 
 ## What works
 
-- v2 (v22 code) ran on both boards up to 2026-10-12: tone sweep → PCM1808 → ESP-NOW (channel 6, auto-scan lock) → receiver levels matched. See `docs/HARDWARE.md` for the baseline numbers.
-- PlatformIO builds and uploads both boards from the PC (`platformio.ini`, two environments).
-- Test bench (`tools/testbench/`): dual-port serial capture, tone sweep through Modi 3E → Magni → PCM1808 (Magni knob at the middle: about 13 dB headroom), and webcam frames of the strips (`captures/webcam/`, gitignored).
-- Strand 1 (GPIO33) renders RGB and white correctly after the 12 V incident at the level converter.
-- Phases 0–3 and 7 are done.
+- The v3 PlatformIO build of v2 runs on both boards with parity:
+  - boot, Wi-Fi (channel 6), web UI and API, and dual-slot save/load;
+  - PCM1808 levels and ESP-NOW (0–1.5% loss once locked);
+  - strand 1 RGB and white on camera.
+- Strands 2–4 were waived by the owner (expected to pass).
+- Credentials and LAN addresses live in gitignored `include/secrets.h`. History has no real Wi-Fi credentials.
+- Test bench (`tools/testbench/`): dual serial capture, tone sweep (`--amplitude 1.0` for music level with the Magni at the middle), and webcam frames.
+- Phases 0–3, 7, and 8 are done.
 
 ## Next step
 
-1. **Repo audit (read-only, still owed from before Phase 7).** Ask Claude Code to run it. It answers:
-   - which v2 files, tags, and branches exist;
-   - the packet version, and the channel scan behavior;
-   - whether the CRC config and the white fix are intact;
-   - whether the S3 status RGB feature is present;
-   - the license;
-   - **whether any branch or any point in history contains a Wi-Fi SSID or password, a home IP, or personal details.** If a password was ever pushed, change it on the router.
-2. **Owner hardware checks** (before the Phase 8 strand-order check):
-   - [ ] Level converter: measure the LV side (about 3.3 V) and HV side (about 5 V), look for damage, and report the part number.
+1. **Your call:** merge `feature/platformio-migration` into `develop-v23`. `main` stays v2 until you decide v3 replaces it.
+2. **Owner hardware checks, when convenient:**
+   - [ ] Level converter: LV side about 3.3 V, HV side about 5 V, no damage; report its part number.
    - [ ] With power off, connect strips to outputs 2–4. Claude then cycles all four strands on camera.
-3. **Phase 8**, once authorized.
+3. **Remaining audit questions (read-only, small):** v2 tags, whether the CRC config and white fix are intact in code, and the S3 status RGB code path. Already answered: packet version and size (107), channel scan, history credentials, and license.
+4. **Phase 9**, once authorized.
 
 ## Phase 4 checklist (DJ track, all owner steps)
 
@@ -56,33 +52,30 @@ Use local files: SoundSwitch's article "Music Streaming with SoundSwitch" (undat
 
 **Gate:** one track runs its saved show in sync with Serato.
 
-## Phase 8 draft checklist (firmware track)
+## Phase 9 draft checklist (firmware track)
 
-- [ ] Branch `feature/platformio-migration` off `develop-v23` *(Claude)*
-- [ ] Gitignored `include/secrets.h` with a committed `secrets.example.h`; the **owner fills in the SSID and password locally** *(owner)*
-- [ ] Port the v2 sender and receiver into `src/sender/` and `src/receiver/` as `.cpp`/`.h`, with no behavior change. Declare types before use (see KNOWN_ISSUES on `.ino` prototypes). Build after each step *(Claude)*
-- [ ] Parity, checked on the test bench *(Claude unless marked)*:
-  - [ ] PCM1808 levels: tone sweep; `clip` in `/api/live` stays 0
-  - [ ] Wi-Fi station join; S3 RSSI logged
-  - [ ] Every web UI page loads *(Claude over HTTP; owner glance once)*
-  - [ ] Settings save and load: change over HTTP, reset over serial, read back
-  - [ ] ESP-NOW delivery: dual capture, sequence numbers, loss compared with the v2 baseline (about 3%)
-  - [ ] ESP-NOW channel behavior: receiver scans, then locks to the sender's channel
-  - [ ] Strands 1–4 on GPIO 33/25/26/27 in order *(camera; needs owner check 2 above)*
-  - [ ] RGB colors and white rendering as white *(camera)*
-- [ ] Diagnostics-only additions, if any, are command-gated or behind a build flag *(Claude)*
+Goal: same behavior as Phase 8, split into modules (see `docs/ROADMAP.md`). One subsystem per step; build, upload, and run the Phase 8 parity checks after each.
+
+- [ ] Branch for Phase 9 (proposed: continue on `feature/platformio-migration`, or a new `feature/modularize`) *(owner decides)*
+- [ ] Shared `lib/` header for `AudioLedPacket` (sender and receiver must stay byte-identical, 107 bytes) *(Claude)*
+- [ ] Sender modules: `audio/PCM1808`, `audio/AudioAnalyzer`, `network/WiFiManager`, `network/EspNowSender`, `web/WebServer`, `lighting/LightingState`, `config/ConfigManager` *(Claude)*
+- [ ] Receiver modules: `network/EspNowReceiver`, `lighting/Renderer`, `lighting/Effects`, `lighting/LedOutput`, `config/ConfigManager` *(Claude)*
+- [ ] Native tests: config blob with CRC, and packet encoding *(Claude)*
+- [ ] Parity rerun after the last extraction: tone sweep, Wi-Fi, web routes, save/load, ESP-NOW loss and lock, strand 1 on camera *(Claude)*
+- Not in Phase 9 unless you approve separately (each changes behavior): the `pps` serial counter, the `v20.1` banner, the boot Wi-Fi drop, and the channel number in the packet.
 
 ## Open questions
 
 - Mac model, macOS version, Serato version, and SoundSwitch version (needed to check features).
-- Are the Mac, the Windows PC, and the S3 on the same VLAN/subnet? (The PC reached the S3's web UI over HTTP on 2026-10-12; whether they share a subnet isn't confirmed.) Phase 5 needs this.
-- Does the committed v2 source build unchanged on Arduino 3.3.12? Phase 8 answers this.
+- Are the Mac, the Windows PC, and the S3 on the same VLAN/subnet? (The PC reaches the S3's web UI; whether they share a subnet isn't confirmed.) Phase 5 needs this.
 - Dev board models (the modules are known: S3-WROOM-1 N16R8 and ESP32-D0WD-V3).
 - Strip types and LED counts per strand (saved config says 150 per strand), PSU rating, fusing, and power injection. A level converter and 330 Ω resistors are fitted.
+- Channel lock and loss at the real install distance (the survey may lock one channel off at close range).
 
 ## Recent decisions
 
 See `docs/DECISIONS.md`. Latest (2026-10-12):
-- One root PlatformIO project with `sender` and `receiver` environments.
-- pioarduino 55.03.312-1 (Arduino 3.3.12), because the official platform only ships Arduino 2.0.17.
-- Board IDs `esp32-s3-devkitc-1` (`qio_opi`, 16 MB) and `esp32dev`.
+- Secrets live in gitignored `include/secrets.h`.
+- Receiver channel survey: an owner-approved exception to Phase 8's "no behavior change".
+- The sender announcing its channel in the packet is deferred to Phase 9+ as a protocol change.
+- PlatformIO: one root project, pioarduino 55.03.312-1 (Arduino 3.3.12).
