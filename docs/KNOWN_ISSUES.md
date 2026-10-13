@@ -15,7 +15,7 @@
 | On 2026-10-12, 12 V touched the receiver's level converter. Strand 1 is proven afterwards (RGB and white on camera in Phase 8). The converter channels for strands 2–4 are untested: the owner waived them in Phase 8 and expects easy passes. GPIO 33/25/26/27 internal pull-downs read 1 (likely the converter's pull-ups, UNVERIFIED) | A damaged converter channel would look like a firmware fault | Owner checks the converter rails (LV about 3.3 V, HV about 5 V) and its part number; test strands 2–4 on camera when they're connected |
 | Strip power, fusing, and level shifting are undocumented | Safety and reliability | Inspect before calling the build product-ready |
 | Post-antenna-fix latency was never measured | No baseline for Phase 11 | Measure in Phase 11 |
-| Build warnings: 2 in the sender and 4 in the receiver, all `'++' expression of 'volatile'-qualified type is deprecated` (C++20) on v2 counters | None (warnings only) | Clean up during Phase 9 |
+| Build warnings: 2 in the sender and 4 in the receiver, all `'++' expression of 'volatile'-qualified type is deprecated` (C++20) on v2 counters | None (warnings only) | Phase 9 was a pure move, so they're still present. Fix them with the first small behavior-change batch (as `x = x + 1`, or `std::atomic`) |
 | Receiver app uses 71% of its 1.25 MB partition (`esp32dev` default 4 MB layout) | Room for growth is limited | Consider a larger app partition before Phase 12 features |
 
 ## Regression Traps (don't reintroduce)

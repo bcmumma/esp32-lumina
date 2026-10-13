@@ -9,10 +9,10 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
 | Track | Phase | Status | Authorization |
 |---|---|---|---|
 | DJ (Mac + PC capture) | 4 — Minimum SoundSwitch workflow (owner-led, guided from the Lumina Project chat) | In progress | Not authorized in this workflow yet |
-| Firmware (Windows PC) | 9 — Modularize | Not started | Not authorized |
+| Firmware (Windows PC) | 9 — Modularize | In progress | Authorized 2026-10-12 for Phase 9 |
 
 - Authorize a phase with `/start-milestone Phase <N>` in Claude Code. Until then, everything is read-only.
-- **Branch:** `main` holds v2 unchanged. `feature/platformio-migration` (off `develop-v23`) holds the Phase 8 port. Merging it into `develop-v23` is your call; Phase 9 continues from it.
+- **Branch:** `main` holds v2 unchanged. Phase 9 works on `feature/platformio-migration` (off `develop-v23`), after the Phase 8 port. Merging into `develop-v23` is your call.
 - **Last verified commit:** `35449ae` on `feature/platformio-migration` (Phase 8, closed 2026-10-12).
 - **Both boards run the Phase 8 port** (v2 behavior, plus the receiver channel survey). The lights react to music again.
 
@@ -56,12 +56,13 @@ Use local files: SoundSwitch's article "Music Streaming with SoundSwitch" (undat
 
 Goal: same behavior as Phase 8, split into modules (see `docs/ROADMAP.md`). One subsystem per step; build, upload, and run the Phase 8 parity checks after each.
 
-- [ ] Branch for Phase 9 (proposed: continue on `feature/platformio-migration`, or a new `feature/modularize`) *(owner decides)*
-- [ ] Shared `lib/` header for `AudioLedPacket` (sender and receiver must stay byte-identical, 107 bytes) *(Claude)*
-- [ ] Sender modules: `audio/PCM1808`, `audio/AudioAnalyzer`, `network/WiFiManager`, `network/EspNowSender`, `web/WebServer`, `lighting/LightingState`, `config/ConfigManager` *(Claude)*
-- [ ] Receiver modules: `network/EspNowReceiver`, `lighting/Renderer`, `lighting/Effects`, `lighting/LedOutput`, `config/ConfigManager` *(Claude)*
-- [ ] Native tests: config blob with CRC, and packet encoding *(Claude)*
-- [ ] Parity rerun after the last extraction: tone sweep, Wi-Fi, web routes, save/load, ESP-NOW loss and lock, strand 1 on camera *(Claude)*
+- [x] Branch: continue on `feature/platformio-migration` (the instructions list no separate modularize branch)
+- [x] Shared `lib/LuminaProtocol` header for `AudioLedPacket`, with `static_assert` checks for 107 and 18 bytes *(Claude)*
+- [x] Sender modules: `audio/PCM1808`, `audio/AudioAnalyzer`, `network/WiFiManager`, `network/EspNowSender`, `web/LuminaWebServer` (+ `web/IndexHtml`), `lighting/LightingState`, `config/ConfigManager`, `util/Clamp.h`; `main.cpp` is 101 lines of setup/loop *(Claude)*
+- [x] Receiver modules: `network/EspNowReceiver`, `lighting/Renderer`, `lighting/Effects`, `lighting/LedOutput`, `lighting/Color.h`, `lighting/EffectState.h`. No receiver `ConfigManager`: the receiver persists nothing, and its packet-driven hardware and calibration live in `LedOutput` *(Claude)*
+- [x] Unit tests on the S3 (`pio test -e sender_test`; no host compiler is installed): 3 protocol layout tests and 5 config CRC blob tests, all PASSED (2026-10-12) *(Claude)*
+- [x] Parity rerun after the last extraction (2026-10-12): no crashes; config `cfgB seq 10` loaded; lock ch 6 with 3.1% loss over 10 s; all routes 200 (page 56,359 B); save/load round trip `cfgA seq 11`; full-scale sweep matches Phase 8 within ±2, clip 0 over 48 polls; strand 1 R/G/B/white on camera unchanged *(Claude)*
+- Each extraction was built, uploaded, and smoke-tested (boot, settings load, Wi-Fi, ESP-NOW pps and errors, receiver lock), plus audio and camera checks after the audio and LED moves.
 - Not in Phase 9 unless you approve separately (each changes behavior): the `pps` serial counter, the `v20.1` banner, the boot Wi-Fi drop, and the channel number in the packet.
 
 ## Open questions

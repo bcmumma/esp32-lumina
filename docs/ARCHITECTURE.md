@@ -68,9 +68,32 @@ The web UI can override the source manually. Diagnostics show the active source.
 - Prefer Art-Net direct to the WROOM. Don't relay pixel frames through the S3 over ESP-NOW unless testing proves it works.
 - Receiver priority: pixel Art-Net when active, otherwise ESP-NOW intelligent mode after a timeout.
 
-## Module Plan (Phase 9)
+## Firmware Modules (v3, since Phase 9)
 
-See the Phase 9 note in `docs/ROADMAP.md`.
+One PlatformIO project (`platformio.ini`): the `sender` env builds `src/sender/`, and the `receiver` env builds `src/receiver/`. Both include `lib/LuminaProtocol/LuminaProtocol.h`, the single definition of the 107-byte ESP-NOW packet (version 12), which `static_assert` guards.
+
+| Sender (`src/sender/`) | Owns |
+|---|---|
+| `main.cpp` | `setup()` order and the audio → analyze → send loop |
+| `config/ConfigManager` | Tuning settings, defaults, and the dual-slot CRC blob in NVS (`lumina_cfg`, slots `cfgA`/`cfgB`) |
+| `lighting/LightingState` | LED/strand settings sent in every packet, and their defaults |
+| `audio/PCM1808` | Pins 20/21/47/48, I2S at 48 kHz 32-bit stereo, `sample32_to_s16` |
+| `audio/AudioAnalyzer` | Band filters, AGC, the (disabled) FFT beat detector, `analyze_audio_block` |
+| `network/WiFiManager` | Station join and recovery, static IP from `include/secrets.h`, mDNS, the onboard status RGB |
+| `network/EspNowSender` | Broadcast peer, rate-limited send, sequence numbers, send statistics |
+| `web/LuminaWebServer`, `web/IndexHtml` | HTTP API (`/api/*`, `/health`), the controller page, loop/HTTP timing |
+| `util/Clamp.h` | Shared clamp helpers |
+
+| Receiver (`src/receiver/`) | Owns |
+|---|---|
+| `main.cpp` | `setup()`, packet hand-off, loss counting, the frame loop and its statistics |
+| `network/EspNowReceiver` | Receive callback, channel scan and survey lock, Wi-Fi radio setup |
+| `lighting/LedOutput` | NeoPixel strands (33/25/26/27, RGB 800 kHz), packet-driven hardware and color calibration, boot test |
+| `lighting/Renderer` | Per-frame mode dispatch |
+| `lighting/Effects` | The render modes |
+| `lighting/Color.h`, `lighting/EffectState.h` | 8-bit color math; per-strand effect state |
+
+The receiver has no config module because it persists nothing: its hardware and calibration settings arrive in every packet. On-device unit tests live in `test/` (`pio test -e sender_test`).
 
 ## Effects
 
