@@ -28,7 +28,7 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
 
 ## Next step
 
-1. **DJ track:** the Phase 4 owner steps below, then Phases 5–6 (Art-Net capture on the PC). Phase 10 waits on these.
+1. **DJ track:** follow **`docs/ARTNET_SOUNDSWITCH_GUIDE.md`**: Phase 4 (Part 1), then Phases 5–6 (Parts 2–3). Phase 10 waits on these. PC-side Art-Net tools are ready and self-tested: `artnet_listen.py` (monitor, answers ArtPoll) and `artnet_send.py` (test pattern).
 2. **Your call:** merge `feature/platformio-migration` into `develop-v23`.
 3. **Done 2026-10-12 (change request):** `pps` counter, banners, `volatile` warnings, the boot Wi-Fi drop (HT20 before join), and `senderChannel` in the packet. See KNOWN_ISSUES → Resolved. Still open: the S3's first join takes about 6 s (`AUTH_FAIL`, then `AUTH_EXPIRE`); please report your AP's Wi-Fi security mode.
 4. **Owner hardware checks, when convenient:**
@@ -36,7 +36,7 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
    - [ ] With power off, connect strips to outputs 2–4. Claude then cycles all four strands on camera.
 5. **Remaining audit questions (read-only, small):** v2 tags, and the S3 status RGB code path.
 
-## Phase 4 checklist (DJ track, all owner steps)
+## Phase 4 checklist (DJ track, all owner steps; click-by-click in the guide, Part 1)
 
 Use local files: SoundSwitch's article "Music Streaming with SoundSwitch" (undated; check it against your installed version) says streaming tracks can't be autoscripted, and Spotify isn't listed for Serato. Autoscripts are stored as a tag inside the audio file. Your Spotify cue points stay as they are.
 
