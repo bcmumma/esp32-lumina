@@ -9,10 +9,12 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
 | Track | Phase | Status | Authorization |
 |---|---|---|---|
 | DJ (Mac + PC capture) | 4 — Minimum SoundSwitch workflow (owner-led, guided from the Lumina Project chat) | In progress | Not authorized in this workflow yet |
-| Firmware (Windows PC) | 8 — Port v2 to PlatformIO, no behavior change | Not started | Not authorized |
+| Firmware (Windows PC) | 8 — Port v2 to PlatformIO, no behavior change | In progress | Authorized 2026-10-12 for Phase 8 |
 
 - Authorize a phase with `/start-milestone Phase <N>` in Claude Code. Until then, everything is read-only.
-- **Branch:** `main` holds v2 unchanged. v3 work lives on `develop-v23`; Phase 8 starts `feature/platformio-migration` off it.
+- **Branch:** `main` holds v2 unchanged. v3 work lives on `develop-v23`. Phase 8 works on `feature/platformio-migration` (created 2026-10-12 from `develop-v23`).
+- **Phase 8 waiver (owner, 2026-10-12):** strands 2–4 aren't tested in Phase 8. Strand parity is strand 1 on camera, plus the receiver logging pins `[33,25,26,27]`. Strands 2–4 are checked later.
+- **History check (2026-10-12):** every Wi-Fi SSID/password line in history is a placeholder, and the real SSID appears in no commit, so no password change is needed. Home LAN IPs are in the v2 sender on `main` and in 3 commits; Phase 8 moves them into gitignored `secrets.h`. History is left as is (private RFC1918 addresses, low risk).
 - **Last verified commit:** `948fa05` on `develop-v23` (Phase 7, closed 2026-10-12).
 - **The boards run Phase 7 bench programs, not v2.** The S3 runs a PCM1808 level meter; the WROOM runs a pin check and cycles strand 1 (10 LEDs). The lights won't react to music until Phase 8 uploads the port.
 

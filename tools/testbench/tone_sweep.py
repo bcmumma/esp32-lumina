@@ -5,6 +5,7 @@ Readings depend on the Magni volume knob, so keep it at the same position betwee
 Boards are not reset, so they keep running. Lines are tagged with the segment playing.
 
     python tools/testbench/tone_sweep.py COM<sender> COM<receiver>
+    python tools/testbench/tone_sweep.py COM<sender> --amplitude 1.0   # music-level input
 """
 import math
 import os
@@ -19,17 +20,17 @@ import winsound
 import serial
 
 SAMPLE_RATE = 44100
-AMPLITUDE = 0.25  # fraction of full scale
+AMPLITUDE = 0.25  # fraction of full scale; override with --amplitude
 PLAN = [("silence", 0, 3), ("100Hz", 100, 3), ("1kHz", 1000, 3), ("6kHz", 6000, 3), ("silence", 0, 3)]
 
 
-def write_wav(path):
+def write_wav(path, amplitude):
     frames = bytearray()
     for _, freq, secs in PLAN:
         n = int(SAMPLE_RATE * secs)
         for i in range(n):
             env = min(1.0, i / 2000, (n - i) / 2000)  # short fade to avoid clicks
-            v = int(32767 * AMPLITUDE * env * math.sin(2 * math.pi * freq * i / SAMPLE_RATE)) if freq else 0
+            v = int(32767 * amplitude * env * math.sin(2 * math.pi * freq * i / SAMPLE_RATE)) if freq else 0
             frames += struct.pack("<hh", v, v)
     with wave.open(path, "wb") as w:
         w.setnchannels(2)
@@ -51,9 +52,15 @@ def open_port(port):
 
 
 def main():
+    args = sys.argv[1:]
+    amplitude = AMPLITUDE
+    if "--amplitude" in args:
+        i = args.index("--amplitude")
+        amplitude = float(args[i + 1])
+        del args[i : i + 2]
     wav = os.path.join(tempfile.gettempdir(), "lumina_tone_sweep.wav")
-    write_wav(wav)
-    ports = {p: open_port(p) for p in sys.argv[1:]}
+    write_wav(wav, amplitude)
+    ports = {p: open_port(p) for p in args}
 
     edges, total = [], 0
     for name, _, secs in PLAN:
