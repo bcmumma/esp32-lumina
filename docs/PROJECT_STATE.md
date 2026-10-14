@@ -1,6 +1,6 @@
 # Project State
 
-_Last updated: 2026-10-12_
+_Last updated: 2026-10-14_
 
 ## Current
 
@@ -8,83 +8,63 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
 
 | Track | Phase | Status | Authorization |
 |---|---|---|---|
-| DJ (Mac + PC capture) | 4 — Minimum SoundSwitch workflow (owner-led, guided from the Lumina Project chat) | In progress | Not authorized in this workflow yet |
-| Firmware (Windows PC) | 10 — First Art-Net receiver on the S3 | Not started; **blocked until DJ Phases 4–6 are done** (ROADMAP: both tracks finish before Phase 10) | Not authorized |
+| DJ (Mac + PC capture) | 5–6: Art-Net from SoundSwitch to the PC, characterized | **Work done 2026-10-14, evidence recorded; awaiting formal close** | Not authorized in this workflow (done at the owner's request) |
+| Firmware (Windows PC) | 10: First Art-Net receiver on the S3 | Not started. Blocked only until Phases 5–6 are closed | Not authorized |
 
 - Authorize a phase with `/start-milestone Phase <N>` in Claude Code. Until then, everything is read-only.
-- **Branch:** `main` holds v2 unchanged. `feature/platformio-migration` (off `develop-v23`) holds Phases 8–9. Merging it into `develop-v23` is your call.
-- **Last verified commit:** `7ab46e6` on `feature/platformio-migration` (Phase 9, closed 2026-10-12).
-- **Both boards run the Phase 9 modular firmware** (v2 behavior plus the receiver channel survey).
+- **Branch:** `main` holds v2 unchanged. `feature/platformio-migration` (off `develop-v23`) holds Phases 8–9, the follow-up firmware fixes, and the DJ-track docs. Merging into `develop-v23` is your call.
+- **Last verified firmware commit:** `e605559` (cleanups, plus `senderChannel` in the packet; 8/8 unit tests pass; parity rerun). Phase 4 closed 2026-10-14 (docs only).
+- **Both boards run** the modular v3 firmware, with strand 1 set to off (a live setting; a reboot restores the saved audio mode).
 
 ## What works
 
-- The v3 firmware is modular (`docs/ARCHITECTURE.md`) and has parity with v2 on hardware:
-  - boot, Wi-Fi, the web UI and API, and dual-slot save/load;
-  - PCM1808 levels (clip 0) and ESP-NOW (about 1–3% loss once locked);
-  - strand 1 RGB and white on camera. Strands 2–4 are waived (expected to pass).
-- One shared packet header; on-device unit tests (`pio test -e sender_test`) for the packet layout and config CRC.
-- Test bench (`tools/testbench/`): dual serial capture, tone sweep (`--amplitude 1.0`), webcam frames, and `strand_colors.py`.
-- Phases 0–3 and 7–9 are done.
+- The v3 firmware has v2 parity on hardware, plus fixes:
+  - the receiver locks to the announced channel in about 4 s;
+  - no boot Wi-Fi drop;
+  - `pps` is correct; builds are warning-free.
+- **DJ path:**
+  - Serato 4.0.4 → SoundSwitch 2.11 (fixture `Lumina 4-Strand RGB`, venue `Lumina Lab`, address 1) → Art-Net → PC.
+  - A scripted track follows Serato play/pause (Phase 4). The Art-Net baseline is in `docs/ARCHITECTURE.md`.
+- **Test bench:** serial capture, tone sweep, webcam, strand colors, and the Art-Net monitor and sender.
+- **Phases done:** 0–4 and 7–9.
 
 ## Next step
 
-1. **DJ track:** follow **`docs/ARTNET_SOUNDSWITCH_GUIDE.md`**: Phase 4 (Part 1), then Phases 5–6 (Parts 2–3). Phase 10 waits on these. PC-side Art-Net tools are ready and self-tested: `artnet_listen.py` (monitor, answers ArtPoll) and `artnet_send.py` (test pattern).
+1. **Close Phases 5–6** (`/close-milestone`); the evidence is in `docs/ARCHITECTURE.md` → Art-Net. Then Phase 10 can be authorized.
 2. **Your call:** merge `feature/platformio-migration` into `develop-v23`.
-3. **Done 2026-10-12 (change request):** `pps` counter, banners, `volatile` warnings, the boot Wi-Fi drop (HT20 before join), and `senderChannel` in the packet. See KNOWN_ISSUES → Resolved. Still open: the S3's first join takes about 6 s (`AUTH_FAIL`, then `AUTH_EXPIRE`); please report your AP's Wi-Fi security mode.
-4. **Owner hardware checks, when convenient:**
-   - [ ] Level converter: LV side about 3.3 V, HV side about 5 V, no damage; report its part number.
-   - [ ] With power off, connect strips to outputs 2–4. Claude then cycles all four strands on camera.
-5. **Remaining audit questions (read-only, small):** v2 tags, and the S3 status RGB code path.
+3. **Owner, when convenient:**
+   - [ ] AP Wi-Fi security mode (WPA2 / mixed / WPA3), for the S3's 6 s first join.
+   - [ ] Level converter: LV side about 3.3 V, HV side about 5 V, part number.
+   - [ ] Strips on outputs 2–4, cycled on camera.
+   - [ ] 12 V PSU amp rating, before brighter tests.
+   - [ ] Retest the SoundSwitch pause/resume quirk (KNOWN_ISSUES).
+4. **Optional:** the Art-Net destination address via `tshark`. Wireshark is a system-wide install, so ask first.
 
-## Where we stopped (2026-10-14)
+## Phase 10 draft checklist (firmware track)
 
-- **Phase 5 gate met (2026-10-14):** the PC receives SoundSwitch's Art-Net. The "Red" Autoloop shows red on all four strands, on universe 0, at about 37 frames/s.
-- **Phase 6 measured:** the baseline table is in `docs/ARCHITECTURE.md` → Art-Net. The key results:
-  - SoundSwitch sends only to nodes that answer ArtPoll, so the S3 must answer.
-  - A paused show keeps sending its last frame.
-- **Phase 4 gate met (2026-10-14), shown on the Art-Net monitor:**
-  - In Performance Mode, the scripted track playing in Serato drove changing section colours (purples, then blues/cyans, then teal).
-  - Pausing Serato froze the output (`0,67,133` held for about 12 s).
-  - Caveat (KNOWN_ISSUES): about 13 s into a pause it faded to black and didn't resume on play until the owner re-cued in Serato.
-  - Performance Mode's screen shows only the logo or MIDI controls, so watch the monitor, not the screen.
-- Not yet captured: Art-Net's destination address (unicast vs broadcast) with `tshark`. Optional; Wireshark would be a system-wide install.
-## Phase 4 checklist (DJ track, all owner steps; click-by-click in the guide, Part 1)
-
-Use local files: SoundSwitch's article "Music Streaming with SoundSwitch" (undated; check it against your installed version) says streaming tracks can't be autoscripted, and Spotify isn't listed for Serato. Autoscripts are stored as a tag inside the audio file. Your Spotify cue points stay as they are.
-
-- [ ] Get 3–5 local test tracks (purchased or owned files).
-- [ ] In Serato, create the crate `Lumina Test`, add the tracks, analyze them, and check BPM and beatgrids.
-- [ ] Open SoundSwitch Edit Mode and make the `Lumina Test` crate visible.
-- [ ] In Fixture Manager, create the local fixture `Lumina 4-Strand RGB` with 12 channels: CH1–3 Strand 1 R/G/B, CH4–6 Strand 2, CH7–9 Strand 3, CH10–12 Strand 4.
-- [ ] Validate the fixture and save it.
-- [ ] Create the venue `Lumina Lab` and patch the fixture at DMX address 1.
-- [ ] Load one test track in Edit Mode, confirm its beatgrid, and run AutoScript.
-- [ ] Inspect one phrase and edit it, then save the lightshow and the project.
-- [ ] Switch to Performance Mode, load the same track in Serato, and confirm the saved show follows playback.
-
-**Gate:** one track runs its saved show in sync with Serato.
-
-## Phase 10 draft checklist (firmware track; starts only after Phases 4–6)
-
-- [ ] Prerequisites: a Phase 5–6 capture summary in `docs/ARCHITECTURE.md` (universe, channel count, packet rate, broadcast or unicast), and the network path from the Mac to the S3 confirmed *(owner + Claude)*
 - [ ] Branch `feature/artnet-receiver` off the merged v3 branch *(owner OK)*
-- [ ] Art-Net module on the S3: UDP 6454 listener, ArtDmx parse (universe, sequence, length, DMX data), and stats on the diagnostics endpoint. Parse and report only; it doesn't drive the lights yet *(Claude)*
-- [ ] Parser unit tests built from captured frames (sanitized byte arrays, not raw captures) *(Claude)*
-- [ ] Gate: values the S3 parses equal the `tshark` capture for the same frames *(Claude)*
-- [ ] Parity unchanged: audio, ESP-NOW, web, and save/load still pass *(Claude)*
+- [ ] S3 Art-Net module:
+  - UDP 6454;
+  - **answers every ArtPoll with an ArtPollReply** (SoundSwitch only sends to nodes that answer, and drops them after about 3 s);
+  - parses ArtDmx (universe, sequence, length, data) and reports its stats on the diagnostics endpoint.
+  - Parse and report only; it doesn't drive the lights yet *(Claude)*
+- [ ] Parser unit tests from sanitized byte arrays (no raw captures) *(Claude)*
+- [ ] **Gate:** S3-parsed values for universe 0 equal what the PC monitor sees for the same SoundSwitch output; also check with `artnet_send.py --to <S3 IP>` *(Claude; owner plays SoundSwitch)*
+- [ ] Parity unchanged: audio, ESP-NOW, web, and save/load *(Claude)*
 
 ## Open questions
 
-- Mac model. (Recorded 2026-10-13: macOS Tahoe 26.71, SoundSwitch 2.11, which has Art-Net since 2.1, and Serato DJ Pro 4.0.4.)
-- Resolved 2026-10-13: the Mac (Wi-Fi), the PC (Ethernet), and the S3 share one subnet (details in `CLAUDE.local.md`).
-- Dev board models (the modules are known: S3-WROOM-1 N16R8 and ESP32-D0WD-V3).
-- Strip types and LED counts per strand (saved config says 150 per strand), PSU rating, fusing, and power injection. A level converter and 330 Ω resistors are fitted.
-- Channel lock and loss at the real install distance.
+- Mac model. Dev board models (the modules are known).
+- Strip types and counts (config says 150 per strand), PSU rating, fusing, and power injection. A level converter and 330 Ω resistors are fitted.
+- Channel lock and Art-Net loss at the real install distance (the Mac is on Wi-Fi: about 0.2% Art-Net gaps on the bench).
 
 ## Recent decisions
 
-See `docs/DECISIONS.md`. Latest (2026-10-12):
-- The Phase 9 module layout, with its deviations: `LuminaWebServer`, and no receiver config module.
-- Unit tests run on the S3 instead of a native env (no host compiler installed).
-- Receiver channel survey: an owner-approved Phase 8 exception.
-- Secrets live in gitignored `include/secrets.h`.
+See `docs/DECISIONS.md`. Latest:
+- **2026-10-14:**
+  - Art-Net monitoring on the PC uses `artnet_listen.py`, which answers ArtPoll; `tshark` is optional.
+  - The guide skips the fixture's `MASTER` cell (SoundSwitch 2.11).
+- **2026-10-12:**
+  - `senderChannel` uses the packet's spare byte (still version 12).
+  - Phase 9 module layout.
+  - Unit tests run on the S3.
