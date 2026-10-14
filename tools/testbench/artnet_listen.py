@@ -26,7 +26,21 @@ OP_DMX = 0x5000
 
 
 def local_ip_towards(peer_ip):
-    """IP of the local interface that routes to peer_ip (no packets are sent)."""
+    """Local IP to advertise to peer_ip.
+
+    Prefer an address on the peer's /24: SoundSwitch unicasts to exactly the IP a
+    node advertises, and Windows may route the LAN through a VPN adapter, which
+    would make the routed address the wrong one to advertise. Fall back to the
+    routed interface's address. No packets are sent.
+    """
+    try:
+        local_ips = socket.gethostbyname_ex(socket.gethostname())[2]
+    except OSError:
+        local_ips = []
+    prefix = peer_ip.rsplit(".", 1)[0] + "."
+    for ip in local_ips:
+        if ip.startswith(prefix):
+            return ip
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         s.connect((peer_ip, ARTNET_PORT))
@@ -101,6 +115,7 @@ def main():
     ap.add_argument("--channels", type=int, default=12, help="channels to show (default 12 = 4 strands x RGB)")
     ap.add_argument("--universe", type=int, default=0, help="universe advertised in ArtPollReply")
     ap.add_argument("--no-reply", action="store_true", help="don't answer ArtPoll")
+    ap.add_argument("--advertise", help="IP to put in ArtPollReply (default: this PC's address on the controller's subnet)")
     ap.add_argument("--bind", default="", help="local address to listen on (default all; 127.0.0.1 for the self-test)")
     ap.add_argument("--csv", help="write a one-line-per-second summary (keep it in captures/, which is gitignored)")
     args = ap.parse_args()
@@ -133,7 +148,10 @@ def main():
                 if op == OP_POLL:
                     polls += 1
                     if not args.no_reply:
-                        reply = poll_reply(local_ip_towards(src_ip), args.universe)
+                        my_ip = args.advertise or local_ip_towards(src_ip)
+                        if polls == 1:
+                            print(f"Advertising {my_ip} in ArtPollReply")
+                        reply = poll_reply(my_ip, args.universe)
                         for dest in ((src_ip, ARTNET_PORT), ("255.255.255.255", ARTNET_PORT)):
                             try:
                                 sock.sendto(reply, dest)

@@ -8,12 +8,12 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
 
 | Track | Phase | Status | Authorization |
 |---|---|---|---|
-| DJ (Mac + PC capture) | 6: Prove SoundSwitch emits Art-Net (Serato → SoundSwitch → Art-Net → capture) | In progress; one owner step left (destination address) | Not authorized in this workflow (done at the owner's request) |
-| Firmware (Windows PC) | 10: First Art-Net receiver on the S3 | Not started. Blocked only until Phase 6 is closed | Not authorized |
+| DJ (Mac + PC capture) | **Complete** (Phases 4–6 closed 2026-10-14) | Done | n/a |
+| Firmware (Windows PC) | 10: First Art-Net receiver on the S3 (tracks merge here) | Not started; unblocked | Not authorized |
 
 - Authorize a phase with `/start-milestone Phase <N>` in Claude Code. Until then, everything is read-only.
 - **Branch:** `main` holds v2 unchanged. `feature/platformio-migration` (off `develop-v23`) holds Phases 8–9, the follow-up firmware fixes, and the DJ-track docs. Merging into `develop-v23` is your call.
-- **Last verified firmware commit:** `e605559` (cleanups, plus `senderChannel` in the packet; 8/8 unit tests pass; parity rerun). Phases 4–5 closed 2026-10-14.
+- **Last verified firmware commit:** `e605559` (cleanups, plus `senderChannel` in the packet; 8/8 unit tests pass; parity rerun). Phases 4–6 closed 2026-10-14 (docs/tools only).
 - **Both boards run** the modular v3 firmware, with strand 1 set to off (a live setting; a reboot restores the saved audio mode).
 
 ## What works
@@ -26,15 +26,11 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
   - Serato 4.0.4 → SoundSwitch 2.11 (fixture `Lumina 4-Strand RGB`, venue `Lumina Lab`, address 1) → Art-Net → PC.
   - A scripted track follows Serato play/pause (Phase 4). The Art-Net baseline is in `docs/ARCHITECTURE.md`.
 - **Test bench:** serial capture, tone sweep, webcam, strand colors, and the Art-Net monitor and sender.
-- **Phases done:** 0–5 and 7–9.
+- **Phases done:** 0–9.
 
 ## Next step
 
-1. **Finish Phase 6:** the gate also needs the Art-Net **destination address** (broadcast or unicast); the rest is in `docs/ARCHITECTURE.md` → Art-Net.
-   - Claude starts `artnet_listen.py`, which now prints the source address. Play the "Red" Autoloop.
-   - On the Mac: **Finder → Applications → Utilities → Terminal**, type `sudo tcpdump -n -c 10 udp port 6454`, press Return, and enter your login password (it doesn't show while you type).
-   - Send Claude the lines. The address after `>` is the destination: your PC's address means unicast; one ending in `.255` means broadcast.
-   - Then `/close-milestone`, and Phase 10 can be authorized.
+1. **Authorize Phase 10** with `/start-milestone Phase 10` when ready. The checklist is below.
 2. **Your call:** merge `feature/platformio-migration` into `develop-v23`.
 3. **Owner, when convenient:**
    - [ ] AP Wi-Fi security mode (WPA2 / mixed / WPA3), for the S3's 6 s first join.
@@ -42,14 +38,14 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
    - [ ] Strips on outputs 2–4, cycled on camera.
    - [ ] 12 V PSU amp rating, before brighter tests.
    - [ ] Retest the SoundSwitch pause/resume quirk (KNOWN_ISSUES).
-4. **Optional:** the Art-Net destination address via `tshark`. Wireshark is a system-wide install, so ask first.
+4. **Optional (your network):** the PC routes its own LAN through the HomeLab VPN adapter (KNOWN_ISSUES).
 
 ## Phase 10 draft checklist (firmware track)
 
 - [ ] Branch `feature/artnet-receiver` off the merged v3 branch *(owner OK)*
 - [ ] S3 Art-Net module:
   - UDP 6454;
-  - **answers every ArtPoll with an ArtPollReply** (SoundSwitch only sends to nodes that answer, and drops them after about 3 s);
+  - **answers every ArtPoll with an ArtPollReply that advertises the S3's own LAN IP** (SoundSwitch unicasts only to answering nodes, at the advertised IP, and drops them after about 3 s);
   - parses ArtDmx (universe, sequence, length, data) and reports its stats on the diagnostics endpoint.
   - Parse and report only; it doesn't drive the lights yet *(Claude)*
 - [ ] Parser unit tests from sanitized byte arrays (no raw captures) *(Claude)*

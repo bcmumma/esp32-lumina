@@ -160,6 +160,7 @@ In VS Code's terminal, in the repo folder:
 
 - It prints `Listening for Art-Net on UDP 6454…`, then `no Art-Net yet` every few seconds.
 - **The first time, Windows may ask whether Python can use the network.** That's a firewall change, so it's your decision. If you allow it, tick **Private networks** only. If you decline, the monitor won't receive anything from the Mac. Tell Claude Code and we'll find another way.
+- The monitor advertises this PC's address on the Mac's subnet (override with `--advertise <ip>`). **SoundSwitch sends unicast to exactly that address** (verified 2026-10-14).
 - The monitor also answers Art-Net **discovery (ArtPoll)**, so it can appear in SoundSwitch as a device called **"Lumina PC Monitor"**. SoundSwitch's 2.1 announcement says it **broadcasts** Art-Net. A user report shows Art-Net devices appearing in SoundSwitch's hardware list. Answering discovery covers both cases.
 
 ### 2.2 Turn on Art-Net output in SoundSwitch

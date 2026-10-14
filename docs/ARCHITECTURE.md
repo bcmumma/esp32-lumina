@@ -57,10 +57,11 @@ The web UI can override the source manually. Diagnostics show the active source.
 | Discovery | SoundSwitch polls (ArtPoll) about once a second and **sends ArtDmx only to nodes that answer**. When replies stop, it drops the node and frames stop within about 3 s. It resumes after replies return. **The S3 must answer every ArtPoll** |
 | Stopped / paused show | Frames **keep coming** at full rate with the **last values frozen**. They don't drop to zero or stop |
 | Idle (nothing playing) | Frames keep coming, all zero. MIDI-menu color overrides alone also give all zero; something must be playing |
-| Broadcast vs unicast | Gated on discovery, so most likely unicast to the node. The destination address hasn't been captured (`tshark`) |
+| Source | The Mac's LAN address, UDP source port 6454 (ArtPoll and ArtDmx) |
+| Broadcast vs unicast | **Unicast**, to exactly the IP the node advertises in its ArtPollReply. Mac `tcpdump` showed 530-byte packets (18-byte header + 512 channels): first to the address the PC monitor had advertised (a VPN adapter's), then to the PC's LAN address once the monitor advertised that instead (2026-10-14). Never broadcast |
 
 - **Design consequences:**
-  - The Phase 10 receiver needs an ArtPollReply, so it shows up as a node.
+  - The Phase 10 receiver needs an ArtPollReply, so it shows up as a node, and it must **advertise its own LAN IP** in that reply. SoundSwitch sends only there.
   - The Phase 13 "Art-Net timeout → fall back" only triggers when SoundSwitch quits or the network drops. A paused show looks live (frozen frames). Telling "paused" apart needs another signal (e.g. frames unchanged for N seconds), if it matters.
 
 ## Intelligent Fixture Profile `LUMINA-16` (Phase 12, draft)
