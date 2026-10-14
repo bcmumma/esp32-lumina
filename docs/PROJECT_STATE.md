@@ -9,10 +9,10 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
 | Track | Phase | Status | Authorization |
 |---|---|---|---|
 | DJ (Mac + PC capture) | **Complete** (Phases 4–6 closed 2026-10-14) | Done | n/a |
-| Firmware (Windows PC) | 10: First Art-Net receiver on the S3 (tracks merge here) | Not started; unblocked | Not authorized |
+| Firmware (Windows PC) | 10: First Art-Net receiver on the S3 (tracks merge here) | In progress | Authorized 2026-10-14 for Phase 10 |
 
 - Authorize a phase with `/start-milestone Phase <N>` in Claude Code. Until then, everything is read-only.
-- **Branch:** `main` holds v2 unchanged. `feature/platformio-migration` (off `develop-v23`) holds Phases 8–9, the follow-up firmware fixes, and the DJ-track docs. Merging into `develop-v23` is your call.
+- **Branch:** `main` holds v2 unchanged. `develop-v23` was fast-forwarded to `feature/platformio-migration` (`ac75b8e`, owner OK 2026-10-14). Phase 10 works on `feature/artnet-receiver`, off `develop-v23`.
 - **Last verified firmware commit:** `e605559` (cleanups, plus `senderChannel` in the packet; 8/8 unit tests pass; parity rerun). Phases 4–6 closed 2026-10-14 (docs/tools only).
 - **Both boards run** the modular v3 firmware, with strand 1 set to off (a live setting; a reboot restores the saved audio mode).
 
@@ -30,8 +30,8 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
 
 ## Next step
 
-1. **Authorize Phase 10** with `/start-milestone Phase 10` when ready. The checklist is below.
-2. **Your call:** merge `feature/platformio-migration` into `develop-v23`.
+1. **Phase 10 in progress** on `feature/artnet-receiver` (checklist below).
+2. Done 2026-10-14: `feature/platformio-migration` merged (fast-forward) into `develop-v23`.
 3. **Owner, when convenient:**
    - [ ] AP Wi-Fi security mode (WPA2 / mixed / WPA3), for the S3's 6 s first join.
    - [ ] Level converter: LV side about 3.3 V, HV side about 5 V, part number.
@@ -42,7 +42,7 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
 
 ## Phase 10 draft checklist (firmware track)
 
-- [ ] Branch `feature/artnet-receiver` off the merged v3 branch *(owner OK)*
+- [x] Branch `feature/artnet-receiver` off `develop-v23`, after the fast-forward merge *(owner OK 2026-10-14)*
 - [ ] S3 Art-Net module:
   - UDP 6454;
   - **answers every ArtPoll with an ArtPollReply that advertises the S3's own LAN IP** (SoundSwitch unicasts only to answering nodes, at the advertised IP, and drops them after about 3 s);
