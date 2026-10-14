@@ -136,7 +136,7 @@ From the SoundSwitch User Guide, "Switching to Performance Mode":
 1. In SoundSwitch, click **File → Switch Modes → Performance Mode**, then select **`Lumina Lab`**.
 2. Switch to **Serato DJ Pro** and load the same track on a deck.
 3. Check the connection indicator next to the Serato icon, top-left in SoundSwitch. The guide says **blue**; you saw **green** earlier, and either means connected. If there's no indicator, the guide suggests something (e.g. a firewall) is blocking the link between the apps.
-4. Play the track. SoundSwitch's on-screen preview should follow the playback, including your edited phrase.
+4. Play the track. **Performance Mode's screen shows only the logo or MIDI controls (SoundSwitch 2.11), not the show.** To see the show follow Serato, run the Art-Net monitor (Part 2) and watch the channel values change; pausing Serato freezes them. If the show doesn't return after a pause, re-cue in Serato (see KNOWN_ISSUES).
 
 **Phase 4 gate:** one track runs its saved show in sync with Serato.
 

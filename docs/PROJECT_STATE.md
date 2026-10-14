@@ -42,7 +42,11 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
 - **Phase 6 measured:** the baseline table is in `docs/ARCHITECTURE.md` → Art-Net. The key results:
   - SoundSwitch sends only to nodes that answer ArtPoll, so the S3 must answer.
   - A paused show keeps sending its last frame.
-- **Phase 4 gate still open:** confirm that a scripted track follows **Serato** playback. Easiest test: Performance Mode, play the scripted track in Serato, and Claude watches the Art-Net monitor for changing values.
+- **Phase 4 gate met (2026-10-14), shown on the Art-Net monitor:**
+  - In Performance Mode, the scripted track playing in Serato drove changing section colours (purples, then blues/cyans, then teal).
+  - Pausing Serato froze the output (`0,67,133` held for about 12 s).
+  - Caveat (KNOWN_ISSUES): about 13 s into a pause it faded to black and didn't resume on play until the owner re-cued in Serato.
+  - Performance Mode's screen shows only the logo or MIDI controls, so watch the monitor, not the screen.
 - Not yet captured: Art-Net's destination address (unicast vs broadcast) with `tshark`. Optional; Wireshark would be a system-wide install.
 ## Phase 4 checklist (DJ track, all owner steps; click-by-click in the guide, Part 1)
 
