@@ -9,7 +9,7 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
 | Track | Phase | Status | Authorization |
 |---|---|---|---|
 | DJ (Mac + PC capture) | 6: Prove SoundSwitch emits Art-Net (Serato → SoundSwitch → Art-Net → capture) | In progress; one owner step left (destination address) | Not authorized in this workflow (done at the owner's request) |
-| Firmware (Windows PC) | 10: First Art-Net receiver on the S3 | Not started. Blocked only until Phases 5–6 are closed | Not authorized |
+| Firmware (Windows PC) | 10: First Art-Net receiver on the S3 | Not started. Blocked only until Phase 6 is closed | Not authorized |
 
 - Authorize a phase with `/start-milestone Phase <N>` in Claude Code. Until then, everything is read-only.
 - **Branch:** `main` holds v2 unchanged. `feature/platformio-migration` (off `develop-v23`) holds Phases 8–9, the follow-up firmware fixes, and the DJ-track docs. Merging into `develop-v23` is your call.
