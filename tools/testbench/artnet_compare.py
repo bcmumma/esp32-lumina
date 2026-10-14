@@ -77,7 +77,7 @@ def main():
                             pass
                 elif op == OP_DMX:
                     parsed = parse_dmx(data)
-                    if parsed and parsed[0] == args.universe and parsed[1] != 0:
+                    if parsed and parsed[0] == args.universe:
                         pc.append((time.time(), parsed[1], list(parsed[3][:12])))
         except socket.timeout:
             pass
@@ -91,7 +91,8 @@ def main():
     # offset; the right one pairs every frame with identical values.
     results = {}
     for offset in (0, 1, -1):
-        matched = mismatched = unpaired = 0
+        matched = mismatched = unpaired = lit = 0
+        distinct = set()
         bad = []
         for (seq, _ms), (seen, ch) in s3.items():
             want = (seq - offset - 1) % 255 + 1 if seq else 0
@@ -102,18 +103,81 @@ def main():
             best = min(cands, key=lambda p: abs(p[0] - seen))
             if best[2] == ch:
                 matched += 1
+                if any(ch):
+                    lit += 1
+                distinct.add(tuple(ch))
             else:
                 mismatched += 1
                 if len(bad) < 3:
                     bad.append((seq, ch, best[2]))
-        results[offset] = (matched, mismatched, unpaired, bad)
-        print(f"offset S3=PC{offset:+d}: paired {matched + mismatched}, identical CH1-12 {matched}, different {mismatched}, unpaired {unpaired}")
-    offset = max(results, key=lambda k: (results[k][0] - 10 * results[k][1], results[k][0]))
-    matched, mismatched, _unpaired, bad = results[offset]
-    for seq, ch, other in bad:
-        print(f"  MISMATCH at offset {offset:+d} seq={seq}: S3={ch} PC={other}")
-    verdict = "PASS" if matched > 0 and mismatched == 0 else "FAIL"
-    print(f"RESULT: {verdict} (best offset {offset:+d}: {matched} identical frames, {mismatched} different)")
+        results[offset] = (matched, mismatched, unpaired, bad, lit, len(distinct))
+        print(f"offset S3=PC{offset:+d}: paired {matched + mismatched}, identical CH1-12 {matched} ({lit} lit, {len(distinct)} distinct), different {mismatched}, unpaired {unpaired}")
+    # Per-frame check: SoundSwitch sends each frame to every node from one shared counter, so the
+    # PC copy of an S3 frame is at seq-1 or seq+1 (either wrap style). With two nodes each node's
+    # numbers repeat every ~3.5 s, so pair by arrival time: S3 ms mapped onto the PC clock.
+    def neighbours(seq):
+        out = set()
+        for off in (-1, 1):
+            out.add((seq + off) % 256)
+            if seq:
+                out.add((seq + off - 1) % 255 + 1)
+        return out
+
+    s3_frames = sorted(((seq, ms, ch) for (seq, ms), (_seen, ch) in s3.items()), key=lambda f: f[1])
+    by_seq = {}
+    for p_time, p_seq, p_ch in pc:
+        by_seq.setdefault(p_seq, []).append((p_time, p_ch))
+    # Clock offset from unambiguous matches (unique lit values), median of pc_time - s3_ms/1000.
+    deltas = []
+    for seq, ms, ch in s3_frames:
+        if not any(ch):
+            continue
+        for n in neighbours(seq):
+            for p_time, p_ch in by_seq.get(n, []):
+                if p_ch == ch:
+                    deltas.append(p_time - ms / 1000.0)
+    if not deltas:
+        lit_s3 = sum(1 for _s, _m, ch in s3_frames if any(ch))
+        print(f"no lit frame matched a PC copy (S3 lit frames: {lit_s3}); cannot align clocks")
+        verdict_override = "FAIL" if lit_s3 else "INCONCLUSIVE (no lit frames; is the show producing light?)"
+        either = neither = lit = 0
+        distinct = set()
+    else:
+        verdict_override = None
+        deltas.sort()
+        delta = deltas[len(deltas) // 2]
+        either = neither = lit = no_partner = 0
+        distinct = set()
+        bad = []
+        for seq, ms, ch in s3_frames:
+            expect = ms / 1000.0 + delta
+            cands = [(abs(p_time - expect), p_ch) for n in neighbours(seq) for p_time, p_ch in by_seq.get(n, [])
+                     if abs(p_time - expect) <= 0.3]
+            if not cands:
+                no_partner += 1
+                continue
+            if any(p_ch == ch for _d, p_ch in cands):
+                either += 1
+                lit += 1 if any(ch) else 0
+                distinct.add(tuple(ch))
+            else:
+                neither += 1
+                if len(bad) < 5:
+                    bad.append((seq, ch, min(cands)[1]))
+        print(f"time-aligned per-frame: matches the PC copy {either} ({lit} lit, {len(distinct)} distinct), "
+              f"matches neither {neither}, no PC frame within 0.3 s {no_partner}")
+        for seq, ch, other in bad:
+            print(f"  NO MATCH seq={seq}: S3={ch} nearest PC={other}")
+    if verdict_override:
+        print(f"RESULT: {verdict_override}")
+        return
+    if neither:
+        verdict = "FAIL"
+    elif lit < 20 or len(distinct) < 3:
+        verdict = "INCONCLUSIVE (too few lit/varied frames; is the show producing light?)"
+    else:
+        verdict = "PASS"
+    print(f"RESULT: {verdict} ({either} S3 frames identical to the PC copy of the same send, {neither} not)")
 
 
 if __name__ == "__main__":

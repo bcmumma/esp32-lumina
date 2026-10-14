@@ -43,14 +43,22 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
 ## Phase 10 draft checklist (firmware track)
 
 - [x] Branch `feature/artnet-receiver` off `develop-v23`, after the fast-forward merge *(owner OK 2026-10-14)*
-- [ ] S3 Art-Net module:
+- [x] Parser library `lib/ArtNet` with on-device tests (7/7 PASS) *(Claude)*
+- [x] S3 Art-Net module (`network/ArtNetReceiver`, `/api/artnet`, 1 Hz serial line while active):
   - UDP 6454;
   - **answers every ArtPoll with an ArtPollReply that advertises the S3's own LAN IP** (SoundSwitch unicasts only to answering nodes, at the advertised IP, and drops them after about 3 s);
   - parses ArtDmx (universe, sequence, length, data) and reports its stats on the diagnostics endpoint.
   - Parse and report only; it doesn't drive the lights yet *(Claude)*
-- [ ] Parser unit tests from sanitized byte arrays (no raw captures) *(Claude)*
-- [ ] **Gate:** S3-parsed values for universe 0 equal what the PC monitor sees for the same SoundSwitch output; also check with `artnet_send.py --to <S3 IP>` *(Claude; owner plays SoundSwitch)*
-- [ ] Parity unchanged: audio, ESP-NOW, web, and save/load *(Claude)*
+- [x] Parser unit tests from synthetic byte arrays shaped like the measured traffic (no raw captures) *(Claude)*
+- [x] **Gate (2026-10-14, `artnet_compare.py`):**
+  - Red Autoloop: 1013/1013 paired frames identical.
+  - Serato-driven show: 1055 S3 frames identical to the PC copy of the same send, 0 different (817 lit, 328 distinct values).
+  - `artnet_send.py --to <S3>`: 236/237 frames; every recent frame is the exact pattern.
+  - SoundSwitch listed "Lumina S3" on Universe One *(Claude; owner played)*
+- [x] Parity with Art-Net flowing (36 fps):
+  - routes 200 (page identical), save OK;
+  - tone sweep within ±4 of Phase 8–9, clip 0;
+  - reboot: no crashes, config loaded, ESP-NOW 0.7% loss, SoundSwitch rediscovered the S3 *(Claude)*
 
 ## Open questions
 

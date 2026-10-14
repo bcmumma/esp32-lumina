@@ -58,6 +58,7 @@ The web UI can override the source manually. Diagnostics show the active source.
 | Stopped / paused show | Frames **keep coming** at full rate with the **last values frozen**. They don't drop to zero or stop |
 | Idle (nothing playing) | Frames keep coming, all zero. MIDI-menu color overrides alone also give all zero; something must be playing |
 | Source | The Mac's LAN address, UDP source port 6454 (ArtPoll and ArtDmx) |
+| Sequence numbers | One counter shared across all nodes: with N nodes, each node sees steps of N |
 | Broadcast vs unicast | **Unicast**, to exactly the IP the node advertises in its ArtPollReply. Mac `tcpdump` showed 530-byte packets (18-byte header + 512 channels): first to the address the PC monitor had advertised (a VPN adapter's), then to the PC's LAN address once the monitor advertised that instead (2026-10-14). Never broadcast |
 
 - **Design consequences:**
