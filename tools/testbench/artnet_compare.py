@@ -3,7 +3,8 @@
 Acts as an Art-Net node on the PC (answers ArtPoll, like artnet_listen.py) and, at the
 same time, polls the S3's /api/artnet "recent" frames. Frames are paired by universe-0
 sequence number (only within a few seconds, because the sequence wraps every 255 frames),
-and CH1-12 must match exactly.
+and CH1-12 must match exactly. SoundSwitch gives each node's copy of a frame its own number
+from one shared counter, so offsets 0, +1 and -1 are tried and reported.
 
     .venv\\Scripts\\python.exe tools/testbench/artnet_compare.py --s3 <s3-ip> --seconds 30
 """
@@ -13,6 +14,7 @@ import os
 import socket
 import struct
 import sys
+import threading
 import time
 import urllib.request
 
@@ -33,14 +35,33 @@ def main():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1 << 20)  # never drop PC frames
     sock.bind(("", ARTNET_PORT))
     sock.settimeout(0.05)
 
     pc = []            # (pc_time, seq, ch12)
     s3 = {}            # (seq, s3_ms) -> (pc_time_seen, ch12)
     t0 = time.time()
-    next_poll = t0
     s3_errors = 0
+    lock = threading.Lock()
+    stop = threading.Event()
+
+    def poll_s3():
+        # Separate thread: a slow or failed HTTP request must never stall the UDP reader.
+        nonlocal s3_errors
+        while not stop.is_set():
+            try:
+                j = json.load(urllib.request.urlopen(f"http://{args.s3}/api/artnet?n=0", timeout=2))
+                seen = time.time()
+                with lock:
+                    for r in j["recent"]:
+                        s3.setdefault((r[0], r[1]), (seen, r[2:14]))
+            except Exception:
+                s3_errors += 1
+            stop.wait(0.5)  # 64-frame ring at ~37 fps covers ~1.7 s
+
+    poller = threading.Thread(target=poll_s3, daemon=True)
+    poller.start()
     print(f"Comparing universe {args.universe} for {args.seconds:g} s (PC node + S3 {args.s3}/api/artnet)...")
     while time.time() - t0 < args.seconds:
         try:
@@ -60,39 +81,39 @@ def main():
                         pc.append((time.time(), parsed[1], list(parsed[3][:12])))
         except socket.timeout:
             pass
-        now = time.time()
-        if now >= next_poll:
-            next_poll = now + 0.5  # 64-frame ring at ~37 fps covers ~1.7 s
-            try:
-                j = json.load(urllib.request.urlopen(f"http://{args.s3}/api/artnet?n=0", timeout=2))
-                for r in j["recent"]:
-                    s3.setdefault((r[0], r[1]), (now, r[2:14]))
-            except Exception:
-                s3_errors += 1
+    stop.set()
+    poller.join(timeout=3)
     sock.close()
 
-    matched = mismatched = s3_unpaired = 0
-    examples = []
-    for (seq, _ms), (seen, ch) in s3.items():
-        candidates = [p for p in pc if p[1] == seq and abs(p[0] - seen) <= PAIR_WINDOW_S]
-        if not candidates:
-            s3_unpaired += 1
-            continue
-        best = min(candidates, key=lambda p: abs(p[0] - seen))
-        if best[2] == ch:
-            matched += 1
-            if len(examples) < 3 and any(ch):
-                examples.append((seq, ch))
-        else:
-            mismatched += 1
-            if mismatched <= 5:
-                print(f"MISMATCH seq={seq}: S3={ch} PC={best[2]}")
     print(f"PC frames: {len(pc)}   S3 frames collected: {len(s3)}   S3 API errors: {s3_errors}")
-    print(f"paired by sequence: {matched + mismatched}   identical CH1-12: {matched}   different: {mismatched}   S3 frames with no PC partner: {s3_unpaired}")
-    for seq, ch in examples:
-        print(f"  e.g. seq={seq} CH1-12={ch} on both")
+    # SoundSwitch numbers every unicast copy from one shared counter, so the copy of a frame
+    # sent to the S3 can carry the PC copy's sequence +/-1 (measured 2026-10-14). Try each
+    # offset; the right one pairs every frame with identical values.
+    results = {}
+    for offset in (0, 1, -1):
+        matched = mismatched = unpaired = 0
+        bad = []
+        for (seq, _ms), (seen, ch) in s3.items():
+            want = (seq - offset - 1) % 255 + 1 if seq else 0
+            cands = [p for p in pc if p[1] == want and abs(p[0] - seen) <= PAIR_WINDOW_S]
+            if not cands:
+                unpaired += 1
+                continue
+            best = min(cands, key=lambda p: abs(p[0] - seen))
+            if best[2] == ch:
+                matched += 1
+            else:
+                mismatched += 1
+                if len(bad) < 3:
+                    bad.append((seq, ch, best[2]))
+        results[offset] = (matched, mismatched, unpaired, bad)
+        print(f"offset S3=PC{offset:+d}: paired {matched + mismatched}, identical CH1-12 {matched}, different {mismatched}, unpaired {unpaired}")
+    offset = max(results, key=lambda k: (results[k][0] - 10 * results[k][1], results[k][0]))
+    matched, mismatched, _unpaired, bad = results[offset]
+    for seq, ch, other in bad:
+        print(f"  MISMATCH at offset {offset:+d} seq={seq}: S3={ch} PC={other}")
     verdict = "PASS" if matched > 0 and mismatched == 0 else "FAIL"
-    print(f"RESULT: {verdict}")
+    print(f"RESULT: {verdict} (best offset {offset:+d}: {matched} identical frames, {mismatched} different)")
 
 
 if __name__ == "__main__":
