@@ -6,6 +6,7 @@
 #include "../audio/AudioAnalyzer.h"
 #include "../network/WiFiManager.h"
 #include "../network/EspNowSender.h"
+#include "../network/ArtNetReceiver.h"
 #include "../util/Clamp.h"
 
 WebServer server(80);
@@ -394,11 +395,22 @@ static void handle_health() {
   httpRequestCount++;
 }
 
+// Art-Net receive diagnostics (Phase 10). ?n=<channels> (default 12, max 512).
+static void handle_artnet() {
+  int n = server.hasArg("n") ? server.arg("n").toInt() : 12;
+  String s;
+  s.reserve(4096);
+  append_artnet_json(s, n);
+  no_cache();
+  server.send(200, "application/json", s);
+}
+
 void setup_web_server() {
   server.on("/", handle_root);
   server.on("/api/state", handle_state);
   server.on("/api/live", handle_live);
   server.on("/health", handle_health);
+  server.on("/api/artnet", handle_artnet);
   server.on("/api/setTuning", handle_set_tuning);
   server.on("/api/setLed", handle_set_led);
   server.on("/api/save", handle_save);

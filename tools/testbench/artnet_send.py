@@ -40,13 +40,14 @@ def pattern(step, level):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--to", default="127.0.0.1", help="receiver IP, or a broadcast address")
+    ap.add_argument("--to", action="append", help="receiver IP or broadcast address; repeat to send the same frames to several")
     ap.add_argument("--universe", type=int, default=0)
     ap.add_argument("--fps", type=float, default=40)
     ap.add_argument("--seconds", type=float, default=10)
     ap.add_argument("--level", type=int, default=64, help="0-255 channel level for lit colors")
     ap.add_argument("--poll", action="store_true", help="send one ArtPoll and print any ArtPollReply")
     args = ap.parse_args()
+    targets = args.to or ["127.0.0.1"]
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -54,7 +55,7 @@ def main():
     if args.poll:
         sock.bind(("", 0))
         sock.settimeout(2.0)
-        sock.sendto(art_poll(), (args.to, ARTNET_PORT))
+        sock.sendto(art_poll(), (targets[0], ARTNET_PORT))
         try:
             data, src = sock.recvfrom(1024)
             name = data[26:44].split(b"\x00")[0].decode(errors="replace")
@@ -66,10 +67,12 @@ def main():
 
     seq, t0, sent = 1, time.time(), 0
     period = 1.0 / args.fps
-    print(f"Sending ArtDmx universe {args.universe} to {args.to}:{ARTNET_PORT} at {args.fps:g} fps for {args.seconds:g} s")
+    print(f"Sending ArtDmx universe {args.universe} to {', '.join(targets)} (port {ARTNET_PORT}) at {args.fps:g} fps for {args.seconds:g} s")
     while time.time() - t0 < args.seconds:
         step = int(time.time() - t0)
-        sock.sendto(art_dmx(args.universe, seq, pattern(step, args.level)), (args.to, ARTNET_PORT))
+        frame = art_dmx(args.universe, seq, pattern(step, args.level))
+        for to in targets:
+            sock.sendto(frame, (to, ARTNET_PORT))
         seq = seq % 255 + 1
         sent += 1
         time.sleep(period)

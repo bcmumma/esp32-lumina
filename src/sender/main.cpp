@@ -9,6 +9,7 @@
 #include "network/WiFiManager.h"
 #include "network/EspNowSender.h"
 #include "web/LuminaWebServer.h"
+#include "network/ArtNetReceiver.h"
 
 // ============================================================
 // Setup
@@ -39,6 +40,7 @@ void setup() {
   setup_wifi();
   setup_espnow();
   setup_web_server();
+  setup_artnet();
   setup_i2s();
 
   Serial.print("Ready. Open http://");
@@ -50,6 +52,7 @@ void loop() {
   uint32_t loopStartedUs = micros();
 
   maintain_wifi_connection();
+  artnet_service(millis());
 
   // Service short browser commands before entering the blocking I2S read.
   server.handleClient();
