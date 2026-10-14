@@ -8,12 +8,12 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
 
 | Track | Phase | Status | Authorization |
 |---|---|---|---|
-| DJ (Mac + PC capture) | 5–6: Art-Net from SoundSwitch to the PC, characterized | **Work done 2026-10-14, evidence recorded; awaiting formal close** | Not authorized in this workflow (done at the owner's request) |
+| DJ (Mac + PC capture) | 6: Prove SoundSwitch emits Art-Net (Serato → SoundSwitch → Art-Net → capture) | In progress; one owner step left (destination address) | Not authorized in this workflow (done at the owner's request) |
 | Firmware (Windows PC) | 10: First Art-Net receiver on the S3 | Not started. Blocked only until Phases 5–6 are closed | Not authorized |
 
 - Authorize a phase with `/start-milestone Phase <N>` in Claude Code. Until then, everything is read-only.
 - **Branch:** `main` holds v2 unchanged. `feature/platformio-migration` (off `develop-v23`) holds Phases 8–9, the follow-up firmware fixes, and the DJ-track docs. Merging into `develop-v23` is your call.
-- **Last verified firmware commit:** `e605559` (cleanups, plus `senderChannel` in the packet; 8/8 unit tests pass; parity rerun). Phase 4 closed 2026-10-14 (docs only).
+- **Last verified firmware commit:** `e605559` (cleanups, plus `senderChannel` in the packet; 8/8 unit tests pass; parity rerun). Phases 4–5 closed 2026-10-14.
 - **Both boards run** the modular v3 firmware, with strand 1 set to off (a live setting; a reboot restores the saved audio mode).
 
 ## What works
@@ -26,11 +26,15 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
   - Serato 4.0.4 → SoundSwitch 2.11 (fixture `Lumina 4-Strand RGB`, venue `Lumina Lab`, address 1) → Art-Net → PC.
   - A scripted track follows Serato play/pause (Phase 4). The Art-Net baseline is in `docs/ARCHITECTURE.md`.
 - **Test bench:** serial capture, tone sweep, webcam, strand colors, and the Art-Net monitor and sender.
-- **Phases done:** 0–4 and 7–9.
+- **Phases done:** 0–5 and 7–9.
 
 ## Next step
 
-1. **Close Phases 5–6** (`/close-milestone`); the evidence is in `docs/ARCHITECTURE.md` → Art-Net. Then Phase 10 can be authorized.
+1. **Finish Phase 6:** the gate also needs the Art-Net **destination address** (broadcast or unicast); the rest is in `docs/ARCHITECTURE.md` → Art-Net.
+   - Claude starts `artnet_listen.py`, which now prints the source address. Play the "Red" Autoloop.
+   - On the Mac: **Finder → Applications → Utilities → Terminal**, type `sudo tcpdump -n -c 10 udp port 6454`, press Return, and enter your login password (it doesn't show while you type).
+   - Send Claude the lines. The address after `>` is the destination: your PC's address means unicast; one ending in `.255` means broadcast.
+   - Then `/close-milestone`, and Phase 10 can be authorized.
 2. **Your call:** merge `feature/platformio-migration` into `develop-v23`.
 3. **Owner, when convenient:**
    - [ ] AP Wi-Fi security mode (WPA2 / mixed / WPA3), for the S3's 6 s first join.

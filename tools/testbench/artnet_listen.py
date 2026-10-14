@@ -141,12 +141,15 @@ def main():
                                 if polls <= 3:
                                     print(f"ArtPollReply to {dest[0]} failed: {e}")
                     if polls <= 3:
-                        print(f"ArtPoll from controller (answered: {not args.no_reply})")
+                        print(f"ArtPoll from {src_ip}:{src_port} (answered: {not args.no_reply})")
                 elif op == OP_DMX:
                     parsed = parse_dmx(data)
                     if parsed:
                         uni, seq, _phys, dmx = parsed
-                        s = stats.setdefault(uni, {"frames": 0, "gaps": 0, "last_seq": None, "dmx": b"", "len": 0})
+                        s = stats.setdefault(uni, {"frames": 0, "gaps": 0, "last_seq": None, "dmx": b"", "len": 0, "sources": set()})
+                        if src_ip not in s["sources"]:
+                            s["sources"].add(src_ip)
+                            print(f"universe {uni}: ArtDmx from {src_ip}:{src_port}")
                         if seq and s["last_seq"] is not None and seq != (s["last_seq"] % 255) + 1:
                             s["gaps"] += 1
                         if seq:
