@@ -36,12 +36,14 @@ Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
    - [ ] With power off, connect strips to outputs 2–4. Claude then cycles all four strands on camera.
 5. **Remaining audit questions (read-only, small):** v2 tags, and the S3 status RGB code path.
 
-## Where we stopped (2026-10-13)
+## Where we stopped (2026-10-14)
 
-- **Guide Part 1:** 1.1–1.4 done. The fixture passes Check Fixture without a `MASTER` cell. At **1.5.4** the Serato link shows green, pulsing, but nothing visibly changes on screen; check 2 (does SoundSwitch show the track title and a moving playhead) is unanswered.
-- **Next:** guide Part 2. Claude starts `artnet_listen.py` on the PC, and you answer the Windows firewall prompt (Private networks only). On the Mac: Preferences → Hardware, look for Art-Net or "Lumina PC Monitor", assign Universe One, play the "Red" Autoloop. Art-Net values changing with Serato playback would also settle the 1.5.4 question.
-- A first monitor run (2026-10-13, 50 s) received nothing, as expected: SoundSwitch Art-Net hadn't been turned on yet.
-
+- **Phase 5 gate met (2026-10-14):** the PC receives SoundSwitch's Art-Net. The "Red" Autoloop shows red on all four strands, on universe 0, at about 37 frames/s.
+- **Phase 6 measured:** the baseline table is in `docs/ARCHITECTURE.md` → Art-Net. The key results:
+  - SoundSwitch sends only to nodes that answer ArtPoll, so the S3 must answer.
+  - A paused show keeps sending its last frame.
+- **Phase 4 gate still open:** confirm that a scripted track follows **Serato** playback. Easiest test: Performance Mode, play the scripted track in Serato, and Claude watches the Art-Net monitor for changing values.
+- Not yet captured: Art-Net's destination address (unicast vs broadcast) with `tshark`. Optional; Wireshark would be a system-wide install.
 ## Phase 4 checklist (DJ track, all owner steps; click-by-click in the guide, Part 1)
 
 Use local files: SoundSwitch's article "Music Streaming with SoundSwitch" (undated; check it against your installed version) says streaming tracks can't be autoscripted, and Spotify isn't listed for Serato. Autoscripts are stored as a tag inside the audio file. Your Spotify cue points stay as they are.

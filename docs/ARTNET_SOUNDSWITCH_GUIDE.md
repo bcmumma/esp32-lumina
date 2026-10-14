@@ -173,6 +173,10 @@ In VS Code's terminal, in the repo folder:
 
 ### 2.3 Send a known color (the simple end-to-end test)
 
+**Verified 2026-10-14 (SoundSwitch 2.11):**
+- "Lumina PC Monitor" shows up and connects automatically, with no Hardware-tab changes needed.
+- Colour override buttons alone send **all zeros**. Something must be **playing**: the Autoloop with its playhead moving.
+
 1. Still in Edit Mode, click the Autoloop icon in the bottom-right corner to show the **Autoloop Banks**.
 2. Open the first Autoloop, **"Red"** in **"Bank 1: Dance"** (User Guide, "Testing").
 3. Press **Space** to play it.
@@ -184,7 +188,7 @@ In VS Code's terminal, in the repo folder:
 ```
 
 - **Red on every strand:** channels 1, 4, 7, and 10 high; green and blue at 0. The brightness may pulse with the Autoloop.
-- `univ=` shows which Art-Net universe SoundSwitch's "Universe One" really is. 0 is most likely, but it's **UNVERIFIED**, and the monitor answers it.
+- `univ=` shows the Art-Net universe. **Verified 2026-10-14: SoundSwitch "Universe One" = Art-Net universe 0.** SoundSwitch also sends universe 1, all zeros.
 - `fps` is SoundSwitch's send rate. `gaps` counts skipped sequence numbers.
 
 ### 2.4 If nothing arrives

@@ -42,9 +42,26 @@ The web UI can override the source manually. Diagnostics show the active source.
 
 ## Art-Net
 
-- UDP port 6454. The first implementation receives and parses ArtDMX only: header, opcode, universe, sequence, and length.
-- Add ArtPoll/ArtPollReply only if SoundSwitch discovery needs it.
-- The SoundSwitch baseline (universe, channel count, rate, broadcast or unicast) will be filled in from the Phase 6 capture summary.
+- UDP port 6454. The first implementation receives and parses ArtDMX (header, opcode, universe, sequence, length) **and answers ArtPoll with ArtPollReply**. Discovery is required (see below).
+
+**SoundSwitch baseline** (Phase 5–6, 2026-10-14):
+- Setup: SoundSwitch 2.11 on macOS Tahoe, Mac on Wi-Fi, PC on Ethernet, same subnet. Measured with `tools/testbench/artnet_listen.py`; logs stay in gitignored `captures/`.
+
+| Item | Value |
+|---|---|
+| Universes sent | Art-Net **0 and 1** (SoundSwitch supports two). SoundSwitch "Universe One" = Art-Net **universe 0** |
+| Fixture check | `Lumina 4-Strand RGB` at address 1: the "Red" Autoloop gave CH1/4/7/10 pulsing 10–250 with G/B = 0 |
+| Frame rate | About 36–37 frames/s per universe (dips to about 20–32 seen), playing or stopped |
+| DMX length | 512 per frame |
+| Loss | About 0.2% sequence gaps over Wi-Fi |
+| Discovery | SoundSwitch polls (ArtPoll) about once a second and **sends ArtDmx only to nodes that answer**. When replies stop, it drops the node and frames stop within about 3 s. It resumes after replies return. **The S3 must answer every ArtPoll** |
+| Stopped / paused show | Frames **keep coming** at full rate with the **last values frozen**. They don't drop to zero or stop |
+| Idle (nothing playing) | Frames keep coming, all zero. MIDI-menu color overrides alone also give all zero; something must be playing |
+| Broadcast vs unicast | Gated on discovery, so most likely unicast to the node. The destination address hasn't been captured (`tshark`) |
+
+- **Design consequences:**
+  - The Phase 10 receiver needs an ArtPollReply, so it shows up as a node.
+  - The Phase 13 "Art-Net timeout → fall back" only triggers when SoundSwitch quits or the network drops. A paused show looks live (frozen frames). Telling "paused" apart needs another signal (e.g. frames unchanged for N seconds), if it matters.
 
 ## Intelligent Fixture Profile `LUMINA-16` (Phase 12, draft)
 
