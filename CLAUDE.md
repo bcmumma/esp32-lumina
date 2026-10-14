@@ -42,7 +42,7 @@ A distributed smart-lighting platform:
 - Build: `pio run -e <env>`. Upload: `pio run -e <env> -t upload --upload-port COM<n>`.
 - Unit tests (on the S3): `pio test -e sender_test --upload-port COM<n> --test-port COM<n>`, then re-upload the `sender` env.
 - Capture serial with a time-limited, non-interactive capture, not the interactive monitor. My serial monitor must be closed while you upload or capture.
-- Test bench (`tools/testbench/`, run with the gitignored `.venv`): `serial_capture.py <secs> COM<a> [COM<b>]`, `tone_sweep.py COM<a> [COM<b>]`, `webcam_frame.py`, `strand_colors.py --host <ip>`, `artnet_listen.py` (Art-Net monitor; answers ArtPoll), `artnet_send.py --to <ip>` (test pattern). Frames and logs go in gitignored `captures/`.
+- Test bench (`tools/testbench/`, run with the gitignored `.venv`): `serial_capture.py <secs> COM<a> [COM<b>]`, `tone_sweep.py COM<a> [COM<b>]`, `webcam_frame.py`, `strand_colors.py --host <ip>`, `artnet_listen.py` (Art-Net monitor; answers ArtPoll), `artnet_send.py --to <ip>` (test pattern; repeat `--to`), `artnet_compare.py --s3 <ip>` (S3 vs PC frame comparison). S3 Art-Net diagnostics: `/api/artnet`. Frames and logs go in gitignored `captures/`.
 - Art-Net capture: `tshark` on UDP 6454, on the PC. SoundSwitch on the Mac must broadcast or unicast to the PC. Raw captures stay outside Git.
 <!-- Fill in during Phases 5–7: env names, board IDs, COM ports (in CLAUDE.local.md), tshark path and interface, capture script, test command. -->
 

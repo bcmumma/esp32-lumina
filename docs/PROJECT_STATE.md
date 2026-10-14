@@ -4,75 +4,67 @@ _Last updated: 2026-10-14_
 
 ## Current
 
-Two tracks run in parallel until Phase 10 (see `docs/ROADMAP.md`).
+The DJ and firmware tracks merged at Phase 10. Phases 10–15 are sequential (see `docs/ROADMAP.md`).
 
 | Track | Phase | Status | Authorization |
 |---|---|---|---|
-| DJ (Mac + PC capture) | **Complete** (Phases 4–6 closed 2026-10-14) | Done | n/a |
-| Firmware (Windows PC) | 10: First Art-Net receiver on the S3 (tracks merge here) | In progress | Authorized 2026-10-14 for Phase 10 |
+| DJ (Mac + PC capture) | Complete (Phases 4–6) | Done | n/a |
+| Firmware | 11: Network validation | Not started | Not authorized |
 
 - Authorize a phase with `/start-milestone Phase <N>` in Claude Code. Until then, everything is read-only.
-- **Branch:** `main` holds v2 unchanged. `develop-v23` was fast-forwarded to `feature/platformio-migration` (`ac75b8e`, owner OK 2026-10-14). Phase 10 works on `feature/artnet-receiver`, off `develop-v23`.
-- **Last verified firmware commit:** `e605559` (cleanups, plus `senderChannel` in the packet; 8/8 unit tests pass; parity rerun). Phases 4–6 closed 2026-10-14 (docs/tools only).
-- **Both boards run** the modular v3 firmware, with strand 1 set to off (a live setting; a reboot restores the saved audio mode).
+- **Branch:** `main` holds v2 unchanged. `develop-v23` = Phases 7–9 + DJ track (`ac75b8e`). Phase 10 is on `feature/artnet-receiver`; merging it into `develop-v23` is your call (a good merge point).
+- **Last verified commit:** `62995bc` on `feature/artnet-receiver` (Phase 10, closed 2026-10-14).
+- **Both boards run** the Phase 10 firmware. Strand 1 is set to off live; a reboot restores its saved audio mode (mode 12).
 
 ## What works
 
-- The v3 firmware has v2 parity on hardware, plus fixes:
-  - the receiver locks to the announced channel in about 4 s;
-  - no boot Wi-Fi drop;
-  - `pps` is correct; builds are warning-free.
-- **DJ path:**
-  - Serato 4.0.4 → SoundSwitch 2.11 (fixture `Lumina 4-Strand RGB`, venue `Lumina Lab`, address 1) → Art-Net → PC.
-  - A scripted track follows Serato play/pause (Phase 4). The Art-Net baseline is in `docs/ARCHITECTURE.md`.
-- **Test bench:** serial capture, tone sweep, webcam, strand colors, and the Art-Net monitor and sender.
-- **Phases done:** 0–9.
+- v3 firmware: v2 parity, modular, warning-free; 15/15 on-device unit tests.
+- **Art-Net into the S3 (parse/report only):**
+  - SoundSwitch discovers "Lumina S3" and unicasts universe 0 at about 36 fps.
+  - The S3's decoded values equal the PC's frame for frame, with a Red Autoloop and a Serato-driven show.
+  - `/api/artnet` reports it.
+- DJ path: Serato 4.0.4 → SoundSwitch 2.11 → Art-Net. A scripted show follows Serato play/pause (see KNOWN_ISSUES for the blackout and resume quirks).
+- **Test bench:** serial, tones, webcam, strand colors, Art-Net monitor/sender/compare.
+- **Phases done:** 0–10.
 
 ## Next step
 
-1. **Phase 10 in progress** on `feature/artnet-receiver` (checklist below).
-2. Done 2026-10-14: `feature/platformio-migration` merged (fast-forward) into `develop-v23`.
+1. **Your call:** merge `feature/artnet-receiver` into `develop-v23`.
+2. **Phase 11** when authorized (draft below).
 3. **Owner, when convenient:**
    - [ ] AP Wi-Fi security mode (WPA2 / mixed / WPA3), for the S3's 6 s first join.
    - [ ] Level converter: LV side about 3.3 V, HV side about 5 V, part number.
    - [ ] Strips on outputs 2–4, cycled on camera.
    - [ ] 12 V PSU amp rating, before brighter tests.
-   - [ ] Retest the SoundSwitch pause/resume quirk (KNOWN_ISSUES).
-4. **Optional (your network):** the PC routes its own LAN through the HomeLab VPN adapter (KNOWN_ISSUES).
+   - [ ] SoundSwitch quirks (KNOWN_ISSUES): Performance Mode blackout (blue-highlighted tracks? fader position?) and pause/resume.
+4. **Optional (your network):** the PC routes its own LAN through the HomeLab VPN adapter, so `.100` traffic takes an extra hop. Switching the Ethernet port or the VPN routes is your call.
 
-## Phase 10 draft checklist (firmware track)
+## Phase 11 draft checklist (Network validation)
 
-- [x] Branch `feature/artnet-receiver` off `develop-v23`, after the fast-forward merge *(owner OK 2026-10-14)*
-- [x] Parser library `lib/ArtNet` with on-device tests (7/7 PASS) *(Claude)*
-- [x] S3 Art-Net module (`network/ArtNetReceiver`, `/api/artnet`, 1 Hz serial line while active):
-  - UDP 6454;
-  - **answers every ArtPoll with an ArtPollReply that advertises the S3's own LAN IP** (SoundSwitch unicasts only to answering nodes, at the advertised IP, and drops them after about 3 s);
-  - parses ArtDmx (universe, sequence, length, data) and reports its stats on the diagnostics endpoint.
-  - Parse and report only; it doesn't drive the lights yet *(Claude)*
-- [x] Parser unit tests from synthetic byte arrays shaped like the measured traffic (no raw captures) *(Claude)*
-- [x] **Gate (2026-10-14, `artnet_compare.py`):**
-  - Red Autoloop: 1013/1013 paired frames identical.
-  - Serato-driven show: 1055 S3 frames identical to the PC copy of the same send, 0 different (817 lit, 328 distinct values).
-  - `artnet_send.py --to <S3>`: 236/237 frames; every recent frame is the exact pattern.
-  - SoundSwitch listed "Lumina S3" on Universe One *(Claude; owner played)*
-- [x] Parity with Art-Net flowing (36 fps):
-  - routes 200 (page identical), save OK;
-  - tone sweep within ±4 of Phase 8–9, clip 0;
-  - reboot: no crashes, config loaded, ESP-NOW 0.7% loss, SoundSwitch rediscovered the S3 *(Claude)*
+Gate (ROADMAP): Art-Net stays stable on the real network (ping, RSSI, packet consistency, VLAN and firewall path).
+
+- [ ] Place the S3 and the receiver at their install positions; antennas clear *(owner)*
+- [ ] Preferred live setup: Mac on Ethernet, S3 on Wi-Fi (one wireless hop). Compare with the Mac on Wi-Fi *(owner switches; Claude measures)*
+- [ ] 30-minute soak with SoundSwitch playing:
+  - Art-Net fps and loss on the S3, measured as frames vs. the expected rate (gap counts aren't valid with several nodes);
+  - S3 RSSI log;
+  - ESP-NOW loss;
+  - Wi-Fi reconnects;
+  - heap trend *(Claude)*
+- [ ] Ping/jitter: PC→S3, plus Mac→S3 if possible. Record the path (same VLAN; no firewall hop) *(Claude, owner for the Mac)*
+- [ ] Latency baseline: Art-Net arrival vs. LED output (camera), and the post-antenna ESP-NOW latency that was never measured *(Claude)*
+- [ ] Check Suricata/pfSense only if the traffic crosses them (it doesn't today: same subnet) *(owner)*
+- [ ] Parity still holds *(Claude)*
 
 ## Open questions
 
-- Mac model. Dev board models (the modules are known).
-- Strip types and counts (config says 150 per strand), PSU rating, fusing, and power injection. A level converter and 330 Ω resistors are fitted.
-- Channel lock and Art-Net loss at the real install distance (the Mac is on Wi-Fi: about 0.2% Art-Net gaps on the bench).
+- Mac model; dev board models (the modules are known).
+- Strip types and counts (config: 150 per strand), PSU rating, fusing, injection. A level converter and 330 Ω resistors are fitted.
+- Why SoundSwitch Performance Mode sometimes outputs pure black.
 
 ## Recent decisions
 
-See `docs/DECISIONS.md`. Latest:
-- **2026-10-14:**
-  - Art-Net monitoring on the PC uses `artnet_listen.py`, which answers ArtPoll; `tshark` is optional.
-  - The guide skips the fixture's `MASTER` cell (SoundSwitch 2.11).
-- **2026-10-12:**
-  - `senderChannel` uses the packet's spare byte (still version 12).
-  - Phase 9 module layout.
-  - Unit tests run on the S3.
+See `docs/DECISIONS.md`. Latest (2026-10-14):
+- Phase 10 gate method: `artnet_compare.py` pairs frames by neighbour sequence and aligned time, because SoundSwitch shares one sequence counter across nodes.
+- The S3's ArtPollReply advertises its own IP; SoundSwitch unicasts only there.
+- `develop-v23` fast-forwarded to `feature/platformio-migration` (owner OK).
