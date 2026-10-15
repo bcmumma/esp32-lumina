@@ -65,7 +65,20 @@ The web UI can override the source manually. Diagnostics show the active source.
   - The Phase 10 receiver needs an ArtPollReply, so it shows up as a node, and it must **advertise its own LAN IP** in that reply. SoundSwitch sends only there.
   - The Phase 13 "Art-Net timeout → fall back" only triggers when SoundSwitch quits or the network drops. A paused show looks live (frozen frames). Telling "paused" apart needs another signal (e.g. frames unchanged for N seconds), if it matters.
 
-## Intelligent Fixture Profile `LUMINA-16` (Phase 12, draft)
+## Intelligent Fixture Profile `LUMINA-16` (v1 implemented in Phase 12)
+
+**v1 (2026-10-14):**
+- `lib/Lumina16` maps CH1–11 onto the existing per-strand effect fields, the same on all strands.
+- CH12–16 are reserved until v2, which needs a packet change.
+- In SoundSwitch 2.11 the fixture is one cell (`Main`): its **Intensity** function on CH1, Strobe on CH6, RGB on CH9–11, and attributes on CH2–5 and CH7–8 (CH4 named "Reactivity").
+- The S3's `lighting/Lumina16Control` applies it when Art-Net control is on (`/api/control`, live-only, off at boot) and frames are under 1 s old. Brightness is capped at 25%.
+- **Strobe safety:**
+  - lives in the receiver: one rig-wide gate (`strobe_gate_allow`) for all flash effects;
+  - its state travels in `AudioLedPacket.flags` (bit 7 enable; bits 4–6 rate 1–8/s);
+  - old senders read as disabled.
+- Measured latency, Art-Net step → camera: ≤123 ms (webcam delay included).
+
+### Original channel plan
 
 | Ch | Function | Ch | Function |
 |---|---|---|---|
