@@ -42,6 +42,15 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are sequential (se
    - [ ] SoundSwitch quirks (KNOWN_ISSUES): Performance Mode blackout (blue-highlighted tracks? fader position?) and pause/resume.
 4. **Optional (your network):** the PC routes its own LAN through the HomeLab VPN adapter, so `.100` traffic takes an extra hop. Switching the Ethernet port or the VPN routes is your call.
 
+## Phase 11 results so far
+
+- **Soak run 1 (2026-10-14, 30 min; bench positions, Mac on Wi-Fi, PC→S3 via the VPN route):**
+  - S3: 0 reboots, 0 Wi-Fi disconnects; RSSI -78/-71/-67 dBm (min/median/max); heap drift -8 B.
+  - Art-Net u0: 30.3 fps average, 0.45% gaps, 27 stalls over 250 ms. **One 160 s outage**, during which neither ArtDmx nor ArtPoll arrived (polls stuck), while the S3 stayed connected and reachable. Points to the Mac/SoundSwitch side, cause unconfirmed.
+  - ESP-NOW: S3 0 send errors; receiver 1.25% loss, 0 bad.
+  - Ping PC→S3 (via VPN): 0.2% loss, p50 3 ms, p95 19 ms, max 361 ms.
+- Next run pings the Mac too, to tell Mac network loss from SoundSwitch going quiet.
+
 ## Phase 11 draft checklist (Network validation)
 
 Gate (ROADMAP): Art-Net stays stable on the real network (ping, RSSI, packet consistency, VLAN and firewall path).
