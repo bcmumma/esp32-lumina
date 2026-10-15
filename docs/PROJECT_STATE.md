@@ -9,10 +9,10 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are sequential (se
 | Track | Phase | Status | Authorization |
 |---|---|---|---|
 | DJ (Mac + PC capture) | Complete (Phases 4–6) | Done | n/a |
-| Firmware | 12: Intelligent Fixture v1 (`LUMINA-16`) | Not started | Not authorized |
+| Firmware | 12: Intelligent Fixture v1 (`LUMINA-16`) | In progress | Authorized 2026-10-14 for Phase 12 |
 
 - Authorize a phase with `/start-milestone Phase <N>` in Claude Code. Until then, everything is read-only.
-- **Branch:** `main` holds v2 unchanged. `develop-v23` = Phases 7–9 + DJ track (`ac75b8e`). Phases 10–11 are on `feature/artnet-receiver`; merging it into `develop-v23` is your call (a good merge point).
+- **Branch:** `main` holds v2 unchanged. `develop-v23` was fast-forwarded to `feature/artnet-receiver` (`e448077`, Phases 7–11; owner OK 2026-10-14). Phase 12 works on `feature/intelligent-fixture`.
 - **Last verified commit:** `6cafb55` on `feature/artnet-receiver` (Phase 11, closed 2026-10-14).
 - **Both boards run** the Phase 11 firmware. Strand 1 is set to off live; its saved mode is 12 (audio VU).
 
@@ -28,7 +28,7 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are sequential (se
 
 ## Next step
 
-1. **Your call:** merge `feature/artnet-receiver` into `develop-v23`.
+1. Done 2026-10-14: `feature/artnet-receiver` merged (fast-forward) into `develop-v23`. Phase 12 in progress.
 2. **Before Phase 12 drives LEDs from Art-Net (owner):**
    - [x] 12 V PSU: **90 W (7.5 A)**, budget about 6 A. Brightness cap estimated at about 60–65% (HARDWARE.md). *(owner, 2026-10-14)*
    - [ ] Fusing and power injection; strip datasheet or one measured current per strand, to confirm the cap.
@@ -43,7 +43,7 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are sequential (se
 
 Gate (ROADMAP): a SoundSwitch control changes a real Lumina effect live.
 
-- [ ] Branch `feature/intelligent-fixture` off the merged v3 branch *(owner OK)*
+- [x] Branch `feature/intelligent-fixture` off `develop-v23` *(owner OK 2026-10-14)*
 - [ ] SoundSwitch fixture `Lumina LUMINA-16`, 16 channels per `docs/ARCHITECTURE.md`:
   - master dimmer, effect, speed, intensity, density, strobe, direction, variation, primary/secondary RGB, transition, palette;
   - click-by-click steps in the guide *(owner, guided)*
