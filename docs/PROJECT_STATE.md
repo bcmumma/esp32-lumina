@@ -38,6 +38,14 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are sequential (se
    - [ ] SoundSwitch blackout/resume quirks (KNOWN_ISSUES).
    - [ ] Re-measure S3 RSSI at the install position.
 
+## Phase 13 owner checklist (now)
+
+- [ ] Open the controller page (`http://<S3 IP>/`). The "Control Source & Strobe Safety" card shows the active source; the buttons switch it; strobe asks for confirmation before enabling.
+- [ ] Real SoundSwitch AUTO test (source = Auto):
+  - open SoundSwitch and play an Autoloop: Claude sees AUTO → ARTNET;
+  - quit SoundSwitch (Command-Q): AUDIO within about 1 s;
+  - reopen it: back to ARTNET.
+
 ## Phase 13 draft checklist (Control-source arbitration)
 
 Gate (ROADMAP): AUTO / STANDALONE / AUDIO / ARTNET switch without a reboot; Art-Net timeout falls back after about 1 s; the web UI can override; diagnostics show the active source.
