@@ -1,0 +1,118 @@
+// Source-router decision tests (pure logic).
+#include <Arduino.h>
+#include <unity.h>
+#include "SourceRouter.h"
+
+using router::Config;
+using router::Decision;
+using router::Reason;
+using router::Source;
+
+void setUp() {}
+void tearDown() {}
+
+static Config cfg(Source sel, Source fb = Source::Audio) { return {sel, fb, router::kDefaultTimeoutMs, 128}; }
+
+static void test_auto_fresh_uses_artnet() {
+  Decision d = router::decide(cfg(Source::Auto), true, 30);
+  TEST_ASSERT_EQUAL(Source::Artnet, d.active);
+  TEST_ASSERT_EQUAL(Reason::AutoArtnetFresh, d.reason);
+  TEST_ASSERT_TRUE(d.applyArtnet);
+  TEST_ASSERT_FALSE(d.standaloneLevels);
+}
+
+static void test_auto_tolerates_measured_stalls_then_falls_back() {
+  TEST_ASSERT_EQUAL(Source::Artnet, router::decide(cfg(Source::Auto), true, 480).active);   // Phase 11 worst stall
+  TEST_ASSERT_EQUAL(Source::Artnet, router::decide(cfg(Source::Auto), true, 1000).active);  // boundary
+  Decision d = router::decide(cfg(Source::Auto), true, 1001);
+  TEST_ASSERT_EQUAL(Source::Audio, d.active);
+  TEST_ASSERT_EQUAL(Reason::AutoFallback, d.reason);
+  TEST_ASSERT_FALSE(d.applyArtnet);
+}
+
+static void test_auto_never_had_artnet_falls_back() {
+  Decision d = router::decide(cfg(Source::Auto), false, 0);
+  TEST_ASSERT_EQUAL(Source::Audio, d.active);
+  TEST_ASSERT_EQUAL(Reason::AutoFallback, d.reason);
+}
+
+static void test_auto_fallback_standalone() {
+  Decision d = router::decide(cfg(Source::Auto, Source::Standalone), true, 5000);
+  TEST_ASSERT_EQUAL(Source::Standalone, d.active);
+  TEST_ASSERT_TRUE(d.standaloneLevels);
+  // Fallback can't be ARTNET or AUTO: sanitized to AUDIO.
+  TEST_ASSERT_EQUAL(Source::Audio, router::decide(cfg(Source::Auto, Source::Artnet), false, 0).active);
+  TEST_ASSERT_EQUAL(Source::Audio, router::sanitize_fallback(Source::Auto));
+}
+
+static void test_auto_returns_when_frames_resume() {
+  TEST_ASSERT_EQUAL(Source::Audio, router::decide(cfg(Source::Auto), true, 4000).active);
+  TEST_ASSERT_EQUAL(Source::Artnet, router::decide(cfg(Source::Auto), true, 15).active);
+}
+
+static void test_forced_artnet_holds_last_frame() {
+  Decision fresh = router::decide(cfg(Source::Artnet), true, 20);
+  TEST_ASSERT_EQUAL(Reason::Selected, fresh.reason);
+  TEST_ASSERT_TRUE(fresh.applyArtnet);
+  Decision stale = router::decide(cfg(Source::Artnet), true, 60000);
+  TEST_ASSERT_EQUAL(Source::Artnet, stale.active);
+  TEST_ASSERT_EQUAL(Reason::ArtnetStaleHold, stale.reason);
+  TEST_ASSERT_TRUE(stale.applyArtnet);  // hold the last frame, don't fall back
+  Decision none = router::decide(cfg(Source::Artnet), false, 0);
+  TEST_ASSERT_EQUAL(Reason::ArtnetNoData, none.reason);
+  TEST_ASSERT_FALSE(none.applyArtnet);
+}
+
+static void test_forced_audio_and_standalone_ignore_artnet() {
+  Decision a = router::decide(cfg(Source::Audio), true, 10);
+  TEST_ASSERT_EQUAL(Source::Audio, a.active);
+  TEST_ASSERT_FALSE(a.applyArtnet);
+  Decision s = router::decide(cfg(Source::Standalone), true, 10);
+  TEST_ASSERT_EQUAL(Source::Standalone, s.active);
+  TEST_ASSERT_FALSE(s.applyArtnet);
+  TEST_ASSERT_TRUE(s.standaloneLevels);
+}
+
+static void test_apply_standalone_levels() {
+  AudioLedPacket p = {};
+  p.volume = 3; p.bass = 200; p.beat = 255; p.clip = 9; p.beatPulse = 7;
+  router::apply_standalone(p, 128);
+  TEST_ASSERT_EQUAL_UINT8(128, p.volume);
+  TEST_ASSERT_EQUAL_UINT8(128, p.bass);
+  TEST_ASSERT_EQUAL_UINT8(128, p.mid);
+  TEST_ASSERT_EQUAL_UINT8(128, p.treble);
+  TEST_ASSERT_EQUAL_UINT8(128, p.left);
+  TEST_ASSERT_EQUAL_UINT8(128, p.right);
+  TEST_ASSERT_EQUAL_UINT8(0, p.beat);
+  TEST_ASSERT_EQUAL_UINT8(0, p.clip);
+  TEST_ASSERT_EQUAL_UINT8(7, p.beatPulse);  // untouched
+}
+
+static void test_parse_and_names() {
+  Source s;
+  TEST_ASSERT_TRUE(router::parse("AUTO", s)); TEST_ASSERT_EQUAL(Source::Auto, s);
+  TEST_ASSERT_TRUE(router::parse("artnet", s)); TEST_ASSERT_EQUAL(Source::Artnet, s);
+  TEST_ASSERT_TRUE(router::parse("Audio", s)); TEST_ASSERT_EQUAL(Source::Audio, s);
+  TEST_ASSERT_TRUE(router::parse("standalone", s)); TEST_ASSERT_EQUAL(Source::Standalone, s);
+  TEST_ASSERT_FALSE(router::parse("dmx", s));
+  TEST_ASSERT_FALSE(router::parse(nullptr, s));
+  TEST_ASSERT_EQUAL_STRING("artnet", router::name(Source::Artnet));
+  TEST_ASSERT_EQUAL_STRING("auto", router::name(Source::Auto));
+}
+
+void setup() {
+  delay(2000);
+  UNITY_BEGIN();
+  RUN_TEST(test_auto_fresh_uses_artnet);
+  RUN_TEST(test_auto_tolerates_measured_stalls_then_falls_back);
+  RUN_TEST(test_auto_never_had_artnet_falls_back);
+  RUN_TEST(test_auto_fallback_standalone);
+  RUN_TEST(test_auto_returns_when_frames_resume);
+  RUN_TEST(test_forced_artnet_holds_last_frame);
+  RUN_TEST(test_forced_audio_and_standalone_ignore_artnet);
+  RUN_TEST(test_apply_standalone_levels);
+  RUN_TEST(test_parse_and_names);
+  UNITY_END();
+}
+
+void loop() {}
