@@ -27,6 +27,8 @@ struct UniverseStats {
   IPAddress source;
   uint32_t maxIntervalMs;  // longest time between two frames since the last reset
   uint32_t stalls;         // intervals longer than kStallMs
+  uint8_t maxValue;        // highest channel value in the latest frame (diagnostic, any universe)
+  uint16_t firstLit;       // 1-based first non-zero channel in the latest frame, 0 if all zero
 };
 
 struct RecentFrame {
@@ -102,6 +104,12 @@ void take_dmx(const artnet::DmxFrame &f, const IPAddress &source, uint32_t nowMs
   s->windowFrames++;
   s->length = f.length;
   s->lastRxMs = nowMs;
+  s->maxValue = 0;
+  s->firstLit = 0;
+  for (uint16_t i = 0; i < f.length; i++) {
+    if (f.data[i] > s->maxValue) s->maxValue = f.data[i];
+    if (s->firstLit == 0 && f.data[i]) s->firstLit = i + 1;
+  }
   s->source = source;
 
   if (f.universe != ARTNET_LISTEN_UNIVERSE) return;
@@ -212,7 +220,8 @@ void append_artnet_json(String &s, int channels) {
     s += "{\"u\":" + String(u.universe) + ",\"frames\":" + String(u.frames) + ",\"fps\":" + String(u.fps) +
          ",\"gaps\":" + String(u.gaps) + ",\"len\":" + String(u.length) + ",\"seq\":" + String(u.lastSeq) +
          ",\"ageMs\":" + String(now - u.lastRxMs) + ",\"maxIntervalMs\":" + String(u.maxIntervalMs) +
-         ",\"stalls\":" + String(u.stalls) + ",\"src\":\"" + u.source.toString() + "\"}";
+         ",\"stalls\":" + String(u.stalls) + ",\"maxValue\":" + String(u.maxValue) + ",\"firstLit\":" + String(u.firstLit) +
+         ",\"src\":\"" + u.source.toString() + "\"}";
   }
   s += "],\"length\":" + String(dmxLength) + ",\"ch\":[";
   for (int i = 0; i < channels; i++) {

@@ -9,7 +9,7 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are sequential (se
 | Track | Phase | Status | Authorization |
 |---|---|---|---|
 | DJ (Mac + PC capture) | Complete (Phases 4–6) | Done | n/a |
-| Firmware | 12: Intelligent Fixture v1 (`LUMINA-16`) | In progress | Authorized 2026-10-14 for Phase 12 |
+| Firmware | 12: Intelligent Fixture v1 (`LUMINA-16`) | In progress (checklist complete) | Authorized 2026-10-14 for Phase 12 |
 
 - Authorize a phase with `/start-milestone Phase <N>` in Claude Code. Until then, everything is read-only.
 - **Branch:** `main` holds v2 unchanged. `develop-v23` was fast-forwarded to `feature/artnet-receiver` (`e448077`, Phases 7–11; owner OK 2026-10-14). Phase 12 works on `feature/intelligent-fixture`.
@@ -39,30 +39,21 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are sequential (se
    - [ ] SoundSwitch quirks (KNOWN_ISSUES): Performance Mode blackout and pause/resume.
    - [ ] Re-measure S3 RSSI and stalls at the install position.
 
-## Phase 12 owner checklist (now)
-
-- [ ] Build the `Lumina LUMINA-16` fixture in Fixture Manager. Guide Part 5.1. Expected: Check Fixture passes (or report its message).
-- [ ] Patch it at Universe 1, address 1 in a new venue `Lumina 16` (Part 5.2).
-- [ ] Gate (Part 5.3): with Art-Net control on, a SoundSwitch colour/Autoloop change visibly changes strand 1 live.
-
-## Phase 12 draft checklist (Intelligent Fixture v1, `LUMINA-16`)
+## Phase 12 checklist (Intelligent Fixture v1, `LUMINA-16`)
 
 Gate (ROADMAP): a SoundSwitch control changes a real Lumina effect live.
 
 - [x] Branch `feature/intelligent-fixture` off `develop-v23` *(owner OK 2026-10-14)*
-- [ ] SoundSwitch fixture `Lumina LUMINA-16`, 16 channels per `docs/ARCHITECTURE.md`:
-  - master dimmer, effect, speed, intensity, density, strobe, direction, variation, primary/secondary RGB, transition, palette;
-  - click-by-click steps in the guide *(owner, guided)*
-- [ ] S3: map universe 0 CH1–16 to the existing effect parameters. The S3 sends effect parameters over ESP-NOW (not pixels); the receiver renders.
-  - Art-Net control is switched on by a web toggle; automatic source arbitration is Phase 13.
-- [ ] Safety:
-  - strobe channel rate-capped with a global strobe disable, conservative default;
-  - a brightness cap from the PSU rating *(Claude; owner sets the PSU number)*
-- [ ] First effects: Solid Color, Neon Scanner, Laser Sweep, Rave Chase, DnB Chopper, White Lightning *(Claude)*
-- [ ] Tests: CH1–16 mapping unit tests. On hardware, `artnet_send.py` drives known channel values, checked against the effect state and on camera *(Claude)*
-- [ ] Gate: a SoundSwitch control (e.g. color or effect change) visibly changes the strips live *(owner + camera)*
-- [ ] Latency baseline: Art-Net frame → LED change on camera (moved from Phase 11) *(Claude)*
-- [ ] Parity: the audio mode still works when Art-Net control is off *(Claude)*
+- [x] `lib/Lumina16`: CH1–11 → shared effect on all strands (CH12–16 reserved); RGB → the receiver's 258-step hue wheel; brightness capped *(Claude)*
+- [x] Strobe safety, rig-wide gate on the receiver for all four flash effects; off at boot, 3/s default, 8/s ceiling. Measured with 4 strands and 10/s bursts: off 0, 3/s → 2.5/s, 8/s → 5.25/s *(Claude)*
+- [x] S3 `Lumina16Control` + `/api/control` (live-only; Art-Net control off at boot; cap ≤ 25%) *(Claude)*
+- [x] Unit tests 10/10 (mapping, colour round-trip, white = sat 0, bands, bounds, cap, strobe flags/gate) *(Claude)*
+- [x] Deterministic: known `LUMINA-16` values → S3 decode, receiver modes/brightness, camera colours (R/G/B/white, dimmer 0, effect band); falls back after 1 s without Art-Net *(Claude)*
+- [x] Fixture built in SoundSwitch 2.11 (one cell `Main`, Intensity on CH1, CH4 "Reactivity"), patched at U1/1 in venue `Lumina 16` *(owner)*
+- [x] **Gate:** the Red Autoloop drove intensity live (CH1 31–220 → brightness under the cap); a colour override changed strand 1 red → greens/teals live (Art-Net, S3, camera) *(owner + Claude)*
+- [x] Latency baseline: Art-Net step → first camera frame showing it, median 123 ms (106–124), an upper bound including webcam delay; internal budget about 60 ms *(Claude)*
+- [x] Parity with Art-Net control off; safe defaults after reboot *(Claude)*
+- Note: SoundSwitch at first sent an all-zero blackout on both universes again (KNOWN_ISSUES); playing the Autoloop from Edit Mode cleared it.
 
 ## Open questions
 
