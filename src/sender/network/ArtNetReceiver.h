@@ -13,3 +13,5 @@ void artnet_service(uint32_t nowMs);
 // Appends the /api/artnet JSON: stats, the first `channels` of the listen universe,
 // and recent frames (sequence, ms, CH1-12) for matching against a PC capture.
 void append_artnet_json(String &s, int channels);
+// Zeroes maxIntervalMs and stalls (Phase 11 soak windows).
+void reset_artnet_interval_stats();

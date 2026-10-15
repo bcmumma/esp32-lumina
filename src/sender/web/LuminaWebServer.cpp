@@ -395,8 +395,10 @@ static void handle_health() {
   httpRequestCount++;
 }
 
-// Art-Net receive diagnostics (Phase 10). ?n=<channels> (default 12, max 512).
+// Art-Net receive diagnostics (Phase 10). ?n=<channels> (default 12, max 512); ?reset=1 zeroes
+// the interval stats (maxIntervalMs, stalls) before reporting.
 static void handle_artnet() {
+  if (server.hasArg("reset")) reset_artnet_interval_stats();
   int n = server.hasArg("n") ? server.arg("n").toInt() : 12;
   String s;
   s.reserve(4096);

@@ -12,6 +12,7 @@ constexpr int kMaxPacketsPerCall = 16;
 constexpr int kRecentFrames = 64;
 constexpr int kRecentChannels = 12;  // Lumina fixture: 4 strands x RGB
 constexpr uint32_t kActiveWindowMs = 2000;
+constexpr uint32_t kStallMs = 250;  // Phase 11: a gap this long between frames counts as a stall
 
 struct UniverseStats {
   bool used;
@@ -24,6 +25,8 @@ struct UniverseStats {
   uint16_t length;
   uint32_t lastRxMs;
   IPAddress source;
+  uint32_t maxIntervalMs;  // longest time between two frames since the last reset
+  uint32_t stalls;         // intervals longer than kStallMs
 };
 
 struct RecentFrame {
@@ -90,6 +93,11 @@ void take_dmx(const artnet::DmxFrame &f, const IPAddress &source, uint32_t nowMs
   // Art-Net sequence runs 1..255 then wraps to 1; 0 means sequencing is off.
   if (f.sequence != 0 && s->lastSeq != 0 && f.sequence != (uint8_t)(s->lastSeq % 255 + 1)) s->gaps++;
   if (f.sequence != 0) s->lastSeq = f.sequence;
+  if (s->frames > 0) {
+    uint32_t interval = nowMs - s->lastRxMs;
+    if (interval > s->maxIntervalMs) s->maxIntervalMs = interval;
+    if (interval > kStallMs) s->stalls++;
+  }
   s->frames++;
   s->windowFrames++;
   s->length = f.length;
@@ -165,6 +173,13 @@ void artnet_service(uint32_t nowMs) {
   }
 }
 
+void reset_artnet_interval_stats() {
+  for (auto &u : stats) {
+    u.maxIntervalMs = 0;
+    u.stalls = 0;
+  }
+}
+
 void append_artnet_json(String &s, int channels) {
   uint32_t now = millis();
   if (channels < 0) channels = 0;
@@ -187,7 +202,8 @@ void append_artnet_json(String &s, int channels) {
     first = false;
     s += "{\"u\":" + String(u.universe) + ",\"frames\":" + String(u.frames) + ",\"fps\":" + String(u.fps) +
          ",\"gaps\":" + String(u.gaps) + ",\"len\":" + String(u.length) + ",\"seq\":" + String(u.lastSeq) +
-         ",\"ageMs\":" + String(now - u.lastRxMs) + ",\"src\":\"" + u.source.toString() + "\"}";
+         ",\"ageMs\":" + String(now - u.lastRxMs) + ",\"maxIntervalMs\":" + String(u.maxIntervalMs) +
+         ",\"stalls\":" + String(u.stalls) + ",\"src\":\"" + u.source.toString() + "\"}";
   }
   s += "],\"length\":" + String(dmxLength) + ",\"ch\":[";
   for (int i = 0; i < channels; i++) {
