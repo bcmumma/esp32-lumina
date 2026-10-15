@@ -97,3 +97,42 @@ struct __attribute__((packed)) AudioLedPacket {
 static_assert(sizeof(AudioLedPacket) < 250, "AudioLedPacket must fit in an ESP-NOW v1 payload");
 static_assert(sizeof(StrandSettings) == 18, "StrandSettings layout changed; update PACKET_VERSION on both boards");
 static_assert(sizeof(AudioLedPacket) == 107, "AudioLedPacket layout changed; update PACKET_VERSION on both boards");
+
+// ------------------------------------------------------------
+// Strobe safety (Phase 12, docs/DECISIONS.md). Carried in AudioLedPacket.flags:
+//   bits 0-1: beat diagnostics (unchanged)
+//   bits 4-6: max flash rate - 1 (1..8 flashes/s)
+//   bit 7:    strobe enabled (0 = all flash effects suppressed)
+// Older senders leave bits 4-7 at 0, which reads as "strobe disabled": the safe default.
+// ------------------------------------------------------------
+static constexpr uint8_t STROBE_FLAG_ENABLED = 0x80;
+static constexpr uint8_t STROBE_RATE_SHIFT = 4;
+static constexpr uint8_t STROBE_RATE_MASK = 0x70;
+static constexpr uint8_t STROBE_DEFAULT_HZ = 3;
+static constexpr uint8_t STROBE_MAX_HZ = 8;  // hard ceiling, below the worst of the 3-30 Hz band
+
+static inline uint8_t strobe_clamp_hz(uint8_t hz) {
+  return hz < 1 ? 1 : (hz > STROBE_MAX_HZ ? STROBE_MAX_HZ : hz);
+}
+
+static inline uint8_t strobe_encode_flags(uint8_t flags, bool enabled, uint8_t maxHz) {
+  flags &= (uint8_t)~(STROBE_FLAG_ENABLED | STROBE_RATE_MASK);
+  flags |= (uint8_t)(((strobe_clamp_hz(maxHz) - 1) << STROBE_RATE_SHIFT) & STROBE_RATE_MASK);
+  if (enabled) flags |= STROBE_FLAG_ENABLED;
+  return flags;
+}
+
+static inline bool strobe_enabled(uint8_t flags) { return (flags & STROBE_FLAG_ENABLED) != 0; }
+
+static inline uint8_t strobe_max_hz(uint8_t flags) {
+  return (uint8_t)(((flags & STROBE_RATE_MASK) >> STROBE_RATE_SHIFT) + 1);
+}
+
+// Minimum time between flash onsets for the packet's strobe state.
+static inline uint32_t strobe_min_interval_ms(uint8_t flags) { return 1000U / strobe_max_hz(flags); }
+
+// True if a flash may start now, given the last flash onset (0 = never flashed).
+static inline bool strobe_allow_flash(uint8_t flags, uint32_t nowMs, uint32_t lastFlashMs) {
+  if (!strobe_enabled(flags)) return false;
+  return lastFlashMs == 0 || nowMs - lastFlashMs >= strobe_min_interval_ms(flags);
+}
