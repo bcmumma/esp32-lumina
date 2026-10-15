@@ -306,7 +306,7 @@ Instead of 12 raw RGB channels, Lumina now takes **16 control channels** and ren
 | 1 | Master dimmer | Brightness (capped at 25% for now) |
 | 2 | Effect | 0–42 Solid Color, 43–85 Neon Scanner, 86–127 Laser Sweep, 128–170 Rave Chase, 171–213 DnB Chopper, 214–255 White Lightning |
 | 3 | Speed | Animation speed |
-| 4 | Intensity | How strongly the effect reacts to the music |
+| 4 | Reactivity | How strongly the effect reacts to the music (don't call it "Intensity": that's SoundSwitch's name for the dimmer) |
 | 5 | Density | Width / fill / number of elements |
 | 6 | Strobe | Strobe strength. Flashing only happens if strobe is enabled on Lumina (off by default, max 3/s) |
 | 7 | Direction | 0–84 forward, 85–169 reverse, 170–255 mirror |
@@ -320,15 +320,15 @@ Same tool as Part 1.2. The steps follow SoundSwitch's "Creating a profile for an
 
 1. Open **Fixture Manager**, then **File → New Fixture**.
 2. Pick the same manufacturer as before; Model: `Lumina LUMINA-16`.
-3. **Add Mode** with **16** channels. Use **one cell**; it's a single fixture, not 4 strands.
+3. **Add Mode** with **16** channels (e.g. named `Main Mode`). Use **one cell**, named e.g. `Main`, **not** `MASTER`; it's a single fixture, not 4 strands. Verified 2026-10-14, SoundSwitch 2.11.
 4. Add these functions, each with **1** channel at the given channel number (the **Coarse** column):
-   - **Dimmer** (master dimmer) → channel **1**
+   - **Intensity** (SoundSwitch's built-in dimmer function; there's no "Dimmer" in 2.11) → channel **1**
    - **Strobe** (shutter/strobe) → channel **6**
    - **Red** → **9**, **Green** → **10**, **Blue** → **11**
 5. Add the control channels SoundSwitch doesn't drive directly as **Attributes**:
    - Effect → **2**
    - Speed → **3**
-   - Intensity → **4**
+   - Reactivity → **4**
    - Density → **5**
    - Direction → **7**
    - Variation → **8**
