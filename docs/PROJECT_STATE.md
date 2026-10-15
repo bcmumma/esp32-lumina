@@ -49,7 +49,14 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are sequential (se
   - Art-Net u0: 30.3 fps average, 0.45% gaps, 27 stalls over 250 ms. **One 160 s outage**, during which neither ArtDmx nor ArtPoll arrived (polls stuck), while the S3 stayed connected and reachable. Points to the Mac/SoundSwitch side, cause unconfirmed.
   - ESP-NOW: S3 0 send errors; receiver 1.25% loss, 0 bad.
   - Ping PC→S3 (via VPN): 0.2% loss, p50 3 ms, p95 19 ms, max 361 ms.
-- Next run pings the Mac too, to tell Mac network loss from SoundSwitch going quiet.
+  - Cause of the outage: **the Mac slept** (owner confirmed).
+- **Soak run 2 (2026-10-14, 30 min; bench positions, Mac on Ethernet in the S3's VLAN):**
+  - S3: 0 reboots, 0 Wi-Fi disconnects; RSSI -83/-72/-66 dBm; heap drift -240 B.
+  - Art-Net u0: SoundSwitch sent **about 21 fps** on Ethernet (36 on Wi-Fi; cause unknown). **0.08% gaps; max interval 480 ms; 22 stalls over 250 ms**; no outage.
+  - ESP-NOW: S3 0 send errors; receiver 1.27% loss, 0 bad.
+  - Ping: Mac 0% loss, p95 1 ms (wired path clean). S3 0% loss, p50 4 / p95 22 / max 307 ms.
+  - So the short stalls sit on the **S3's Wi-Fi hop** (signal around -72 dBm), not the Mac.
+- A Mac on VLAN 10 can't discover the S3 on VLAN 30 (broadcast ArtPoll doesn't cross VLANs). Keep the Mac on the S3's VLAN.
 
 ## Phase 11 draft checklist (Network validation)
 
