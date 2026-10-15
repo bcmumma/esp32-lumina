@@ -10,7 +10,7 @@
 #include "network/EspNowSender.h"
 #include "web/LuminaWebServer.h"
 #include "network/ArtNetReceiver.h"
-#include "lighting/Lumina16Control.h"
+#include "lighting/ControlRouter.h"
 
 // ============================================================
 // Setup
@@ -36,6 +36,7 @@ void setup() {
   }
   reset_agc();
   reset_beat_state();
+  load_control_settings();
 
   setup_status_rgb();
   setup_wifi();
@@ -65,7 +66,7 @@ void loop() {
   if (frames > 0) {
     uint32_t analyzeStartedUs = micros();
     AudioLedPacket packet = analyze_audio_block(frames);
-    control_apply(packet, millis());  // strobe safety bits; LUMINA-16 when Art-Net control is on
+    control_apply(packet, millis());  // strobe safety bits; active source (AUTO/STANDALONE/AUDIO/ARTNET)
     lastAnalyzeUs = micros() - analyzeStartedUs;
     if (lastAnalyzeUs > maxAnalyzeUs) maxAnalyzeUs = lastAnalyzeUs;
 

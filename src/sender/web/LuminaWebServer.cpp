@@ -7,7 +7,7 @@
 #include "../network/WiFiManager.h"
 #include "../network/EspNowSender.h"
 #include "../network/ArtNetReceiver.h"
-#include "../lighting/Lumina16Control.h"
+#include "../lighting/ControlRouter.h"
 #include "../util/Clamp.h"
 
 WebServer server(80);
@@ -408,13 +408,37 @@ static void handle_artnet() {
   server.send(200, "application/json", s);
 }
 
-// Phase 12 live controls (not saved): ?artnet=0|1 &address=1..497 &cap=0..64 &strobe=0|1 &strobeHz=1..8
+// Control source and safety (Phase 13). Saved: source, fallback, standalone, strobeHz.
+// Live only: strobe (off at every boot), cap, address.
+//   ?source=auto|artnet|audio|standalone &fallback=audio|standalone &standalone=0..255
+//   &strobe=0|1 &strobeHz=1..8 &cap=0..64 &address=1..497   (?artnet=1|0 = source artnet|audio)
 static void handle_control() {
-  if (server.hasArg("artnet")) control.artnetControl = server.arg("artnet").toInt() != 0;
+  bool persist = false;
+  router::Source parsed;
+  if (server.hasArg("source") && router::parse(server.arg("source").c_str(), parsed)) {
+    control.source = parsed;
+    persist = true;
+  }
+  if (server.hasArg("artnet")) {  // Phase 12 alias
+    control.source = server.arg("artnet").toInt() != 0 ? router::Source::Artnet : router::Source::Audio;
+    persist = true;
+  }
+  if (server.hasArg("fallback") && router::parse(server.arg("fallback").c_str(), parsed)) {
+    control.autoFallback = router::sanitize_fallback(parsed);
+    persist = true;
+  }
+  if (server.hasArg("standalone")) {
+    control.standaloneLevel = (uint8_t)clamp_int(server.arg("standalone").toInt(), 0, 255);
+    persist = true;
+  }
+  if (server.hasArg("strobeHz")) {
+    control.strobeHz = strobe_clamp_hz((uint8_t)clamp_int(server.arg("strobeHz").toInt(), 1, STROBE_MAX_HZ));
+    persist = true;
+  }
+  if (server.hasArg("strobe")) control.strobeEnabled = server.arg("strobe").toInt() != 0;
   if (server.hasArg("address")) control.address = (uint16_t)clamp_int(server.arg("address").toInt(), 1, 512 - 15);
   if (server.hasArg("cap")) control.brightnessCap = (uint8_t)clamp_int(server.arg("cap").toInt(), 0, LUMINA16_BRIGHTNESS_CAP_MAX);
-  if (server.hasArg("strobe")) control.strobeEnabled = server.arg("strobe").toInt() != 0;
-  if (server.hasArg("strobeHz")) control.strobeHz = strobe_clamp_hz((uint8_t)clamp_int(server.arg("strobeHz").toInt(), 1, STROBE_MAX_HZ));
+  if (persist && !save_control_settings()) Serial.println("WARNING: control settings could not be saved");
   String s;
   s.reserve(768);
   append_control_json(s, millis());
