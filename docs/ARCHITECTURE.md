@@ -51,9 +51,9 @@ The web UI can override the source manually. Diagnostics show the active source.
 |---|---|
 | Universes sent | Art-Net **0 and 1** (SoundSwitch supports two). SoundSwitch "Universe One" = Art-Net **universe 0** |
 | Fixture check | `Lumina 4-Strand RGB` at address 1: the "Red" Autoloop gave CH1/4/7/10 pulsing 10–250 with G/B = 0 |
-| Frame rate | About 36–37 frames/s per universe (dips to about 20–32 seen), playing or stopped |
+| Frame rate | Set by SoundSwitch: about 36–37 fps per universe with the Mac on Wi-Fi, about 21 fps with the Mac on Ethernet (Phase 11). Playing or stopped |
 | DMX length | 512 per frame |
-| Loss | About 0.2% sequence gaps over Wi-Fi |
+| Loss (Phase 11 soaks, S3 as the only node) | Mac on Ethernet: 0.08%, max gap 480 ms. Mac on Wi-Fi: 0.45% (plus a 160 s outage when the Mac slept). Short stalls come from the S3's Wi-Fi hop |
 | Discovery | SoundSwitch polls (ArtPoll) about once a second and **sends ArtDmx only to nodes that answer**. When replies stop, it drops the node and frames stop within about 3 s. It resumes after replies return. **The S3 must answer every ArtPoll** |
 | Stopped / paused show | Frames **keep coming** at full rate with the **last values frozen**. They don't drop to zero or stop |
 | Idle (nothing playing) | Frames keep coming, all zero. MIDI-menu color overrides alone also give all zero; something must be playing |

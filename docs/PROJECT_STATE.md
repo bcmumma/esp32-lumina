@@ -9,80 +9,63 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are sequential (se
 | Track | Phase | Status | Authorization |
 |---|---|---|---|
 | DJ (Mac + PC capture) | Complete (Phases 4–6) | Done | n/a |
-| Firmware | 11: Network validation | In progress | Authorized 2026-10-14 for Phase 11 |
+| Firmware | 12: Intelligent Fixture v1 (`LUMINA-16`) | Not started | Not authorized |
 
 - Authorize a phase with `/start-milestone Phase <N>` in Claude Code. Until then, everything is read-only.
-- **Branch:** `main` holds v2 unchanged. `develop-v23` = Phases 7–9 + DJ track (`ac75b8e`). Phase 10 is on `feature/artnet-receiver`; merging it into `develop-v23` is your call (a good merge point).
-- **Last verified commit:** `62995bc` on `feature/artnet-receiver` (Phase 10, closed 2026-10-14). Phase 11 (measurement) continues on `feature/artnet-receiver`.
-- **Both boards run** the Phase 10 firmware. Strand 1 is set to off live; a reboot restores its saved audio mode (mode 12).
+- **Branch:** `main` holds v2 unchanged. `develop-v23` = Phases 7–9 + DJ track (`ac75b8e`). Phases 10–11 are on `feature/artnet-receiver`; merging it into `develop-v23` is your call (a good merge point).
+- **Last verified commit:** `6cafb55` on `feature/artnet-receiver` (Phase 11, closed 2026-10-14).
+- **Both boards run** the Phase 11 firmware. Strand 1 is set to off live; its saved mode is 12 (audio VU).
 
 ## What works
 
 - v3 firmware: v2 parity, modular, warning-free; 15/15 on-device unit tests.
-- **Art-Net into the S3 (parse/report only):**
-  - SoundSwitch discovers "Lumina S3" and unicasts universe 0 at about 36 fps.
-  - The S3's decoded values equal the PC's frame for frame, with a Red Autoloop and a Serato-driven show.
-  - `/api/artnet` reports it.
-- DJ path: Serato 4.0.4 → SoundSwitch 2.11 → Art-Net. A scripted show follows Serato play/pause (see KNOWN_ISSUES for the blackout and resume quirks).
-- **Test bench:** serial, tones, webcam, strand colors, Art-Net monitor/sender/compare.
-- **Phases done:** 0–10.
+- **Art-Net into the S3 (parse/report):** SoundSwitch discovers "Lumina S3" and unicasts universe 0. The decoded values equal the PC's frame for frame.
+- **Live network setup (validated):**
+  - Mac on Ethernet in the S3's VLAN; Art-Net loss 0.08% over 30 min, max gap 480 ms.
+  - Keep the Mac awake. A Mac on another VLAN can't discover the S3.
+- **Test bench:** serial, tones, webcam, strand colors, Art-Net monitor/sender/compare, network soak.
+- **Phases done:** 0–11.
 
 ## Next step
 
 1. **Your call:** merge `feature/artnet-receiver` into `develop-v23`.
-2. **Phase 11 in progress.** Owner checklist:
-   - [ ] Switch the PC so it reaches the S3 directly (Ethernet port / disconnect the HomeLab VPN). Expected: Claude's route check shows `Ethernet`.
-   - [ ] Put the S3 and the receiver at their install positions, antennas clear.
-   - [ ] Mac on Ethernet for the main 30-min soak (optional second soak on Wi-Fi). SoundSwitch playing; PC Art-Net monitor closed.
+2. **Before Phase 12 drives LEDs from Art-Net (owner):**
+   - [ ] 12 V PSU amp rating, fusing, and injection. This sets the brightness cap.
+   - [ ] Level converter check: LV side about 3.3 V, HV side about 5 V, part number.
+   - [ ] Strips on outputs 2–4, if effects should span all four.
 3. **Owner, when convenient:**
    - [ ] AP Wi-Fi security mode (WPA2 / mixed / WPA3), for the S3's 6 s first join.
-   - [ ] Level converter: LV side about 3.3 V, HV side about 5 V, part number.
-   - [ ] Strips on outputs 2–4, cycled on camera.
-   - [ ] 12 V PSU amp rating, before brighter tests.
-   - [ ] SoundSwitch quirks (KNOWN_ISSUES): Performance Mode blackout (blue-highlighted tracks? fader position?) and pause/resume.
-4. **Optional (your network):** the PC routes its own LAN through the HomeLab VPN adapter, so `.100` traffic takes an extra hop. Switching the Ethernet port or the VPN routes is your call.
+   - [ ] SoundSwitch quirks (KNOWN_ISSUES): Performance Mode blackout and pause/resume.
+   - [ ] Re-measure S3 RSSI and stalls at the install position.
 
-## Phase 11 results so far
+## Phase 12 draft checklist (Intelligent Fixture v1, `LUMINA-16`)
 
-- **Soak run 1 (2026-10-14, 30 min; bench positions, Mac on Wi-Fi, PC→S3 via the VPN route):**
-  - S3: 0 reboots, 0 Wi-Fi disconnects; RSSI -78/-71/-67 dBm (min/median/max); heap drift -8 B.
-  - Art-Net u0: 30.3 fps average, 0.45% gaps, 27 stalls over 250 ms. **One 160 s outage**, during which neither ArtDmx nor ArtPoll arrived (polls stuck), while the S3 stayed connected and reachable. Points to the Mac/SoundSwitch side, cause unconfirmed.
-  - ESP-NOW: S3 0 send errors; receiver 1.25% loss, 0 bad.
-  - Ping PC→S3 (via VPN): 0.2% loss, p50 3 ms, p95 19 ms, max 361 ms.
-  - Cause of the outage: **the Mac slept** (owner confirmed).
-- **Soak run 2 (2026-10-14, 30 min; bench positions, Mac on Ethernet in the S3's VLAN):**
-  - S3: 0 reboots, 0 Wi-Fi disconnects; RSSI -83/-72/-66 dBm; heap drift -240 B.
-  - Art-Net u0: SoundSwitch sent **about 21 fps** on Ethernet (36 on Wi-Fi; cause unknown). **0.08% gaps; max interval 480 ms; 22 stalls over 250 ms**; no outage.
-  - ESP-NOW: S3 0 send errors; receiver 1.27% loss, 0 bad.
-  - Ping: Mac 0% loss, p95 1 ms (wired path clean). S3 0% loss, p50 4 / p95 22 / max 307 ms.
-  - So the short stalls sit on the **S3's Wi-Fi hop** (signal around -72 dBm), not the Mac.
-- A Mac on VLAN 10 can't discover the S3 on VLAN 30 (broadcast ArtPoll doesn't cross VLANs). Keep the Mac on the S3's VLAN.
+Gate (ROADMAP): a SoundSwitch control changes a real Lumina effect live.
 
-## Phase 11 checklist (Network validation)
-
-Gate (ROADMAP): Art-Net stays stable on the real network (ping, RSSI, packet consistency, VLAN and firewall path).
-
-- [x] Live setup decided (owner): Mac on Ethernet in the S3's VLAN; ESP32s closer to the AP than on the bench. Run 2 on the bench is the conservative proxy *(owner)*
-- [x] 30-min soak in the live network setup (run 2):
-  - Art-Net loss 0.08%, max gap 480 ms, no outage (thresholds: under 1%, no gap over 1 s);
-  - S3 0 Wi-Fi disconnects, 0 reboots, heap flat;
-  - ESP-NOW 1.27% loss, 0 send errors *(Claude)*
-- [x] Wi-Fi comparison (run 1): 0.45% loss; one 160 s outage caused by the Mac sleeping *(Claude; owner confirmed)*
-- [x] Ping: Mac 0% loss, p95 1 ms; S3 0% loss, p95 22 ms. RSSI logged (median -72 dBm). Short stalls are on the S3's Wi-Fi hop *(Claude)*
-- [x] Path: Mac and S3 on the same VLAN/subnet, so no pfSense/Suricata hop. Cross-VLAN breaks discovery (broadcast ArtPoll) *(Claude; owner moved the Mac)*
-- [x] Gate judged on loss and gaps, not frame rate (owner OK) *(see DECISIONS)*
-- [x] Latency baseline moved to Phase 12 (Art-Net doesn't drive LEDs yet) *(see DECISIONS)*
-- [x] Parity: routes 200 (page identical), save/load OK, tone sweep matches between boards, clip 0 *(Claude)*
+- [ ] Branch `feature/intelligent-fixture` off the merged v3 branch *(owner OK)*
+- [ ] SoundSwitch fixture `Lumina LUMINA-16`, 16 channels per `docs/ARCHITECTURE.md`:
+  - master dimmer, effect, speed, intensity, density, strobe, direction, variation, primary/secondary RGB, transition, palette;
+  - click-by-click steps in the guide *(owner, guided)*
+- [ ] S3: map universe 0 CH1–16 to the existing effect parameters. The S3 sends effect parameters over ESP-NOW (not pixels); the receiver renders.
+  - Art-Net control is switched on by a web toggle; automatic source arbitration is Phase 13.
+- [ ] Safety:
+  - strobe channel rate-capped with a global strobe disable, conservative default;
+  - a brightness cap from the PSU rating *(Claude; owner sets the PSU number)*
+- [ ] First effects: Solid Color, Neon Scanner, Laser Sweep, Rave Chase, DnB Chopper, White Lightning *(Claude)*
+- [ ] Tests: CH1–16 mapping unit tests. On hardware, `artnet_send.py` drives known channel values, checked against the effect state and on camera *(Claude)*
+- [ ] Gate: a SoundSwitch control (e.g. color or effect change) visibly changes the strips live *(owner + camera)*
+- [ ] Latency baseline: Art-Net frame → LED change on camera (moved from Phase 11) *(Claude)*
+- [ ] Parity: the audio mode still works when Art-Net control is off *(Claude)*
 
 ## Open questions
 
 - Mac model; dev board models (the modules are known).
 - Strip types and counts (config: 150 per strand), PSU rating, fusing, injection. A level converter and 330 Ω resistors are fitted.
-- Why SoundSwitch Performance Mode sometimes outputs pure black.
+- Why SoundSwitch Performance Mode sometimes outputs pure black, and why its send rate is about 21 fps wired vs about 36 on Wi-Fi.
 
 ## Recent decisions
 
 See `docs/DECISIONS.md`. Latest (2026-10-14):
-- Phase 10 gate method: `artnet_compare.py` pairs frames by neighbour sequence and aligned time, because SoundSwitch shares one sequence counter across nodes.
-- The S3's ArtPollReply advertises its own IP; SoundSwitch unicasts only there.
-- `develop-v23` fast-forwarded to `feature/platformio-migration` (owner OK).
+- Live setup: Mac on Ethernet in the S3's VLAN; ESP32s nearer the AP.
+- Phase 11 gate judged on Art-Net loss and gaps (under 1%, no gap over 1 s), not frame rate.
+- Latency baseline moved to Phase 12.
