@@ -58,22 +58,21 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are sequential (se
   - So the short stalls sit on the **S3's Wi-Fi hop** (signal around -72 dBm), not the Mac.
 - A Mac on VLAN 10 can't discover the S3 on VLAN 30 (broadcast ArtPoll doesn't cross VLANs). Keep the Mac on the S3's VLAN.
 
-## Phase 11 draft checklist (Network validation)
+## Phase 11 checklist (Network validation)
 
 Gate (ROADMAP): Art-Net stays stable on the real network (ping, RSSI, packet consistency, VLAN and firewall path).
 
-- [ ] Place the S3 and the receiver at their install positions; antennas clear *(owner)*
-- [ ] Preferred live setup: Mac on Ethernet, S3 on Wi-Fi (one wireless hop). Compare with the Mac on Wi-Fi *(owner switches; Claude measures)*
-- [ ] 30-minute soak with SoundSwitch playing:
-  - Art-Net fps and loss on the S3, measured as frames vs. the expected rate (gap counts aren't valid with several nodes);
-  - S3 RSSI log;
-  - ESP-NOW loss;
-  - Wi-Fi reconnects;
-  - heap trend *(Claude)*
-- [ ] Ping/jitter: PC→S3, plus Mac→S3 if possible. Record the path (same VLAN; no firewall hop) *(Claude, owner for the Mac)*
-- [ ] Latency baseline: Art-Net arrival vs. LED output (camera), and the post-antenna ESP-NOW latency that was never measured *(Claude)*
-- [ ] Check Suricata/pfSense only if the traffic crosses them (it doesn't today: same subnet) *(owner)*
-- [ ] Parity still holds *(Claude)*
+- [x] Live setup decided (owner): Mac on Ethernet in the S3's VLAN; ESP32s closer to the AP than on the bench. Run 2 on the bench is the conservative proxy *(owner)*
+- [x] 30-min soak in the live network setup (run 2):
+  - Art-Net loss 0.08%, max gap 480 ms, no outage (thresholds: under 1%, no gap over 1 s);
+  - S3 0 Wi-Fi disconnects, 0 reboots, heap flat;
+  - ESP-NOW 1.27% loss, 0 send errors *(Claude)*
+- [x] Wi-Fi comparison (run 1): 0.45% loss; one 160 s outage caused by the Mac sleeping *(Claude; owner confirmed)*
+- [x] Ping: Mac 0% loss, p95 1 ms; S3 0% loss, p95 22 ms. RSSI logged (median -72 dBm). Short stalls are on the S3's Wi-Fi hop *(Claude)*
+- [x] Path: Mac and S3 on the same VLAN/subnet, so no pfSense/Suricata hop. Cross-VLAN breaks discovery (broadcast ArtPoll) *(Claude; owner moved the Mac)*
+- [x] Gate judged on loss and gaps, not frame rate (owner OK) *(see DECISIONS)*
+- [x] Latency baseline moved to Phase 12 (Art-Net doesn't drive LEDs yet) *(see DECISIONS)*
+- [x] Parity: routes 200 (page identical), save/load OK, tone sweep matches between boards, clip 0 *(Claude)*
 
 ## Open questions
 
