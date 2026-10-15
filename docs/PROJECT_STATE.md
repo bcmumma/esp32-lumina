@@ -30,9 +30,10 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are sequential (se
 
 1. **Your call:** merge `feature/artnet-receiver` into `develop-v23`.
 2. **Before Phase 12 drives LEDs from Art-Net (owner):**
-   - [ ] 12 V PSU amp rating, fusing, and injection. This sets the brightness cap.
-   - [ ] Level converter check: LV side about 3.3 V, HV side about 5 V, part number.
-   - [ ] Strips on outputs 2–4, if effects should span all four.
+   - [x] 12 V PSU: **90 W (7.5 A)**, budget about 6 A. Brightness cap estimated at about 60–65% (HARDWARE.md). *(owner, 2026-10-14)*
+   - [ ] Fusing and power injection; strip datasheet or one measured current per strand, to confirm the cap.
+   - [~] Level converter is 3.3 V → 5 V (owner). Still to come: a multimeter reading on each side, after the 12 V touch, and the part number.
+   - [ ] Strips on outputs 2–4: being mounted (owner). Likely the **same effect on all four**, so `LUMINA-16` drives one shared effect.
 3. **Owner, when convenient:**
    - [ ] AP Wi-Fi security mode (WPA2 / mixed / WPA3), for the S3's 6 s first join.
    - [ ] SoundSwitch quirks (KNOWN_ISSUES): Performance Mode blackout and pause/resume.

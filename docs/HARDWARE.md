@@ -46,6 +46,11 @@
 
 - The strips are 12 V addressable. WS2815 has been confirmed working. I've also mentioned having "the 11s," probably 12 V WS2811-type strips; still to be confirmed.
 - They run from a separate 12 V LED supply. **That supply's ground must be tied to the ESP32 ground**, or the data signal has no reference.
+- **Owner, 2026-10-14:**
+  - 12 V supply rated **90 W (7.5 A)**; plan for about 80% continuous, about 6 A.
+  - Level converter is a 3.3 V → 5 V type (rail measurements and part number still to come).
+  - Strands 2–4 are being mounted; likely the **same effect on all four strands**.
+- **Brightness budget (estimate):** 600 LEDs (4 × 150) at full white. **UNVERIFIED:** about 15 mA per WS2815 pixel at full white (from memory). If so, about 9 A, above the about 6 A budget, so cap global brightness at about 60–65%. Confirm with the strip datasheet or one measured current before Phase 12 drives LEDs from Art-Net.
 - **Unknown, to inspect:**
   - strip type and LED count per strand;
   - PSU voltage and current rating;
