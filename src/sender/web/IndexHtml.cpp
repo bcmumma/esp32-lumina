@@ -226,6 +226,29 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
     </div>
 
     <div class="card">
+      <h2>Control Source &amp; Strobe Safety</h2>
+      <p class="small">Who drives the lights. <b>Auto</b> follows SoundSwitch (Art-Net) while it sends, and falls back after about 1 s without it. Source, fallback, strobe rate and standalone level are saved immediately.</p>
+      <div class="front-actions">
+        <button id="src_auto" onclick="setSource('auto')">Auto</button>
+        <button id="src_artnet" onclick="setSource('artnet')">Art-Net</button>
+        <button id="src_audio" onclick="setSource('audio')">Audio</button>
+        <button id="src_standalone" onclick="setSource('standalone')">Standalone</button>
+      </div>
+      <p id="controlStatus" class="small">Active source: loading...</p>
+      <div class="grid">
+        <label>Auto fallback</label>
+        <select id="ctlFallback" onchange="controlCall('fallback=' + this.value)"><option value="audio">Audio</option><option value="standalone">Standalone</option></select><span></span>
+        <label>Standalone level</label><input id="ctlStandalone" type="range" min="0" max="255" step="1" onchange="controlCall('standalone=' + this.value)"><span id="ctlStandaloneVal"></span>
+        <label>Strobe max rate</label>
+        <select id="ctlStrobeHz" onchange="controlCall('strobeHz=' + this.value)"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select><span>flashes/s</span>
+      </div>
+      <div class="front-actions">
+        <button id="ctlStrobeBtn" onclick="toggleStrobe()">Strobe: off</button>
+      </div>
+      <p class="small warn">Photosensitivity warning: flashing at about 3-30 flashes/s can trigger seizures. Strobe is off at every boot; keep it off near people who may be affected.</p>
+    </div>
+
+    <div class="card">
       <h2>Master Controls</h2>
       <div class="grid">
         <label>Global brightness</label><input id="globalBrightness" type="range" min="0" max="255" step="1"><span id="globalBrightnessVal"></span>
@@ -1341,6 +1364,38 @@ makeAllColorButtons();
 makeColorMapButtons();
 makeModeStrandControls();
 makeHardwareStrandControls();
+// ---- Control source & strobe safety (Phase 13, /api/control) ----
+let controlState = null;
+function renderControl(c) {
+  controlState = c;
+  for (const s of ["auto", "artnet", "audio", "standalone"]) {
+    const b = document.getElementById("src_" + s);
+    if (b) b.classList.toggle("active", c.source === s);
+  }
+  const age = c.artnetAgeMs > 4000000000 ? "none yet" : (c.artnetAgeMs / 1000).toFixed(1) + " s ago";
+  document.getElementById("controlStatus").textContent =
+    "Active source: " + c.active.toUpperCase() + " (" + c.reason + "). Last Art-Net: " + age + ".";
+  document.getElementById("ctlFallback").value = c.autoFallback;
+  document.getElementById("ctlStandalone").value = c.standaloneLevel;
+  document.getElementById("ctlStandaloneVal").textContent = c.standaloneLevel;
+  document.getElementById("ctlStrobeHz").value = String(c.strobeHz);
+  const sb = document.getElementById("ctlStrobeBtn");
+  sb.textContent = c.strobeEnabled ? "Strobe: ON (tap to turn off)" : "Strobe: off (tap to enable)";
+  sb.classList.toggle("active", c.strobeEnabled);
+}
+function controlCall(query) {
+  return fetch("/api/control" + (query ? "?" + query : ""), {cache: "no-store"})
+    .then(r => r.json()).then(renderControl).catch(() => showToast("Control update failed", true));
+}
+function setSource(s) { controlCall("source=" + s); }
+function toggleStrobe() {
+  if (controlState && controlState.strobeEnabled) { controlCall("strobe=0"); return; }
+  if (confirm("Enable strobe? Flashing light can trigger seizures in photosensitive people. Max rate stays capped at " +
+              (controlState ? controlState.strobeHz : 3) + " flashes/s.")) controlCall("strobe=1");
+}
+controlCall("");
+setInterval(() => { if (!document.hidden) controlCall(""); }, 2000);
+
 installControls();
 showTab("all");
 loadInitialState().finally(() => scheduleLivePoll(0));
