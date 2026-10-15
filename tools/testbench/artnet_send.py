@@ -46,6 +46,8 @@ def main():
     ap.add_argument("--seconds", type=float, default=10)
     ap.add_argument("--level", type=int, default=64, help="0-255 channel level for lit colors")
     ap.add_argument("--poll", action="store_true", help="send one ArtPoll and print any ArtPollReply")
+    ap.add_argument("--lumina16", help="comma-separated fixed LUMINA-16 channel values (CH1..), e.g. 255,0,0,128,128,0,0,0,255,0,0")
+    ap.add_argument("--address", type=int, default=1, help="1-based DMX address for --lumina16")
     args = ap.parse_args()
     targets = args.to or ["127.0.0.1"]
 
@@ -70,7 +72,13 @@ def main():
     print(f"Sending ArtDmx universe {args.universe} to {', '.join(targets)} (port {ARTNET_PORT}) at {args.fps:g} fps for {args.seconds:g} s")
     while time.time() - t0 < args.seconds:
         step = int(time.time() - t0)
-        frame = art_dmx(args.universe, seq, pattern(step, args.level))
+        if args.lumina16:
+            values = [max(0, min(255, int(v))) for v in args.lumina16.split(",")][:16]
+            data = bytearray(512)
+            data[args.address - 1:args.address - 1 + len(values)] = bytes(values)
+            frame = art_dmx(args.universe, seq, bytes(data))
+        else:
+            frame = art_dmx(args.universe, seq, pattern(step, args.level))
         for to in targets:
             sock.sendto(frame, (to, ARTNET_PORT))
         seq = seq % 255 + 1

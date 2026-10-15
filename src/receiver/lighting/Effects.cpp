@@ -4,6 +4,15 @@
 #include "LedOutput.h"
 
 StrandRuntime rt[MAX_STRANDS];
+StrobeGate strobeGate = {0, 0};  // one flash timer for the whole rig (all strands)
+
+// Strobe safety (docs/DECISIONS.md): every flash onset goes through here, so the
+// sender's global strobe switch and max flash rate (packet flags) always apply.
+static bool flash_allowed(uint8_t s, const AudioLedPacket &p, uint32_t now) {
+  if (!strobe_gate_allow(strobeGate, p.flags, now)) return false;
+  rt[s].lastTriggerMs = now;
+  return true;
+}
 
 static uint8_t combined_brightness(const AudioLedPacket &p, const StrandSettings &st) {
   uint8_t gb = p.globalBrightness;
@@ -69,7 +78,7 @@ void render_space_pulse(uint8_t s, const AudioLedPacket &p, const StrandSettings
 }
 
 void render_beat_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat) {
-  if (newBeat) rt[s].flash = 255;
+  if (newBeat && flash_allowed(s, p, millis())) rt[s].flash = 255;
   fade_strand(s, st.strobe > 0 ? st.strobe : 80);
   if (rt[s].flash > 10) {
     fill_strand(s, strand_color(p, st, 0, combined_brightness(p, st)));
@@ -257,7 +266,7 @@ void render_beat_tracker(uint8_t s, const AudioLedPacket &p, const StrandSetting
   if (p.flags & 0x01) set_pixel(s, 0, {brightness, brightness, 0});
   if (p.flags & 0x02) set_pixel(s, n - 1U, {0, brightness, brightness});
 
-  if (newBeat) rt[s].flash = 255;
+  if (newBeat && flash_allowed(s, p, millis())) rt[s].flash = 255;
   if (rt[s].flash > 2) {
     uint8_t flashBrightness = scale8_video(brightness, rt[s].flash);
     Rgb flashColor = strand_color(p, st, 0, flashBrightness);
@@ -523,9 +532,8 @@ void render_hyper_strobe(uint8_t s, const AudioLedPacket &p, const StrandSetting
   rt[s].prevEnergy = energy;
   uint8_t threshold = (uint8_t)map(st.strobe, 0, 255, 72, 14);
   uint32_t now = millis();
-  if (delta > threshold && now - rt[s].lastTriggerMs > 35U) {
+  if (delta > threshold && flash_allowed(s, p, now)) {  // was: every 35 ms (~28/s)
     rt[s].flash = (uint8_t)min<int>(255, 120 + delta * 3);
-    rt[s].lastTriggerMs = now;
     rt[s].aux = (uint16_t)random(max<uint16_t>(1, n));
   }
   clear_strand(s);
@@ -566,9 +574,8 @@ void render_white_lightning(uint8_t s, const AudioLedPacket &p, const StrandSett
   rt[s].prevTreble = p.treble;
   uint8_t threshold = (uint8_t)map(st.sensitivity, 0, 255, 65, 12);
   uint32_t now = millis();
-  if (delta > threshold && now - rt[s].lastTriggerMs > 45U) {
+  if (delta > threshold && flash_allowed(s, p, now)) {  // was: every 45 ms (~22/s)
     rt[s].flash = (uint8_t)min<int>(255, 135 + delta * 3);
-    rt[s].lastTriggerMs = now;
     uint8_t forks = (uint8_t)map(st.density, 0, 255, 1, 5);
     for (uint8_t f = 0; f < forks; f++) {
       int32_t start = random(n);

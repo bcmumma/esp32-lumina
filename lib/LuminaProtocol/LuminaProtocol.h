@@ -136,3 +136,24 @@ static inline bool strobe_allow_flash(uint8_t flags, uint32_t nowMs, uint32_t la
   if (!strobe_enabled(flags)) return false;
   return lastFlashMs == 0 || nowMs - lastFlashMs >= strobe_min_interval_ms(flags);
 }
+
+// One flash timer for the whole rig: a viewer sees all strands at once, so the cap
+// applies to flash *events*, not per strand. Strands that trigger within
+// STROBE_SAME_EVENT_MS of the current event join it (they flash together).
+static constexpr uint32_t STROBE_SAME_EVENT_MS = 20;
+
+struct StrobeGate {
+  uint32_t lastEventMs;  // 0 = no flash yet
+  uint32_t events;       // flash events started (diagnostic)
+};
+
+// True if this strand may start a flash now; counts a new event when it opens one.
+static inline bool strobe_gate_allow(StrobeGate &g, uint8_t flags, uint32_t nowMs) {
+  if (!strobe_enabled(flags)) return false;
+  if (g.lastEventMs != 0 && nowMs - g.lastEventMs < STROBE_SAME_EVENT_MS) return true;  // same event
+  if (!strobe_allow_flash(flags, nowMs, g.lastEventMs)) return false;
+  g.lastEventMs = nowMs;
+  g.events++;
+  return true;
+}
+

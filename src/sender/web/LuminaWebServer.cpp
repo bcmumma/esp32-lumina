@@ -7,6 +7,7 @@
 #include "../network/WiFiManager.h"
 #include "../network/EspNowSender.h"
 #include "../network/ArtNetReceiver.h"
+#include "../lighting/Lumina16Control.h"
 #include "../util/Clamp.h"
 
 WebServer server(80);
@@ -407,12 +408,27 @@ static void handle_artnet() {
   server.send(200, "application/json", s);
 }
 
+// Phase 12 live controls (not saved): ?artnet=0|1 &address=1..497 &cap=0..64 &strobe=0|1 &strobeHz=1..8
+static void handle_control() {
+  if (server.hasArg("artnet")) control.artnetControl = server.arg("artnet").toInt() != 0;
+  if (server.hasArg("address")) control.address = (uint16_t)clamp_int(server.arg("address").toInt(), 1, 512 - 15);
+  if (server.hasArg("cap")) control.brightnessCap = (uint8_t)clamp_int(server.arg("cap").toInt(), 0, LUMINA16_BRIGHTNESS_CAP_MAX);
+  if (server.hasArg("strobe")) control.strobeEnabled = server.arg("strobe").toInt() != 0;
+  if (server.hasArg("strobeHz")) control.strobeHz = strobe_clamp_hz((uint8_t)clamp_int(server.arg("strobeHz").toInt(), 1, STROBE_MAX_HZ));
+  String s;
+  s.reserve(768);
+  append_control_json(s, millis());
+  no_cache();
+  server.send(200, "application/json", s);
+}
+
 void setup_web_server() {
   server.on("/", handle_root);
   server.on("/api/state", handle_state);
   server.on("/api/live", handle_live);
   server.on("/health", handle_health);
   server.on("/api/artnet", handle_artnet);
+  server.on("/api/control", handle_control);
   server.on("/api/setTuning", handle_set_tuning);
   server.on("/api/setLed", handle_set_led);
   server.on("/api/save", handle_save);

@@ -173,6 +173,15 @@ void artnet_service(uint32_t nowMs) {
   }
 }
 
+const uint8_t *artnet_listen_dmx(uint16_t &length, uint32_t &lastRxMs) {
+  length = dmxLength;
+  lastRxMs = 0;
+  for (const auto &u : stats) {
+    if (u.used && u.universe == ARTNET_LISTEN_UNIVERSE) lastRxMs = u.lastRxMs;
+  }
+  return dmxLength ? dmx : nullptr;
+}
+
 void reset_artnet_interval_stats() {
   for (auto &u : stats) {
     u.maxIntervalMs = 0;

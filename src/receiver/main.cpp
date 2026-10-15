@@ -13,6 +13,7 @@
 #include "lighting/EffectState.h"
 #include "lighting/LedOutput.h"
 #include "lighting/Renderer.h"
+#include "lighting/Effects.h"
 #include "network/EspNowReceiver.h"
 
 // v3 layout: setup() and the frame loop live here; each subsystem has its own module.
@@ -161,7 +162,7 @@ void loop() {
     if (haveCurrentPacket) {
       const AudioLedPacket &p = currentPacket;
       Serial.printf(
-        "rx good=%lu bad=%lu lost=%lu seq=%u age=%lums ch=%u locked=%u fps=%lu render=%luus show=%luus vol=%3u bass=%3u mid=%3u treb=%3u beat=%3u pulse=%3u conf=%3u bpm=%3u gB=%3u modes=[%u,%u,%u,%u] br=[%u,%u,%u,%u] en=[%u,%u,%u,%u] pins=[%u,%u,%u,%u] counts=[%u,%u,%u,%u] cmap=%u rgbScale=[%u,%u,%u] gamma10=%u\n",
+        "rx good=%lu bad=%lu lost=%lu seq=%u age=%lums ch=%u locked=%u fps=%lu flashes=%lu render=%luus show=%luus vol=%3u bass=%3u mid=%3u treb=%3u beat=%3u pulse=%3u conf=%3u bpm=%3u gB=%3u modes=[%u,%u,%u,%u] br=[%u,%u,%u,%u] en=[%u,%u,%u,%u] pins=[%u,%u,%u,%u] counts=[%u,%u,%u,%u] cmap=%u rgbScale=[%u,%u,%u] gamma10=%u\n",
         (unsigned long)good,
         (unsigned long)bad,
         (unsigned long)lostPackets,
@@ -170,6 +171,7 @@ void loop() {
         (unsigned int)currentWifiChannel,
         wifiChannelLocked ? 1U : 0U,
         (unsigned long)renderFps,
+        (unsigned long)strobeGate.events,
         (unsigned long)renderUs,
         (unsigned long)showUs,
         p.volume,

@@ -162,6 +162,31 @@ static void test_strobe_allow_flash() {
   TEST_ASSERT_TRUE(strobe_allow_flash(on8, 1125, 1000));
 }
 
+static void test_strobe_gate_is_rig_wide() {
+  StrobeGate g = {0, 0};
+  uint8_t on3 = strobe_encode_flags(0, true, 3);
+  // Four strands triggering in the same render frame are one event.
+  TEST_ASSERT_TRUE(strobe_gate_allow(g, on3, 1000));
+  TEST_ASSERT_TRUE(strobe_gate_allow(g, on3, 1001));
+  TEST_ASSERT_TRUE(strobe_gate_allow(g, on3, 1005));
+  TEST_ASSERT_TRUE(strobe_gate_allow(g, on3, 1019));
+  TEST_ASSERT_EQUAL_UINT32(1, g.events);
+  // Out-of-step strands can't add events inside the cap interval.
+  TEST_ASSERT_FALSE(strobe_gate_allow(g, on3, 1100));
+  TEST_ASSERT_FALSE(strobe_gate_allow(g, on3, 1250));
+  TEST_ASSERT_TRUE(strobe_gate_allow(g, on3, 1334));
+  TEST_ASSERT_EQUAL_UINT32(2, g.events);
+  // Simulate 4 strands each trying every 25 ms, out of phase, for 10 s: events <= 3/s.
+  StrobeGate h = {0, 0};
+  for (uint32_t t = 1; t < 10000; t++) {
+    if (t % 25 == 0 || t % 25 == 6 || t % 25 == 12 || t % 25 == 18) strobe_gate_allow(h, on3, t);
+  }
+  TEST_ASSERT_LESS_OR_EQUAL_UINT32(30, h.events);
+  StrobeGate off = {0, 0};
+  TEST_ASSERT_FALSE(strobe_gate_allow(off, strobe_encode_flags(0, false, 8), 1000));
+  TEST_ASSERT_EQUAL_UINT32(0, off.events);
+}
+
 void setup() {
   delay(2000);
   UNITY_BEGIN();
@@ -174,6 +199,7 @@ void setup() {
   RUN_TEST(test_apply_keeps_hardware_fields);
   RUN_TEST(test_strobe_flags);
   RUN_TEST(test_strobe_allow_flash);
+  RUN_TEST(test_strobe_gate_is_rig_wide);
   UNITY_END();
 }
 
