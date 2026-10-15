@@ -39,6 +39,12 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are sequential (se
    - [ ] SoundSwitch quirks (KNOWN_ISSUES): Performance Mode blackout and pause/resume.
    - [ ] Re-measure S3 RSSI and stalls at the install position.
 
+## Phase 12 owner checklist (now)
+
+- [ ] Build the `Lumina LUMINA-16` fixture in Fixture Manager. Guide Part 5.1. Expected: Check Fixture passes (or report its message).
+- [ ] Patch it at Universe 1, address 1 in a new venue `Lumina 16` (Part 5.2).
+- [ ] Gate (Part 5.3): with Art-Net control on, a SoundSwitch colour/Autoloop change visibly changes strand 1 live.
+
 ## Phase 12 draft checklist (Intelligent Fixture v1, `LUMINA-16`)
 
 Gate (ROADMAP): a SoundSwitch control changes a real Lumina effect live.

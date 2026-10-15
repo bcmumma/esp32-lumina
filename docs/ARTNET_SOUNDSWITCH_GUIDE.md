@@ -294,3 +294,59 @@ The S3's diagnostics should then report the same universe, frame rate, and chann
 - [SoundSwitch User Guide (PDF, 2021)](https://cdn.inmusicbrands.com/soundswitch/files/User%20Guide.pdf): Preferences → Hardware tab and universe assignment, venues, DMX Map, the "Red" Autoloop, File → Switch Modes, the Serato connection indicator.
 - [SoundSwitch 2.1 announcement (2019)](https://www.audiomasterclass.com/blog/soundswitch-announces-2-1-dj-lighting-control-software-release-with-new-connectivity-options-2): "SoundSwitch now broadcasts Art-NET".
 - [OLA issue #1779 (2022, user report)](https://github.com/OpenLightingProject/ola/issues/1779): Art-Net devices appearing in SoundSwitch's hardware overview.
+
+---
+
+## Part 5: Phase 12, the `LUMINA-16` intelligent fixture (Mac, about 30 min)
+
+Instead of 12 raw RGB channels, Lumina now takes **16 control channels** and renders the effect itself, the same on all four strands. Channels 12–16 are reserved in v1, so leave them unassigned.
+
+| CH | Function | What it does on Lumina |
+|---|---|---|
+| 1 | Master dimmer | Brightness (capped at 25% for now) |
+| 2 | Effect | 0–42 Solid Color, 43–85 Neon Scanner, 86–127 Laser Sweep, 128–170 Rave Chase, 171–213 DnB Chopper, 214–255 White Lightning |
+| 3 | Speed | Animation speed |
+| 4 | Intensity | How strongly the effect reacts to the music |
+| 5 | Density | Width / fill / number of elements |
+| 6 | Strobe | Strobe strength. Flashing only happens if strobe is enabled on Lumina (off by default, max 3/s) |
+| 7 | Direction | 0–84 forward, 85–169 reverse, 170–255 mirror |
+| 8 | Variation | Extra sparkle/variation |
+| 9–11 | Red / Green / Blue | Main colour (equal R=G=B gives white) |
+| 12–16 | (reserved) | Ignored in v1 |
+
+### 5.1 Build the fixture (Fixture Manager)
+
+Same tool as Part 1.2. The steps follow SoundSwitch's "Creating a profile for an RGB par can" article. **UNVERIFIED:** exact labels in SoundSwitch 2.11.
+
+1. Open **Fixture Manager**, then **File → New Fixture**.
+2. Pick the same manufacturer as before; Model: `Lumina LUMINA-16`.
+3. **Add Mode** with **16** channels. Use **one cell**; it's a single fixture, not 4 strands.
+4. Add these functions, each with **1** channel at the given channel number (the **Coarse** column):
+   - **Dimmer** (master dimmer) → channel **1**
+   - **Strobe** (shutter/strobe) → channel **6**
+   - **Red** → **9**, **Green** → **10**, **Blue** → **11**
+5. Add the control channels SoundSwitch doesn't drive directly as **Attributes**:
+   - Effect → **2**
+   - Speed → **3**
+   - Intensity → **4**
+   - Density → **5**
+   - Direction → **7**
+   - Variation → **8**
+6. Leave 12–16 empty, and remove any default functions you didn't add.
+7. Click **Fixtures → Check Fixture**. If it complains about a **MASTER** cell, a missing function, or unused channels, tell Claude Code exactly what it says.
+8. Click **File → Save Workspace**.
+
+### 5.2 Patch it (SoundSwitch Edit Mode)
+
+1. Create a new venue so the old one stays intact: click **+** at the top of the workspace, type `Lumina 16`, and press **Return**.
+2. Open the **DMX Map**, select **Universe 1**, search for `LUMINA-16`, and drag the 16-channel mode onto address **1**.
+3. In **Preferences → Hardware**, check that **Lumina S3** is still on **Universe One**.
+
+### 5.3 Gate test: a SoundSwitch control changes the strip
+
+1. Tell Claude Code you're ready. Claude switches **Art-Net control on** (`/api/control?artnet=1`). Strobe stays off.
+2. With the `Lumina 16` venue selected, play the **"Red"** Autoloop. Strand 1 should turn red (dimmed by the 25% cap).
+3. Change the colour (another Autoloop, or a colour override while it plays). **The strip should change colour live.** The webcam watches too.
+4. Optional: in a script or Autoloop, set the **Effect** attribute to another band (e.g. 128 for Rave Chase) and watch the effect change.
+
+Without Art-Net control (Claude switches it off, or Lumina reboots), Lumina goes back to its own web settings and audio mode.
