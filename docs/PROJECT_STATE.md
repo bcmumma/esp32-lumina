@@ -9,11 +9,11 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are sequential (se
 | Track | Phase | Status | Authorization |
 |---|---|---|---|
 | DJ (Mac + PC capture) | Complete (Phases 4–6) | Done | n/a |
-| Firmware | 11: Network validation | Not started | Not authorized |
+| Firmware | 11: Network validation | In progress | Authorized 2026-10-14 for Phase 11 |
 
 - Authorize a phase with `/start-milestone Phase <N>` in Claude Code. Until then, everything is read-only.
 - **Branch:** `main` holds v2 unchanged. `develop-v23` = Phases 7–9 + DJ track (`ac75b8e`). Phase 10 is on `feature/artnet-receiver`; merging it into `develop-v23` is your call (a good merge point).
-- **Last verified commit:** `62995bc` on `feature/artnet-receiver` (Phase 10, closed 2026-10-14).
+- **Last verified commit:** `62995bc` on `feature/artnet-receiver` (Phase 10, closed 2026-10-14). Phase 11 (measurement) continues on `feature/artnet-receiver`.
 - **Both boards run** the Phase 10 firmware. Strand 1 is set to off live; a reboot restores its saved audio mode (mode 12).
 
 ## What works
@@ -30,7 +30,10 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are sequential (se
 ## Next step
 
 1. **Your call:** merge `feature/artnet-receiver` into `develop-v23`.
-2. **Phase 11** when authorized (draft below).
+2. **Phase 11 in progress.** Owner checklist:
+   - [ ] Switch the PC so it reaches the S3 directly (Ethernet port / disconnect the HomeLab VPN). Expected: Claude's route check shows `Ethernet`.
+   - [ ] Put the S3 and the receiver at their install positions, antennas clear.
+   - [ ] Mac on Ethernet for the main 30-min soak (optional second soak on Wi-Fi). SoundSwitch playing; PC Art-Net monitor closed.
 3. **Owner, when convenient:**
    - [ ] AP Wi-Fi security mode (WPA2 / mixed / WPA3), for the S3's 6 s first join.
    - [ ] Level converter: LV side about 3.3 V, HV side about 5 V, part number.
