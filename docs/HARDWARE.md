@@ -50,7 +50,19 @@
   - 12 V supply rated **90 W (7.5 A)**; plan for about 80% continuous, about 6 A.
   - Level converter is a 3.3 V → 5 V type (rail measurements and part number still to come).
   - Strands 2–4 are being mounted; likely the **same effect on all four strands**.
-- **Brightness budget (estimate):** 600 LEDs (4 × 150) at full white. **UNVERIFIED:** about 15 mA per WS2815 pixel at full white (from memory). If so, about 9 A, above the about 6 A budget, so cap global brightness at about 60–65%. Confirm with the strip datasheet or one measured current before Phase 12 drives LEDs from Art-Net.
+- **Strips ordered (owner, 2026-10-15):** 30 m of WS2815 12 V, as 6 rolls of 5 m. Each roll has 30 LEDs/m (150 LEDs, which matches one 150-LED strand), is rated **9 W/m**, and is IP30 (bare, uncoated).
+- **Brightness budget (from the seller's rating; confirm with one measured current):**
+  - 9 W/m ÷ 30 LEDs/m = 0.3 W per LED, which is 25 mA per LED at 12 V. This replaces the earlier 15 mA guess.
+  - One roll (one strand) at full white: 45 W, about 3.75 A.
+  - Four strands: 180 W, about 15 A, against the supply's roughly 6 A continuous budget. Full white on all four needs a cap of about 40% (about 100/255).
+  - The `rgbScale` of 128/255/126 already halves red and blue, so the firmware's full white is about 10 A. That is still above the budget.
+  - All six rolls lit at full white would be 270 W; that would need a bigger supply.
+- **Where the cap applies (2026-10-15):** the 25% cap only covers the Art-Net (`LUMINA-16`) path. AUDIO and STANDALONE use the web page's global and per-strand brightness, and those are saved at 255. Lower them or add a cap that covers every source before strands 2–4 are connected.
+- **Wiring proposal (owner decides):**
+  - A 5 A fuse on each strand's 12 V feed, since one strand draws at most about 3.75 A.
+  - Feed 12 V at the input end of each roll. Also feed the far end if the last LEDs look dim or shift in colour at full white.
+  - On WS2815 strips, tie the first LED's **BI** (backup data) pad to ground.
+  - Keep the level converter.
 - **Unknown, to inspect:**
   - strip type and LED count per strand;
   - PSU voltage and current rating;

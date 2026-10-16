@@ -1388,11 +1388,8 @@ function controlCall(query) {
     .then(r => r.json()).then(renderControl).catch(() => showToast("Control update failed", true));
 }
 function setSource(s) { controlCall("source=" + s); }
-function toggleStrobe() {
-  if (controlState && controlState.strobeEnabled) { controlCall("strobe=0"); return; }
-  if (confirm("Enable strobe? Flashing light can trigger seizures in photosensitive people. Max rate stays capped at " +
-              (controlState ? controlState.strobeHz : 3) + " flashes/s.")) controlCall("strobe=1");
-}
+// No confirm dialog (owner 2026-10-15: the venue is signposted). Off at boot and the rate cap still apply.
+function toggleStrobe() { controlCall("strobe=" + (controlState && controlState.strobeEnabled ? 0 : 1)); }
 controlCall("");
 setInterval(() => { if (!document.hidden) controlCall(""); }, 2000);
 
