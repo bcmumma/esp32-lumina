@@ -84,7 +84,7 @@ The web UI can override the source manually. Diagnostics show the active source.
 - `lib/Lumina16` maps CH1–11 onto the existing per-strand effect fields, the same on all strands.
 - CH12–16 are reserved until v2, which needs a packet change.
 - In SoundSwitch 2.11 the fixture is one cell (`Main`): its **Intensity** function on CH1, Strobe on CH6, RGB on CH9–11, and attributes on CH2–5 and CH7–8 (CH4 named "Reactivity").
-- The S3's `lighting/ControlRouter` applies it when the active source is ARTNET (see Control-Source Arbitration below). Brightness is capped at 25% on this path only.
+- The S3's `lighting/ControlRouter` applies it when the active source is ARTNET (see Control-Source Arbitration below). Brightness is limited only by the rig brightness cap, which covers every source (default 100%).
 - **Strobe safety:**
   - lives in the receiver: one rig-wide gate (`strobe_gate_allow`) for all flash effects;
   - its state travels in `AudioLedPacket.flags` (bit 7 enable; bits 4–6 plus high bit 3 = rate 1–15/s);

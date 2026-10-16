@@ -8,9 +8,10 @@
 #include "LuminaProtocol.h"
 #include "SourceRouter.h"
 
-// Rig brightness cap, applied to every source (Phase 14). Hard ceiling 25% until the
-// strip current is measured: 4 x 150 LEDs at 9 W/m is about 15 A vs a 90 W supply (docs/HARDWARE.md).
-static constexpr uint8_t RIG_BRIGHTNESS_CAP_MAX = 64;
+// Rig brightness cap, applied to every source (Phase 14). Owner removed the 25% limit
+// (2026-10-16): default 100% = no cap. 4 x 150 LEDs at 9 W/m is about 15 A at full white
+// vs a 90 W supply, so lower it before strands 2-4 are connected (docs/HARDWARE.md).
+static constexpr uint8_t RIG_BRIGHTNESS_CAP_MAX = 255;
 static constexpr uint8_t RIG_BRIGHTNESS_CAP_MIN = 8;
 
 struct ControlState {

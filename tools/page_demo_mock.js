@@ -17,7 +17,7 @@
   };
   const ctl = { source: "auto", active: "audio", reason: "auto: no fresh art-net, fallback", autoFallback: "audio", timeoutMs: 1000,
     standaloneLevel: 128, switches: 7, artnetAgeMs: 84641, applyingArtnet: false, appliedPackets: 46847, address: 1,
-    brightnessCap: 64, brightnessCapMin: 8, brightnessCapMax: 64, strobeEnabled: false, strobeHz: 3, strobeMaxHz: 15 };
+    brightnessCap: 255, brightnessCapMin: 8, brightnessCapMax: 255, strobeEnabled: false, strobeHz: 3, strobeMaxHz: 15 };
   const t0 = performance.now();
   let pulse = 0, lastKick = -1;
 
@@ -43,7 +43,7 @@
     if (q.has("standalone")) ctl.standaloneLevel = +q.get("standalone");
     if (q.has("strobeHz")) ctl.strobeHz = Math.max(1, Math.min(15, +q.get("strobeHz")));
     if (q.has("strobe")) ctl.strobeEnabled = q.get("strobe") !== "0";
-    if (q.has("cap")) ctl.brightnessCap = Math.max(8, Math.min(64, +q.get("cap")));
+    if (q.has("cap")) ctl.brightnessCap = Math.max(8, Math.min(255, +q.get("cap")));
     ctl.active = ctl.source === "auto" ? ctl.autoFallback : ctl.source;
     ctl.reason = ctl.source === "auto" ? "auto: no fresh art-net, fallback" : ctl.source === "artnet" ? "artnet: no frame yet" : "selected";
     ctl.artnetAgeMs = 84641 + Math.round(performance.now() - t0);

@@ -411,7 +411,7 @@ static void handle_artnet() {
 // Control source and safety (Phases 13-14). Saved: source, fallback, standalone, strobeHz, cap.
 // Live only: strobe (off at every boot), address.
 //   ?source=auto|artnet|audio|standalone &fallback=audio|standalone &standalone=0..255
-//   &strobe=0|1 &strobeHz=1..8 &cap=8..64 (rig brightness cap, every source) &address=1..497
+//   &strobe=0|1 &strobeHz=1..8 &cap=8..255 (rig brightness cap, every source; 255 = none) &address=1..497
 //   (?artnet=1|0 = source artnet|audio)
 static void handle_control() {
   bool persist = false;

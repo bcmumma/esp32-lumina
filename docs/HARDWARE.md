@@ -57,7 +57,7 @@
   - Four strands: 180 W, about 15 A, against the supply's roughly 6 A continuous budget. Full white on all four needs a cap of about 40% (about 100/255).
   - The `rgbScale` of 128/255/126 already halves red and blue, so the firmware's full white is about 10 A. That is still above the budget.
   - All six rolls lit at full white would be 270 W; that would need a bigger supply.
-- **Where the cap applies (2026-10-15):** the 25% cap only covers the Art-Net (`LUMINA-16`) path. AUDIO and STANDALONE use the web page's global and per-strand brightness, and those are saved at 255. Lower them or add a cap that covers every source before strands 2–4 are connected.
+- **Brightness cap (2026-10-16):** one saved cap now applies to every source (Setup → Power & safety, `/api/control?cap=`). The owner removed the 25% limit, so it defaults to 100% (no cap). One strand at full white (about 3.75 A) is within the supply; all four (about 15 A) are not. Before strands 2–4 are connected: fuses and injection, plus a bigger supply or a cap of about 40%.
 - **Wiring proposal (owner decides):**
   - A 5 A fuse on each strand's 12 V feed, since one strand draws at most about 3.75 A.
   - Feed 12 V at the input end of each roll. Also feed the far end if the last LEDs look dim or shift in colour at full white.

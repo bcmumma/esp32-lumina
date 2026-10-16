@@ -303,7 +303,7 @@ Instead of 12 raw RGB channels, Lumina now takes **16 control channels** and ren
 
 | CH | Function | What it does on Lumina |
 |---|---|---|
-| 1 | Master dimmer | Brightness (capped at 25% for now) |
+| 1 | Master dimmer | Brightness (limited only by the brightness cap in Setup) |
 | 2 | Effect | 0–42 Solid Color, 43–85 Neon Scanner, 86–127 Laser Sweep, 128–170 Rave Chase, 171–213 DnB Chopper, 214–255 White Lightning |
 | 3 | Speed | Animation speed |
 | 4 | Reactivity | How strongly the effect reacts to the music (don't call it "Intensity": that's SoundSwitch's name for the dimmer) |
@@ -345,7 +345,7 @@ Same tool as Part 1.2. The steps follow SoundSwitch's "Creating a profile for an
 ### 5.3 Gate test: a SoundSwitch control changes the strip
 
 1. Tell Claude Code you're ready. Since Phase 13 the S3 is on **Auto** by default and switches to Art-Net on its own when SoundSwitch sends frames. You can also pick **Art-Net** on the controller page (`/api/control?source=artnet`). Strobe stays off.
-2. With the `Lumina 16` venue selected, play the **"Red"** Autoloop. Strand 1 should turn red (dimmed by the 25% cap).
+2. With the `Lumina 16` venue selected, play the **"Red"** Autoloop. Strand 1 should turn red.
 3. Change the colour (another Autoloop, or a colour override while it plays). **The strip should change colour live.** The webcam watches too.
 4. Optional: in a script or Autoloop, set the **Effect** attribute to another band (e.g. 128 for Rave Chase) and watch the effect change.
 

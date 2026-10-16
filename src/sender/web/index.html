@@ -274,7 +274,7 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
 <main class="wrap setup" id="screenSetup" style="margin-top:14px" hidden>
   <details class="sec" open><summary>Power &amp; safety</summary>
     <div class="inner">
-      <div class="sl"><label for="cap">Brightness cap</label><input type="range" id="cap" min="8" max="64"><output class="num" id="o_cap"></output></div>
+      <div class="sl"><label for="cap">Brightness cap</label><input type="range" id="cap" min="8" max="255"><output class="num" id="o_cap"></output></div>
       <p class="note" id="capNote"></p>
       <div class="sl"><label for="fallback">Auto falls back to</label><select id="fallback"><option value="audio">Audio</option><option value="standalone">Standalone</option></select><span></span></div>
       <div class="sl"><label for="standalone">Standalone level</label><input type="range" id="standalone" min="0" max="255"><output class="num" id="o_standalone"></output></div>
@@ -547,9 +547,9 @@ function renderLook() {
 function renderCapLine() {
   if (!led || !ctl) return;
   const cap = ctl.brightnessCap, m = led.globalBrightness;
-  $("capLine").textContent = m > cap
-    ? `Limited to ${pct(cap)} by the power cap (Setup → Power & safety).`
-    : `Power cap ${pct(cap)}.`;
+  $("capLine").textContent = cap >= 255 ? "" : m > cap
+    ? `Limited to ${pct(cap)} by the brightness cap (Setup → Power & safety).`
+    : `Brightness cap ${pct(cap)}.`;
 }
 function renderSetup() {
   if (!led) return;
@@ -571,8 +571,10 @@ function renderPower() {
   let leds = 0;
   for (let s = 0; s < led.activeStrands; s++) if (led.strand[s].enabled) leds += led.strand[s].ledCount;
   const amps = leds * MA_PER_LED / 1000 * ctl.brightnessCap / 255;
-  $("capNote").textContent = `At this cap, ${leds} LEDs at full white draw about ${amps.toFixed(1)} A of the supply's ~${SUPPLY_BUDGET_A} A budget. ` +
-    `Estimate from the strip rating (9 W/m); measure before raising the ${pct(ctl.brightnessCapMax)} ceiling.`;
+  const over = amps > SUPPLY_BUDGET_A;
+  $("capNote").className = over ? "warnnote" : "note";
+  $("capNote").textContent = `${ctl.brightnessCap >= 255 ? "No cap: " : "At this cap, "}${leds} enabled LEDs at full white draw about ${amps.toFixed(1)} A; ` +
+    `the 90 W supply manages about ${SUPPLY_BUDGET_A} A.${over ? " Lower the cap or add power before running full white." : ""} Estimate from the strip rating (9 W/m).`;
   $("fallback").value = ctl.autoFallback;
   $("standalone").value = ctl.standaloneLevel; $("o_standalone").textContent = ctl.standaloneLevel;
 }
