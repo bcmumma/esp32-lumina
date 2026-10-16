@@ -1,4 +1,4 @@
-// The 32 render modes (see the mode list in Effects.cpp). Each draws one strand for one frame.
+// The render modes 0..LED_MODE_MAX (see the mode list in Effects.cpp). Each draws one strand for one frame.
 #pragma once
 
 #include <Arduino.h>
@@ -46,6 +46,10 @@ void render_dnb_split(uint8_t s, const AudioLedPacket &p, const StrandSettings &
 void render_rave_tiles(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
 void render_pulse_train(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
 void render_void_bloom(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
+void render_stereo_vu(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
+void render_kick_pump(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat);
+void render_kick_ripple(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat);
+void render_break_chopper(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat);
 
 // Rig-wide strobe gate; .events (flash events since boot) is printed in the status line.
 extern StrobeGate strobeGate;

@@ -9,10 +9,10 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are sequential (se
 | Track | Phase | Status | Authorization |
 |---|---|---|---|
 | DJ (Mac + PC capture) | Complete (Phases 4–6) | Done | n/a |
-| Firmware | 14: PCM1808 fallback | Not started | Not authorized |
+| Firmware | 14: PCM1808 fallback | In progress | Authorized 2026-10-15 for Phase 14 |
 
 - Authorize a phase with `/start-milestone Phase <N>` in Claude Code. Until then, everything is read-only.
-- **Branch:** `main` holds v2 unchanged. `develop-v23` = `c368c96` (Phases 7–12). Phase 13 is on `feature/control-router`.
+- **Branch:** `main` holds v2 unchanged. `develop-v23` = `c368c96` (Phases 7–12). Phases 13 and 14 are on `feature/control-router` (owner, 2026-10-15: no new branch, and no develop fast-forward yet).
 - **Last verified commit:** `98a73e6` on `feature/control-router` (Phase 13, closed 2026-10-15).
 - **Boards:** the S3 runs the Phase 13 sender and the WROOM runs the Phase 12 receiver. Safe at boot: source AUTO, strobe off (3/s cap when on), Art-Net brightness cap 25%.
 
@@ -44,12 +44,19 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are sequential (se
 
 Gate (ROADMAP): energy, bass, mid, treble, left, and right (plus transients if useful) drive effects. Beat detection is not a goal.
 
-- [ ] Branch: owner's choice. Proposal: `feature/audio-fallback` off `develop-v23` after the Phase 13 merge *(owner)*
-- [ ] Audit which effects use which audio fields today, and which fields (left/right) reach the receiver but go unused *(Claude)*
-- [ ] Make the fallback look good unattended: one AUDIO preset that uses energy, bands, and stereo, without beat detection *(Claude; owner judges the look)*
-- [ ] Transients (onset strength) as a field, only if the audit shows a use for it *(Claude)*
-- [ ] Tests: tone sweep per band and left/right separately; music playback; webcam frames *(Claude)*
-- [ ] Parity, plus AUTO fallback still within about 1 s *(Claude)*
+Owner decisions, 2026-10-15: stay on `feature/control-router`; add a brightness cap for every source; add a bass-hit pulse; add a new Stereo VU mode. Scope added: regroup the modes by genre (DnB, techno/house, harder EDM) and overhaul the controller page, with a demo first.
+
+- [x] Audit *(Claude)*:
+  - volume, bass, mid, and treble already drive most modes;
+  - left and right are sent but no mode uses them;
+  - modes 2, 4, 7, and 14 wait for a beat pulse that never comes, because beat detection is off.
+- [ ] Bass-hit pulse on the S3 (an energy jump, not tempo), sent through the existing `beatPulse` field. Modes 2, 4, and 7 react again, and flashes stay behind the strobe gate *(Claude)*
+- [ ] New Stereo VU mode: left level on one half of the strand, right on the other *(Claude)*
+- [ ] Saved brightness cap applied after every source, default 25% *(Claude)*
+- [ ] Modes grouped by genre on the page, with mode numbers unchanged (saved config and `LUMINA-16` CH2 use them); new modes only from 32 *(Claude; owner judges)*
+- [ ] Controller page overhaul: demo first, then on the S3 *(Claude; owner approves the demo)*
+- [ ] Tests: hit-detector unit tests; left-only and right-only tones; bass hits vs. a steady tone; webcam frames; AUTO fallback still within about 1 s; parity *(Claude)*
+- [ ] Owner: music through the Modi; does the audio fallback look good?
 
 ## Open questions
 

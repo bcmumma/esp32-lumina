@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include "LuminaProtocol.h"
 #include "PCM1808.h"
+#include "HitDetector.h"
 
 static constexpr float PI_F = 3.14159265359f;
 static constexpr int FFT_SIZE = 1024;
@@ -14,9 +15,11 @@ static constexpr int FFT_BAND_COUNT = 36;
 static constexpr float FFT_MIN_HZ = 43.0f;
 static constexpr float FFT_MAX_HZ = 12000.0f;
 static constexpr bool ENABLE_BEAT_DETECTOR = false;
+static constexpr uint32_t HIT_HOLD_MS = 80;  // packet `beat` stays 255 this long after a bass hit
 
 extern int16_t beat_mono_samples[BLOCK_FRAMES];
 extern uint8_t beat_pulse_counter;
+extern hits::State hitState;  // bass-hit detector (Phase 14); hitState.count = hits since boot
 extern AudioLedPacket last_packet;
 extern float peak_volume;
 extern float peak_bass;

@@ -109,7 +109,7 @@ static void handle_set_led() {
     snprintf(name, sizeof(name), "s%d_pin", s); ledCfg.strand[s].pin = get_u8_arg(name, ledCfg.strand[s].pin, 0, 48);
     snprintf(name, sizeof(name), "s%d_ledType", s); ledCfg.strand[s].ledType = get_u8_arg(name, ledCfg.strand[s].ledType, 0, 6);
     snprintf(name, sizeof(name), "s%d_ledCount", s); ledCfg.strand[s].ledCount = get_u16_arg(name, ledCfg.strand[s].ledCount, 0, 1000);
-    snprintf(name, sizeof(name), "s%d_mode", s); ledCfg.strand[s].mode = get_u8_arg(name, ledCfg.strand[s].mode, 0, 31);
+    snprintf(name, sizeof(name), "s%d_mode", s); ledCfg.strand[s].mode = get_u8_arg(name, ledCfg.strand[s].mode, 0, LED_MODE_MAX);
     snprintf(name, sizeof(name), "s%d_brightness", s); ledCfg.strand[s].brightness = get_u8_arg(name, ledCfg.strand[s].brightness, 0, 255);
     snprintf(name, sizeof(name), "s%d_hue", s); ledCfg.strand[s].hue = get_u8_arg(name, ledCfg.strand[s].hue, 0, 255);
     snprintf(name, sizeof(name), "s%d_saturation", s); ledCfg.strand[s].saturation = get_u8_arg(name, ledCfg.strand[s].saturation, 0, 255);
@@ -408,10 +408,11 @@ static void handle_artnet() {
   server.send(200, "application/json", s);
 }
 
-// Control source and safety (Phase 13). Saved: source, fallback, standalone, strobeHz.
-// Live only: strobe (off at every boot), cap, address.
+// Control source and safety (Phases 13-14). Saved: source, fallback, standalone, strobeHz, cap.
+// Live only: strobe (off at every boot), address.
 //   ?source=auto|artnet|audio|standalone &fallback=audio|standalone &standalone=0..255
-//   &strobe=0|1 &strobeHz=1..8 &cap=0..64 &address=1..497   (?artnet=1|0 = source artnet|audio)
+//   &strobe=0|1 &strobeHz=1..8 &cap=8..64 (rig brightness cap, every source) &address=1..497
+//   (?artnet=1|0 = source artnet|audio)
 static void handle_control() {
   bool persist = false;
   router::Source parsed;
@@ -437,7 +438,11 @@ static void handle_control() {
   }
   if (server.hasArg("strobe")) control.strobeEnabled = server.arg("strobe").toInt() != 0;
   if (server.hasArg("address")) control.address = (uint16_t)clamp_int(server.arg("address").toInt(), 1, 512 - 15);
-  if (server.hasArg("cap")) control.brightnessCap = (uint8_t)clamp_int(server.arg("cap").toInt(), 0, LUMINA16_BRIGHTNESS_CAP_MAX);
+  if (server.hasArg("cap")) {
+    control.brightnessCap =
+        (uint8_t)clamp_int(server.arg("cap").toInt(), RIG_BRIGHTNESS_CAP_MIN, RIG_BRIGHTNESS_CAP_MAX);
+    persist = true;
+  }
   if (persist && !save_control_settings()) Serial.println("WARNING: control settings could not be saved");
   String s;
   s.reserve(768);

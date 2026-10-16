@@ -9,6 +9,7 @@
 int16_t beat_mono_samples[BLOCK_FRAMES];
 
 uint8_t beat_pulse_counter = 0;
+hits::State hitState = {0.0f, 0.0f, true, false, 0, 0, 0};
 AudioLedPacket last_packet = {};
 
 float peak_volume = 1200.0f;
@@ -147,6 +148,7 @@ void reset_agc() {
 }
 
 void reset_beat_state() {
+  hits::reset(hitState);
   prevLogVolume = 0.0f;
   beatStatePrimed = false;
   beatWarmupBlocks = 0;
@@ -671,8 +673,12 @@ AudioLedPacket analyze_audio_block(int frames) {
       p.beatPhase = (uint8_t)clamp_int((int)((elapsed / beatPeriodMs) * 255.0f + 0.5f), 0, 255);
     }
   } else {
-    p.beat = 0;
-    p.beatPulse = 0;
+    // Phase 14: bass hits (transients, not tempo) drive beatPulse so the hit-driven modes react.
+    hits::Config hc = hits::kDefaultConfig;
+    hc.floor = cfg.bassFloor;
+    if (hits::update(hitState, hc, raw_bass, p.ms)) beat_pulse_counter++;
+    p.beat = (hitState.lastHitMs != 0 && p.ms - hitState.lastHitMs < HIT_HOLD_MS) ? 255 : 0;
+    p.beatPulse = beat_pulse_counter;
     p.beatConfidence = 0;
     p.beatPhase = 0;
     p.beatBpm = 0;

@@ -76,7 +76,7 @@ The web UI can override the source manually. Diagnostics show the active source.
 - "Fresh" means a frame arrived, whatever its values. A paused or blacked-out show still sends frames, so it stays on ARTNET.
 - The 1 s timeout clears the measured stalls of up to 480 ms. Measured: AUTO → ARTNET 78 ms after frames start, → AUDIO 1045 ms after they stop.
 - **Persistence:** a separate CRC-checked NVS record (`lumina_ctl`), not part of the main dual-slot blob. It holds the source, fallback, standalone level, and strobe rate. Strobe enable is never saved.
-- **Interface:** `/api/control` reads or changes the settings and reports the active source and the reason. `artnet=1|0` stays as an alias for `source=artnet|auto`. The controller page has a "Control Source & Strobe Safety" card. The serial log prints `Source: X -> active Y (reason)` on each switch.
+- **Interface:** `/api/control` reads or changes the settings and reports the active source and the reason. `artnet=1|0` stays as an alias for `source=artnet|audio`. The controller page has a "Control Source & Strobe Safety" card. The serial log prints `Source: X -> active Y (reason)` on each switch.
 
 ## Intelligent Fixture Profile `LUMINA-16` (v1 implemented in Phase 12)
 

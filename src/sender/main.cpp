@@ -83,12 +83,13 @@ void loop() {
   if (now - last_print_ms > 1000) {
     last_print_ms = now;
     Serial.printf(
-      "vol=%3u bass=%3u mid=%3u treb=%3u beat=%3u bpm=%5.1f pps=%lu rssi=%ddBm ch=%u fft=%luus(avg%lu) analyze=%luus http=%luus heap=%lu\n",
+      "vol=%3u bass=%3u mid=%3u treb=%3u beat=%3u hits=%lu bpm=%5.1f pps=%lu rssi=%ddBm ch=%u fft=%luus(avg%lu) analyze=%luus http=%luus heap=%lu\n",
       last_packet.volume,
       last_packet.bass,
       last_packet.mid,
       last_packet.treble,
       last_packet.beat,
+      (unsigned long)hitState.count,
       debugBpm,
       (unsigned long)packets_per_sec,
       WiFi.status() == WL_CONNECTED ? WiFi.RSSI() : -127,

@@ -57,6 +57,10 @@ void render_strand(uint8_t s, const AudioLedPacket &p, bool newBeat) {
     case 29: render_rave_tiles(s, p, st); break;
     case 30: render_pulse_train(s, p, st); break;
     case 31: render_void_bloom(s, p, st); break;
+    case 32: render_stereo_vu(s, p, st); break;
+    case 33: render_kick_pump(s, p, st, newBeat); break;
+    case 34: render_kick_ripple(s, p, st, newBeat); break;
+    case 35: render_break_chopper(s, p, st, newBeat); break;
     default: render_solid(s, p, st); break;
   }
 }

@@ -14,6 +14,8 @@ struct StrandRuntime {
   uint8_t prevTreble;
   uint8_t phase;
   uint32_t lastTriggerMs;
+  uint16_t ring[4];     // Kick Ripple: radius + 1 of each travelling ring (0 = unused)
+  uint8_t ringHue[4];
 };
 
 extern StrandRuntime rt[MAX_STRANDS];

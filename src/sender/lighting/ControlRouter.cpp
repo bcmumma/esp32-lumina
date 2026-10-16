@@ -7,7 +7,7 @@
 #include "../network/ArtNetReceiver.h"
 
 ControlState control = {router::Source::Auto, router::Source::Audio, router::kDefaultStandaloneLevel, STROBE_DEFAULT_HZ,
-                        false, 1, LUMINA16_BRIGHTNESS_CAP_MAX};
+                        false, 1, RIG_BRIGHTNESS_CAP_MAX};
 
 namespace {
 
@@ -15,7 +15,7 @@ namespace {
 constexpr char kNamespace[] = "lumina_ctl";
 constexpr char kKey[] = "rec";
 constexpr uint32_t kMagic = 0x4C435431UL;  // "LCT1"
-constexpr uint8_t kVersion = 1;
+constexpr uint8_t kVersion = 2;  // v2 adds brightnessCap in a byte that v1 left zero; v1 still loads
 
 struct ControlRecord {
   uint32_t magic;
@@ -24,9 +24,14 @@ struct ControlRecord {
   uint8_t autoFallback;
   uint8_t strobeHz;
   uint8_t standaloneLevel;
-  uint8_t reserved[3];
+  uint8_t brightnessCap;
+  uint8_t reserved[2];
   uint32_t crc32;
 };
+
+uint8_t clamp_cap(int v) {
+  return (uint8_t)(v < RIG_BRIGHTNESS_CAP_MIN ? RIG_BRIGHTNESS_CAP_MIN : (v > RIG_BRIGHTNESS_CAP_MAX ? RIG_BRIGHTNESS_CAP_MAX : v));
+}
 
 uint32_t record_crc(const ControlRecord &r) {
   return config_crc32(reinterpret_cast<const uint8_t *>(&r), offsetof(ControlRecord, crc32));
@@ -38,6 +43,7 @@ uint32_t switches = 0;
 lumina16::Params lastParams = {};
 bool haveParams = false;
 uint32_t appliedPackets = 0;
+uint8_t heldBeatPulse = 0;  // bass-hit pulse is frozen while audio isn't the active source
 
 router::Config router_config() {
   return {control.source, router::sanitize_fallback(control.autoFallback), router::kDefaultTimeoutMs, control.standaloneLevel};
@@ -50,7 +56,7 @@ void load_control_settings() {
   ControlRecord r = {};
   bool ok = false;
   if (store.begin(kNamespace, true)) {
-    ok = store.getBytes(kKey, &r, sizeof(r)) == sizeof(r) && r.magic == kMagic && r.version == kVersion &&
+    ok = store.getBytes(kKey, &r, sizeof(r)) == sizeof(r) && r.magic == kMagic && (r.version == 1 || r.version == kVersion) &&
          r.crc32 == record_crc(r) && r.source <= (uint8_t)router::Source::Artnet;
     store.end();
   }
@@ -59,11 +65,12 @@ void load_control_settings() {
     control.autoFallback = router::sanitize_fallback((router::Source)r.autoFallback);
     control.strobeHz = strobe_clamp_hz(r.strobeHz);
     control.standaloneLevel = r.standaloneLevel;
+    control.brightnessCap = r.version >= 2 ? clamp_cap(r.brightnessCap) : RIG_BRIGHTNESS_CAP_MAX;
   }
   control.strobeEnabled = false;  // never restored: strobe is always off at boot
-  Serial.printf("Control: source=%s fallback=%s strobe off (cap %u/s) standalone=%u (%s)\n", router::name(control.source),
-                router::name(control.autoFallback), control.strobeHz, control.standaloneLevel,
-                ok ? "loaded" : "defaults");
+  Serial.printf("Control: source=%s fallback=%s strobe off (cap %u/s) standalone=%u brightnessCap=%u/255 (%s)\n",
+                router::name(control.source), router::name(control.autoFallback), control.strobeHz,
+                control.standaloneLevel, control.brightnessCap, ok ? "loaded" : "defaults");
 }
 
 bool save_control_settings() {
@@ -74,6 +81,7 @@ bool save_control_settings() {
   r.autoFallback = (uint8_t)router::sanitize_fallback(control.autoFallback);
   r.strobeHz = control.strobeHz;
   r.standaloneLevel = control.standaloneLevel;
+  r.brightnessCap = clamp_cap(control.brightnessCap);
   r.crc32 = record_crc(r);
   Preferences store;
   if (!store.begin(kNamespace, false)) return false;
@@ -102,13 +110,25 @@ void control_apply(AudioLedPacket &p, uint32_t nowMs) {
   if (d.applyArtnet) {
     lumina16::Params params;
     if (lumina16::decode(dmx, length, control.address, params)) {
-      lumina16::apply(p, params, control.brightnessCap);
+      lumina16::apply(p, params, 255);  // full dimmer range; the rig cap below limits it
       lastParams = params;
       haveParams = true;
       appliedPackets++;
     }
   }
   if (d.standaloneLevels) router::apply_standalone(p, control.standaloneLevel);
+
+  // Bass hits only drive the lights when audio is the active source.
+  if (d.active == router::Source::Audio) {
+    heldBeatPulse = p.beatPulse;
+  } else {
+    p.beatPulse = heldBeatPulse;
+    p.beat = 0;
+  }
+
+  // Rig brightness cap (power budget), after every source.
+  const uint8_t cap = clamp_cap(control.brightnessCap);
+  if (p.globalBrightness > cap) p.globalBrightness = cap;
 }
 
 void append_control_json(String &s, uint32_t nowMs) {
@@ -128,7 +148,8 @@ void append_control_json(String &s, uint32_t nowMs) {
   s += ",\"appliedPackets\":" + String(appliedPackets);
   s += ",\"address\":" + String(control.address);
   s += ",\"brightnessCap\":" + String(control.brightnessCap);
-  s += ",\"brightnessCapMax\":" + String(LUMINA16_BRIGHTNESS_CAP_MAX);
+  s += ",\"brightnessCapMin\":" + String(RIG_BRIGHTNESS_CAP_MIN);
+  s += ",\"brightnessCapMax\":" + String(RIG_BRIGHTNESS_CAP_MAX);
   s += ",\"strobeEnabled\":";
   s += control.strobeEnabled ? "true" : "false";
   s += ",\"strobeHz\":" + String(control.strobeHz);
@@ -139,7 +160,7 @@ void append_control_json(String &s, uint32_t nowMs) {
          ",\"sensitivity\":" + String(q.sensitivity) + ",\"density\":" + String(q.density) + ",\"strobe\":" + String(q.strobe) +
          ",\"direction\":" + String(q.direction) + ",\"variation\":" + String(q.variation) + ",\"hue\":" + String(q.hue) +
          ",\"saturation\":" + String(q.saturation) + ",\"value\":" + String(q.value) +
-         ",\"brightness\":" + String(lumina16::brightness(q, control.brightnessCap)) + "}";
+         ",\"brightness\":" + String(lumina16::brightness(q, 255)) + "}";
   }
   s += "}";
 }

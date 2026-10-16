@@ -86,7 +86,7 @@ static void sanitize_loaded_config() {
 
   for (int s = 0; s < MAX_STRANDS; ++s) {
     ledCfg.strand[s].enabled = ledCfg.strand[s].enabled ? 1 : 0;
-    ledCfg.strand[s].mode = (uint8_t)clamp_int(ledCfg.strand[s].mode, 0, 31);
+    ledCfg.strand[s].mode = (uint8_t)clamp_int(ledCfg.strand[s].mode, 0, LED_MODE_MAX);
     ledCfg.strand[s].pin = (uint8_t)clamp_int(ledCfg.strand[s].pin, 0, 48);
     ledCfg.strand[s].ledType = (uint8_t)clamp_int(ledCfg.strand[s].ledType, 0, 6);
     ledCfg.strand[s].direction = (uint8_t)clamp_int(ledCfg.strand[s].direction, 0, 2);

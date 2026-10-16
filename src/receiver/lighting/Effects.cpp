@@ -43,6 +43,7 @@ static uint8_t scaled_audio(uint8_t v, uint8_t sensitivity) {
 //   24 Spectrum Sparks, 25 Hyper Strobe, 26 Cyber Tunnel
 //   27 White Lightning, 28 DnB Split, 29 Rave Tiles
 //   30 Pulse Train, 31 Void Bloom
+//   Phase 14: 32 Stereo VU, 33 Kick Pump, 34 Kick Ripple, 35 Break Chopper
 // Internal/legacy modes 0-14 remain available for VU tuning and compatibility.
 // ============================================================
 void render_off(uint8_t s) {
@@ -238,6 +239,27 @@ void render_band_vu(uint8_t s, const AudioLedPacket &p, const StrandSettings &st
 
 void render_vu(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
   render_band_vu(s, p, st, VU_SOURCE_OVERALL);
+}
+
+// Phase 14: left level fills from the centre toward pixel 0, right level toward the far end.
+// Direction 1 (reverse) swaps the sides for strips mounted the other way round.
+void render_stereo_vu(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
+  uint16_t n = count_for(s);
+  if (n == 0) return;
+  clear_strand(s);
+  uint8_t brightness = combined_brightness(p, st);
+  uint8_t lo = scaled_audio(st.direction == 1 ? p.right : p.left, st.sensitivity);
+  uint8_t hi = scaled_audio(st.direction == 1 ? p.left : p.right, st.sensitivity);
+  uint16_t half = (n + 1U) / 2U;
+  uint16_t litLo = ((uint32_t)lo * half + 254U) / 255U;
+  uint16_t litHi = ((uint32_t)hi * half + 254U) / 255U;
+  for (uint16_t i = 0; i < half; i++) {
+    Rgb c = vu_color(VU_SOURCE_OVERALL, (uint8_t)(((uint32_t)i * 255U) / max<uint16_t>(1, half - 1U)), brightness);
+    int a = (int)((n - 1U) / 2U) - (int)i;
+    int b = (int)(n / 2U) + (int)i;
+    if (i < litLo && a >= 0) set_pixel(s, (uint16_t)a, c);
+    if (i < litHi && b < n && b != a) set_pixel(s, (uint16_t)b, c);
+  }
 }
 
 void render_beat_tracker(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat) {
@@ -663,5 +685,77 @@ void render_void_bloom(uint8_t s, const AudioLedPacket &p, const StrandSettings 
     int32_t right = center + radius;
     if (left >= 0) set_pixel(s, (uint16_t)left, c);
     if (right < n) set_pixel(s, (uint16_t)right, c);
+  }
+}
+
+// ============================================================
+// Phase 14: bass-hit modes. newBeat is set when the sender's bass-hit pulse
+// changes (a transient, not tempo tracking). Any whole-strand flash goes
+// through flash_allowed(), so the global strobe switch and rate cap apply.
+// ============================================================
+
+// Techno/house. A dim colour bed follows the bass; each hit pumps the whole strand.
+// With strobe off the pump is suppressed and only the smooth bass bed remains.
+void render_kick_pump(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat) {
+  if (count_for(s) == 0) return;
+  if (newBeat && flash_allowed(s, p, millis())) rt[s].flash = 255;
+  uint8_t bed = max<uint8_t>(40, scale8(audio_gate(p.bass, st.sensitivity, 12), 150));
+  uint8_t level = max<uint8_t>(bed, rt[s].flash);
+  fill_strand(s, strand_color(p, st, 0, scale8_video(combined_brightness(p, st), level)));
+  rt[s].flash = scale8(rt[s].flash, (uint8_t)map(st.strobe, 0, 255, 150, 235));
+}
+
+// Techno/house. Each hit launches a ring from the centre that travels outward.
+void render_kick_ripple(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat) {
+  uint16_t n = count_for(s);
+  if (n == 0) return;
+  fade_strand(s, (uint8_t)map(st.strobe, 0, 255, 110, 40));
+  if (newBeat) {
+    uint8_t slot = rt[s].phase & 3U;
+    rt[s].ring[slot] = 1;
+    rt[s].ringHue[slot] = (uint8_t)(rt[s].phase * 29U);
+    rt[s].phase++;
+  }
+  uint8_t b = combined_brightness(p, st);
+  uint16_t half = (n + 1U) / 2U;
+  uint8_t step = (uint8_t)(1U + st.speed / 64U);
+  uint8_t width = (uint8_t)(1U + st.density / 64U);
+  int centerL = (int)((n - 1U) / 2U);
+  int centerR = (int)(n / 2U);
+  for (uint8_t k = 0; k < 4; k++) {
+    if (rt[s].ring[k] == 0) continue;
+    uint16_t r = rt[s].ring[k] - 1U;
+    if (r >= half + width) { rt[s].ring[k] = 0; continue; }
+    for (uint8_t w = 0; w < width; w++) {
+      if (r < w) break;
+      uint16_t rr = r - w;
+      if (rr >= half) continue;
+      Rgb c = strand_color(p, st, rt[s].ringHue[k], scale8_video(b, (uint8_t)(255U - w * 50U)));
+      if (centerL - (int)rr >= 0) set_pixel(s, (uint16_t)(centerL - rr), c);
+      if (centerR + (int)rr < n) set_pixel(s, (uint16_t)(centerR + rr), c);
+    }
+    rt[s].ring[k] += step;
+  }
+}
+
+// Drum & bass. Each hit slams a lit block into a random slot (a chopped break);
+// hi-hats (treble) add white sparks.
+void render_break_chopper(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat) {
+  uint16_t n = count_for(s);
+  if (n == 0) return;
+  fade_strand(s, (uint8_t)map(st.strobe, 0, 255, 120, 45));
+  uint8_t b = combined_brightness(p, st);
+  if (newBeat) {
+    uint16_t seg = max<uint16_t>(3, ((uint32_t)n * (1U + st.density / 64U)) / 16U);
+    if (seg > n) seg = n;
+    uint16_t start = (uint16_t)random(n - seg + 1U);
+    uint8_t hue = (uint8_t)((rt[s].phase++ % 3U) * 85U);
+    for (uint16_t i = 0; i < seg; i++) set_pixel(s, start + i, strand_color(p, st, hue, b));
+  }
+  uint8_t hats = audio_gate(p.treble, st.sensitivity, 30);
+  uint8_t sparks = (uint8_t)(((uint16_t)hats * (1U + st.twinkle / 64U)) / 128U);
+  for (uint8_t k = 0; k < sparks; k++) {
+    uint8_t v = scale8_video(b, (uint8_t)random(120, 256));
+    add_pixel(s, (uint16_t)random(n), {v, v, v});
   }
 }
