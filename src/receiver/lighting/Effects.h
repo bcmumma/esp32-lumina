@@ -51,6 +51,11 @@ void render_kick_pump(uint8_t s, const AudioLedPacket &p, const StrandSettings &
 void render_kick_ripple(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat);
 void render_break_chopper(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat);
 void render_acid_squelch(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
+void render_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
+void render_drop_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat);
+// Kick Flash overlay: update once per frame, then apply after each strand's mode.
+void update_kick_flash(const AudioLedPacket &p, bool newBeat);
+void apply_kick_flash(uint8_t s, const AudioLedPacket &p);
 
 // Rig-wide strobe gate; .events (flash events since boot) is printed in the status line.
 extern StrobeGate strobeGate;

@@ -56,6 +56,7 @@ Owner decisions, 2026-10-15: stay on `feature/control-router`; add a brightness 
 - [x] Modes grouped by genre on the page (owner's list: House, Techno, Drum & Bass, Acid, General, Chill, Meters), with mode numbers unchanged; 3, 8, and 14 hidden as legacy. New mode 36 Acid Squelch *(Claude)*
 - [x] Controller page overhaul: `src/sender/web/index.html` is the source and `tools/build_page.py` generates `IndexHtml.cpp` and the demo. Owner: "looks good overall" (2026-10-15); now on the S3 *(owner)*
 - [x] Strobe ceiling 15/s (owner request; flagged as inside the 3–30 Hz band). Receiver verified above 8/s *(Claude)*
+- [x] "Flashy, strobe-like, intense" (owner): modes 37 Strobe and 38 Drop Strobe (General), plus a rig-wide Kick Flash slider (saved; packet byte 106). All gated. At a 10/s cap, strobe on: 9.7, 2.2 (kicks), 9.4 (drop), 2.0 (Kick Flash) events/s; strobe off: 0 *(Claude)*
 - [ ] Tests: hit-detector unit tests; left-only and right-only tones; bass hits vs. a steady tone; webcam frames; AUTO fallback still within about 1 s; parity *(Claude)*
 - [ ] Owner: music through the Modi; does the audio fallback look good?
 

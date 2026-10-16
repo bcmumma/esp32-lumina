@@ -7,7 +7,7 @@
 static constexpr uint16_t PACKET_MAGIC = 0xA17D;
 static constexpr uint8_t PACKET_VERSION = 12;
 static constexpr uint8_t MAX_STRANDS = 4;
-static constexpr uint8_t LED_MODE_MAX = 36;  // highest render mode (32-36 added in Phase 14; IDs never renumbered)
+static constexpr uint8_t LED_MODE_MAX = 38;  // highest render mode (32-38 added in Phase 14; IDs never renumbered)
 
 enum LedType : uint8_t {
   LED_TYPE_WS2815_WS2812_RGB_800 = 0,
@@ -92,7 +92,9 @@ struct __attribute__((packed)) AudioLedPacket {
   // straight to it. 0 = unknown (older senders); the receiver then surveys.
   // Was the low byte of a zero-filled reserved field, so packet version 12 holds.
   uint8_t senderChannel;
-  uint8_t reserved;
+  // Rig-wide Kick Flash overlay strength (0 = off), Phase 14. Was a zero-filled
+  // reserved byte, so packet version 12 holds and older receivers ignore it.
+  uint8_t kickFlash;
 };
 
 static_assert(sizeof(AudioLedPacket) < 250, "AudioLedPacket must fit in an ESP-NOW v1 payload");

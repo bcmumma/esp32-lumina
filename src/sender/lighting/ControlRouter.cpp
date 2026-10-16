@@ -7,7 +7,7 @@
 #include "../network/ArtNetReceiver.h"
 
 ControlState control = {router::Source::Auto, router::Source::Audio, router::kDefaultStandaloneLevel, STROBE_DEFAULT_HZ,
-                        false, 1, RIG_BRIGHTNESS_CAP_MAX};
+                        false, 1, 0, RIG_BRIGHTNESS_CAP_MAX};
 
 namespace {
 
@@ -25,7 +25,8 @@ struct ControlRecord {
   uint8_t strobeHz;
   uint8_t standaloneLevel;
   uint8_t brightnessCap;
-  uint8_t reserved[2];
+  uint8_t kickFlash;  // v2 reserved byte, 0 in older records = off
+  uint8_t reserved[1];
   uint32_t crc32;
 };
 
@@ -66,6 +67,7 @@ void load_control_settings() {
     control.strobeHz = strobe_clamp_hz(r.strobeHz);
     control.standaloneLevel = r.standaloneLevel;
     control.brightnessCap = r.version >= 2 ? clamp_cap(r.brightnessCap) : RIG_BRIGHTNESS_CAP_MAX;
+    control.kickFlash = r.version >= 2 ? r.kickFlash : 0;
   }
   control.strobeEnabled = false;  // never restored: strobe is always off at boot
   Serial.printf("Control: source=%s fallback=%s strobe off (cap %u/s) standalone=%u brightnessCap=%u/255 (%s)\n",
@@ -82,6 +84,7 @@ bool save_control_settings() {
   r.strobeHz = control.strobeHz;
   r.standaloneLevel = control.standaloneLevel;
   r.brightnessCap = clamp_cap(control.brightnessCap);
+  r.kickFlash = control.kickFlash;
   r.crc32 = record_crc(r);
   Preferences store;
   if (!store.begin(kNamespace, false)) return false;
@@ -129,6 +132,8 @@ void control_apply(AudioLedPacket &p, uint32_t nowMs) {
   // Rig brightness cap (power budget), after every source.
   const uint8_t cap = clamp_cap(control.brightnessCap);
   if (p.globalBrightness > cap) p.globalBrightness = cap;
+
+  p.kickFlash = control.kickFlash;  // receiver flashes it only on bass hits, through the strobe gate
 }
 
 void append_control_json(String &s, uint32_t nowMs) {
@@ -154,6 +159,7 @@ void append_control_json(String &s, uint32_t nowMs) {
   s += control.strobeEnabled ? "true" : "false";
   s += ",\"strobeHz\":" + String(control.strobeHz);
   s += ",\"strobeMaxHz\":" + String(STROBE_MAX_HZ);
+  s += ",\"kickFlash\":" + String(control.kickFlash);
   if (haveParams) {
     const lumina16::Params &q = lastParams;
     s += ",\"lumina16\":{\"dimmer\":" + String(q.dimmer) + ",\"mode\":" + String(q.mode) + ",\"speed\":" + String(q.speed) +

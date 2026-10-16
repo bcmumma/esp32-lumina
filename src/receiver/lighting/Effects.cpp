@@ -43,7 +43,8 @@ static uint8_t scaled_audio(uint8_t v, uint8_t sensitivity) {
 //   24 Spectrum Sparks, 25 Hyper Strobe, 26 Cyber Tunnel
 //   27 White Lightning, 28 DnB Split, 29 Rave Tiles
 //   30 Pulse Train, 31 Void Bloom
-//   Phase 14: 32 Stereo VU, 33 Kick Pump, 34 Kick Ripple, 35 Break Chopper, 36 Acid Squelch
+//   Phase 14: 32 Stereo VU, 33 Kick Pump, 34 Kick Ripple, 35 Break Chopper, 36 Acid Squelch,
+//   37 Strobe, 38 Drop Strobe; plus the rig-wide Kick Flash overlay
 // Internal/legacy modes 0-14 remain available for VU tuning and compatibility.
 // ============================================================
 void render_off(uint8_t s) {
@@ -786,4 +787,39 @@ void render_acid_squelch(uint8_t s, const AudioLedPacket &p, const StrandSetting
     if (w == 0 && st.twinkle > 128) c = {scale8_video(b, v), scale8_video(b, v), scale8_video(b, v)};  // white-hot core
     set_pixel(s, oriented_index((uint16_t)i, n, st.direction), c);
   }
+}
+
+// General. A classic strobe: flashes at the rig's max rate whenever Strobe is on.
+// Decay sets the flash length (0 = one frame, the sharpest).
+void render_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
+  if (count_for(s) == 0) return;
+  if (flash_allowed(s, p, millis())) rt[s].flash = 255;
+  fill_strand(s, strand_color(p, st, 0, scale8_video(combined_brightness(p, st), rt[s].flash)));
+  rt[s].flash = scale8(rt[s].flash, (uint8_t)map(st.strobe, 0, 255, 0, 200));
+}
+
+// General. Dark in quiet parts, a flash on each kick, and flat-out strobing at the
+// max rate while the music is loud (drops). Audio response sets how loud is "loud".
+void render_drop_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat) {
+  if (count_for(s) == 0) return;
+  bool peak = energy_mix(p) >= (uint8_t)map(st.sensitivity, 0, 255, 230, 90);
+  if ((peak || newBeat) && flash_allowed(s, p, millis())) rt[s].flash = 255;
+  fill_strand(s, strand_color(p, st, 0, scale8_video(combined_brightness(p, st), rt[s].flash)));
+  rt[s].flash = scale8(rt[s].flash, (uint8_t)map(st.strobe, 0, 255, 0, 200));
+}
+
+// Rig-wide Kick Flash overlay (packet.kickFlash, 0 = off): a white flash on every bass
+// hit, drawn over whatever mode each strand runs. Through the strobe gate like any flash.
+static uint8_t kickFlashLevel = 0;
+
+void update_kick_flash(const AudioLedPacket &p, bool newBeat) {
+  if (kickFlashLevel) kickFlashLevel = scale8(kickFlashLevel, 110);
+  if (p.kickFlash && newBeat && strobe_gate_allow(strobeGate, p.flags, millis())) kickFlashLevel = 255;
+}
+
+void apply_kick_flash(uint8_t s, const AudioLedPacket &p) {
+  if (!p.kickFlash || kickFlashLevel < 8) return;
+  uint16_t n = count_for(s);
+  uint8_t v = scale8_video(scale8_video(p.globalBrightness, p.kickFlash), kickFlashLevel);
+  for (uint16_t i = 0; i < n; i++) add_pixel(s, i, {v, v, v});
 }

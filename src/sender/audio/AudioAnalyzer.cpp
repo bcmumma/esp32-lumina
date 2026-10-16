@@ -696,7 +696,7 @@ AudioLedPacket analyze_audio_block(int frames) {
   p.gamma10 = (uint8_t)clamp_int(ledCfg.gamma10, 10, 30);
   // beatConfidence, beatPhase, and beatBpm are populated above.
   memcpy(p.strand, ledCfg.strand, sizeof(p.strand));
-  p.reserved = 0;
+  p.kickFlash = 0;  // set by control_apply()
 
   return p;
 }

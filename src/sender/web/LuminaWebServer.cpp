@@ -412,6 +412,7 @@ static void handle_artnet() {
 // Live only: strobe (off at every boot), address.
 //   ?source=auto|artnet|audio|standalone &fallback=audio|standalone &standalone=0..255
 //   &strobe=0|1 &strobeHz=1..8 &cap=8..255 (rig brightness cap, every source; 255 = none) &address=1..497
+//   &kickFlash=0..255 (rig-wide white flash on bass hits, saved; 0 = off)
 //   (?artnet=1|0 = source artnet|audio)
 static void handle_control() {
   bool persist = false;
@@ -438,6 +439,10 @@ static void handle_control() {
   }
   if (server.hasArg("strobe")) control.strobeEnabled = server.arg("strobe").toInt() != 0;
   if (server.hasArg("address")) control.address = (uint16_t)clamp_int(server.arg("address").toInt(), 1, 512 - 15);
+  if (server.hasArg("kickFlash")) {
+    control.kickFlash = (uint8_t)clamp_int(server.arg("kickFlash").toInt(), 0, 255);
+    persist = true;
+  }
   if (server.hasArg("cap")) {
     control.brightnessCap =
         (uint8_t)clamp_int(server.arg("cap").toInt(), RIG_BRIGHTNESS_CAP_MIN, RIG_BRIGHTNESS_CAP_MAX);

@@ -126,6 +126,7 @@ void loop() {
     lastFrameMs = now;
     uint32_t renderStartUs = micros();
 
+    update_kick_flash(currentPacket, pendingBeat);
     for (uint8_t s = 0; s < MAX_STRANDS; s++) {
       render_strand(s, currentPacket, pendingBeat);
     }

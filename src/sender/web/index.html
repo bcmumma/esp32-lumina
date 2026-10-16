@@ -266,6 +266,8 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
   <section class="panel">
     <div class="switch"><div><h2>Strobe</h2><p class="note" id="strobeNote">Off. Flash modes stay dark until you turn it on.</p></div>
       <button class="tog" id="strobeTog" aria-pressed="false" aria-label="Strobe" onclick="toggleStrobe()"></button></div>
+    <div class="sl"><label for="kickFlash">Kick flash</label><input type="range" id="kickFlash" min="0" max="255"><output class="num" id="o_kickFlash"></output></div>
+    <p class="note">Kick flash adds a white hit on every kick over any mode. Strobe and Drop Strobe are in General.</p>
     <div class="sl"><label for="strobeHz">Max flashes/s</label><input type="range" id="strobeHz" min="1" max="15"><output class="num" id="o_strobeHz"></output></div>
     <p class="warnnote">Flashing at about 3–30 flashes per second can trigger seizures in people with photosensitive epilepsy. Strobe is off after every restart.</p>
   </section>
@@ -375,6 +377,8 @@ const MODES = {
   34: ["Kick Ripple", "Each kick sends a ring out from the centre.", "k"],
   35: ["Break Chopper", "Kicks slam blocks into random slots; hats spark.", "k"],
   36: ["Acid Squelch", "A resonant peak glides with the mids, like a 303 sweep.", ""],
+  37: ["Strobe", "Classic strobe at your max flash rate.", "s"],
+  38: ["Drop Strobe", "Dark in quiet parts, kick flashes, flat-out strobe on drops.", "ks"],
   3:  ["Bass Comet", "Legacy mode.", ""],
   8:  ["Void Scanner", "Legacy mode.", ""],
   14: ["Beat Tracker", "Legacy mode (needs the old beat detector).", ""],
@@ -384,7 +388,7 @@ const GENRES = [
   ["techno", "Techno", [34, 18, 26, 30, 25, 2]],
   ["dnb", "Drum & Bass", [35, 21, 28, 20, 29, 27]],
   ["acid", "Acid", [36, 22, 31]],
-  ["general", "General", [9, 1, 4, 5]],
+  ["general", "General", [37, 38, 9, 1, 4, 5]],
   ["chill", "Chill", [15, 16, 17]],
   ["meters", "Meters", [32, 6, 11, 12, 13, 10]],
 ];
@@ -396,7 +400,7 @@ const DEFAULTS = {
   26: [168, 98, 138, 185, 0], 27: [178, 82, 185, 230, 12], 28: [198, 124, 168, 185, 16], 29: [184, 150, 155, 165, 0],
   30: [205, 88, 158, 180, 0], 31: [120, 82, 165, 195, 92],
   32: [0, 0, 128, 150, 0], 33: [0, 0, 160, 170, 0], 34: [150, 90, 0, 170, 0], 35: [0, 100, 160, 160, 120],
-  36: [120, 60, 170, 0, 160],
+  36: [120, 60, 170, 0, 160], 37: [0, 0, 0, 0, 0], 38: [0, 0, 160, 0, 0],
   6: [0, 0, 128, 150, 0], 11: [0, 0, 128, 150, 0], 12: [0, 0, 128, 150, 0], 13: [0, 0, 128, 150, 0],
 };
 const DEFAULT_FIELDS = ["speed", "density", "sensitivity", "strobe", "twinkle"];
@@ -596,6 +600,7 @@ function renderControl(c) {
   $("srcNote").textContent = notes[c.source] || "";
   $("strobeTog").setAttribute("aria-pressed", String(c.strobeEnabled));
   $("strobeNote").textContent = c.strobeEnabled ? `On, capped at ${c.strobeHz} flashes/s across the whole rig.` : "Off. Flash modes stay dark until you turn it on.";
+  if (c.kickFlash !== undefined) { $("kickFlash").value = c.kickFlash; $("o_kickFlash").textContent = c.kickFlash ? pct(c.kickFlash) : "Off"; }
   if (c.strobeMaxHz) $("strobeHz").max = c.strobeMaxHz;
   $("strobeHz").value = c.strobeHz; $("o_strobeHz").textContent = c.strobeHz;
   renderCapLine();
@@ -630,6 +635,7 @@ function renderDiag(j) {
 function pickMode(mode) {
   const f = { mode, enabled: 1 };
   if (DEFAULTS[mode]) DEFAULT_FIELDS.forEach((k, i) => f[k] = DEFAULTS[mode][i]);
+  if (mode === 37 || mode === 38) f.saturation = 0;  // strobes start white
   setStrandFields(f);
   renderLook();
 }
@@ -708,6 +714,8 @@ function wire() {
   $("srcSeg").onclick = (e) => { const b = e.target.closest("button"); if (b) control("source=" + b.dataset.src); };
   $("strobeHz").oninput = (e) => { $("o_strobeHz").textContent = e.target.value; };
   $("strobeHz").onchange = (e) => control("strobeHz=" + e.target.value);
+  $("kickFlash").oninput = (e) => { $("o_kickFlash").textContent = +e.target.value ? pct(+e.target.value) : "Off"; };
+  $("kickFlash").onchange = (e) => control("kickFlash=" + e.target.value);
   $("cap").oninput = (e) => { $("o_cap").textContent = pct(+e.target.value); };
   $("cap").onchange = (e) => control("cap=" + e.target.value);
   $("fallback").onchange = (e) => control("fallback=" + e.target.value);
