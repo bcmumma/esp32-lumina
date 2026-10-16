@@ -7,7 +7,7 @@
 static constexpr uint16_t PACKET_MAGIC = 0xA17D;
 static constexpr uint8_t PACKET_VERSION = 12;
 static constexpr uint8_t MAX_STRANDS = 4;
-static constexpr uint8_t LED_MODE_MAX = 35;  // highest render mode (32-35 added in Phase 14; IDs never renumbered)
+static constexpr uint8_t LED_MODE_MAX = 36;  // highest render mode (32-36 added in Phase 14; IDs never renumbered)
 
 enum LedType : uint8_t {
   LED_TYPE_WS2815_WS2812_RGB_800 = 0,
@@ -102,23 +102,30 @@ static_assert(sizeof(AudioLedPacket) == 107, "AudioLedPacket layout changed; upd
 // ------------------------------------------------------------
 // Strobe safety (Phase 12, docs/DECISIONS.md). Carried in AudioLedPacket.flags:
 //   bits 0-1: beat diagnostics (unchanged)
-//   bits 4-6: max flash rate - 1 (1..8 flashes/s)
+//   bits 4-6: low 3 bits of (max flash rate - 1)
+//   bit 3:    high bit of (max flash rate - 1), added in Phase 14 (rates 9..16)
 //   bit 7:    strobe enabled (0 = all flash effects suppressed)
-// Older senders leave bits 4-7 at 0, which reads as "strobe disabled": the safe default.
+// Older senders leave bits 3-7 at 0, which reads as "strobe disabled": the safe default.
+// Older receivers ignore bit 3, so they cap a 9-15/s rate lower, never higher.
 // ------------------------------------------------------------
 static constexpr uint8_t STROBE_FLAG_ENABLED = 0x80;
 static constexpr uint8_t STROBE_RATE_SHIFT = 4;
 static constexpr uint8_t STROBE_RATE_MASK = 0x70;
+static constexpr uint8_t STROBE_RATE_HIGH_BIT = 0x08;
 static constexpr uint8_t STROBE_DEFAULT_HZ = 3;
-static constexpr uint8_t STROBE_MAX_HZ = 8;  // hard ceiling, below the worst of the 3-30 Hz band
+// Hard ceiling, owner decision 2026-10-15 (was 8). It sits inside the 3-30 Hz
+// photosensitive band: the venue is signposted, strobe is off at boot, default 3/s.
+static constexpr uint8_t STROBE_MAX_HZ = 15;
 
 static inline uint8_t strobe_clamp_hz(uint8_t hz) {
   return hz < 1 ? 1 : (hz > STROBE_MAX_HZ ? STROBE_MAX_HZ : hz);
 }
 
 static inline uint8_t strobe_encode_flags(uint8_t flags, bool enabled, uint8_t maxHz) {
-  flags &= (uint8_t)~(STROBE_FLAG_ENABLED | STROBE_RATE_MASK);
-  flags |= (uint8_t)(((strobe_clamp_hz(maxHz) - 1) << STROBE_RATE_SHIFT) & STROBE_RATE_MASK);
+  flags &= (uint8_t)~(STROBE_FLAG_ENABLED | STROBE_RATE_MASK | STROBE_RATE_HIGH_BIT);
+  const uint8_t r = (uint8_t)(strobe_clamp_hz(maxHz) - 1);
+  flags |= (uint8_t)(((r & 0x07) << STROBE_RATE_SHIFT) & STROBE_RATE_MASK);
+  if (r & 0x08) flags |= STROBE_RATE_HIGH_BIT;
   if (enabled) flags |= STROBE_FLAG_ENABLED;
   return flags;
 }
@@ -126,7 +133,9 @@ static inline uint8_t strobe_encode_flags(uint8_t flags, bool enabled, uint8_t m
 static inline bool strobe_enabled(uint8_t flags) { return (flags & STROBE_FLAG_ENABLED) != 0; }
 
 static inline uint8_t strobe_max_hz(uint8_t flags) {
-  return (uint8_t)(((flags & STROBE_RATE_MASK) >> STROBE_RATE_SHIFT) + 1);
+  uint8_t r = (uint8_t)((flags & STROBE_RATE_MASK) >> STROBE_RATE_SHIFT);
+  if (flags & STROBE_RATE_HIGH_BIT) r |= 0x08;
+  return (uint8_t)(r + 1);
 }
 
 // Minimum time between flash onsets for the packet's strobe state.

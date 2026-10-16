@@ -22,7 +22,7 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are sequential (se
 - **SoundSwitch → Art-Net → S3:** discovery, universe 0, loss 0.08% with the Mac wired (Phase 11).
 - **`LUMINA-16` v1:** SoundSwitch drives a shared effect on all strands, capped at 25%.
 - **Control sources:** AUTO (the default) uses SoundSwitch while it sends and falls back to audio about 1 s after it stops. AUDIO, STANDALONE, and ARTNET can be picked on the controller page or through `/api/control`.
-- **Strobe safety:** rig-wide gate, off at boot, at most 3/s by default (8/s ceiling). No confirm dialog, since the venue is signposted.
+- **Strobe safety:** rig-wide gate, off at boot, at most 3/s by default (15/s ceiling, owner 2026-10-15). No confirm dialog, since the venue is signposted.
 - **Test bench:** serial, tones, webcam, strand colours, and the Art-Net tools (monitor, sender, compare, soak, `--lumina16`).
 - **Phases done:** 0–13.
 
@@ -50,11 +50,13 @@ Owner decisions, 2026-10-15: stay on `feature/control-router`; add a brightness 
   - volume, bass, mid, and treble already drive most modes;
   - left and right are sent but no mode uses them;
   - modes 2, 4, 7, and 14 wait for a beat pulse that never comes, because beat detection is off.
-- [ ] Bass-hit pulse on the S3 (an energy jump, not tempo), sent through the existing `beatPulse` field. Modes 2, 4, and 7 react again, and flashes stay behind the strobe gate *(Claude)*
-- [ ] New Stereo VU mode: left level on one half of the strand, right on the other *(Claude)*
-- [ ] Saved brightness cap applied after every source, default 25% *(Claude)*
-- [ ] Modes grouped by genre on the page, with mode numbers unchanged (saved config and `LUMINA-16` CH2 use them); new modes only from 32 *(Claude; owner judges)*
-- [ ] Controller page overhaul: demo first, then on the S3 *(Claude; owner approves the demo)*
+- [x] Bass-hit pulse on the S3 (an energy jump, not tempo), sent through the existing `beatPulse` field. Modes 2, 4, and 7 react again, and flashes stay behind the strobe gate *(Claude; `79b774e`)*
+- [x] New Stereo VU mode (32): left level on one half of the strand, right on the other *(Claude)*
+- [x] Saved brightness cap applied after every source, default 25% *(Claude)*
+- [x] New hit-driven modes 33 Kick Pump, 34 Kick Ripple, 35 Break Chopper *(Claude)*
+- [x] Modes grouped by genre on the page (owner's list: House, Techno, Drum & Bass, Acid, General, Chill, Meters), with mode numbers unchanged; 3, 8, and 14 hidden as legacy. New mode 36 Acid Squelch *(Claude)*
+- [x] Controller page overhaul: `src/sender/web/index.html` is the source and `tools/build_page.py` generates `IndexHtml.cpp` and the demo. Owner: "looks good overall" (2026-10-15); now on the S3 *(owner)*
+- [x] Strobe ceiling 15/s (owner request; flagged as inside the 3–30 Hz band). Receiver verified above 8/s *(Claude)*
 - [ ] Tests: hit-detector unit tests; left-only and right-only tones; bass hits vs. a steady tone; webcam frames; AUTO fallback still within about 1 s; parity *(Claude)*
 - [ ] Owner: music through the Modi; does the audio fallback look good?
 

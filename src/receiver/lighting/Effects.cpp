@@ -43,7 +43,7 @@ static uint8_t scaled_audio(uint8_t v, uint8_t sensitivity) {
 //   24 Spectrum Sparks, 25 Hyper Strobe, 26 Cyber Tunnel
 //   27 White Lightning, 28 DnB Split, 29 Rave Tiles
 //   30 Pulse Train, 31 Void Bloom
-//   Phase 14: 32 Stereo VU, 33 Kick Pump, 34 Kick Ripple, 35 Break Chopper
+//   Phase 14: 32 Stereo VU, 33 Kick Pump, 34 Kick Ripple, 35 Break Chopper, 36 Acid Squelch
 // Internal/legacy modes 0-14 remain available for VU tuning and compatibility.
 // ============================================================
 void render_off(uint8_t s) {
@@ -757,5 +757,33 @@ void render_break_chopper(uint8_t s, const AudioLedPacket &p, const StrandSettin
   for (uint8_t k = 0; k < sparks; k++) {
     uint8_t v = scale8_video(b, (uint8_t)random(120, 256));
     add_pixel(s, (uint16_t)random(n), {v, v, v});
+  }
+}
+
+// Acid. A filter-sweep look: a resonant peak glides with the mid level (like a 303
+// cutoff), a dim tail fills the strand below it, and an LFO plus the highs wobble the colour.
+void render_acid_squelch(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
+  uint16_t n = count_for(s);
+  if (n == 0) return;
+  clear_strand(s);
+  uint8_t mid = audio_gate(p.mid, st.sensitivity, 10);
+  int32_t target = (int32_t)mid * 257;
+  rt[s].aux = (uint16_t)((int32_t)rt[s].aux + (target - (int32_t)rt[s].aux) / 4);  // glide
+  uint16_t pos = (uint16_t)(((uint32_t)rt[s].aux * (n - 1U)) / 65535U);
+  uint8_t lfo = triwave8((uint8_t)((millis() * (10U + st.speed)) / 256U));
+  uint8_t hueOff = (uint8_t)(lfo / 5U + p.treble / 6U);
+  uint8_t b = combined_brightness(p, st);
+  for (uint16_t i = 0; i < pos; i++) {
+    uint8_t v = (uint8_t)(30U + ((uint32_t)i * 70U) / max<uint16_t>(1, pos));
+    set_pixel(s, oriented_index(i, n, st.direction), strand_color(p, st, hueOff, scale8_video(b, v)));
+  }
+  uint8_t width = (uint8_t)(1U + st.density / 48U);
+  for (int16_t w = -(int16_t)width; w <= (int16_t)width; w++) {
+    int32_t i = (int32_t)pos + w;
+    if (i < 0 || i >= n) continue;
+    uint8_t v = (uint8_t)(255U - (uint16_t)abs(w) * 180U / (width + 1U));
+    Rgb c = strand_color(p, st, (uint8_t)(hueOff + 20U), scale8_video(b, v));
+    if (w == 0 && st.twinkle > 128) c = {scale8_video(b, v), scale8_video(b, v), scale8_video(b, v)};  // white-hot core
+    set_pixel(s, oriented_index((uint16_t)i, n, st.direction), c);
   }
 }

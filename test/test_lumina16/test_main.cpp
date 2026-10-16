@@ -145,8 +145,13 @@ static void test_strobe_flags() {
   TEST_ASSERT_TRUE(strobe_enabled(f));
   TEST_ASSERT_EQUAL_UINT8(3, strobe_max_hz(f));
   TEST_ASSERT_EQUAL_UINT32(333, strobe_min_interval_ms(f));
-  TEST_ASSERT_EQUAL_UINT8(8, strobe_max_hz(strobe_encode_flags(0, true, 50)));  // hard ceiling
+  TEST_ASSERT_EQUAL_UINT8(STROBE_MAX_HZ, strobe_max_hz(strobe_encode_flags(0, true, 50)));  // hard ceiling
   TEST_ASSERT_EQUAL_UINT8(1, strobe_max_hz(strobe_encode_flags(0, true, 0)));
+  for (uint8_t hz = 1; hz <= STROBE_MAX_HZ; hz++) TEST_ASSERT_EQUAL_UINT8(hz, strobe_max_hz(strobe_encode_flags(0x03, true, hz)));
+  uint8_t f15 = strobe_encode_flags(0x03, true, 15);
+  TEST_ASSERT_EQUAL_HEX8(0x03, f15 & 0x03);  // beat bits untouched
+  TEST_ASSERT_EQUAL_UINT8(7, ((f15 & STROBE_RATE_MASK) >> STROBE_RATE_SHIFT) + 1);  // old receivers: lower, never higher
+  TEST_ASSERT_EQUAL_UINT32(66, strobe_min_interval_ms(f15));
   TEST_ASSERT_FALSE(strobe_enabled(0x00));  // old senders: bits clear = disabled (safe)
 }
 

@@ -87,7 +87,7 @@ The web UI can override the source manually. Diagnostics show the active source.
 - The S3's `lighting/ControlRouter` applies it when the active source is ARTNET (see Control-Source Arbitration below). Brightness is capped at 25% on this path only.
 - **Strobe safety:**
   - lives in the receiver: one rig-wide gate (`strobe_gate_allow`) for all flash effects;
-  - its state travels in `AudioLedPacket.flags` (bit 7 enable; bits 4–6 rate 1–8/s);
+  - its state travels in `AudioLedPacket.flags` (bit 7 enable; bits 4–6 plus high bit 3 = rate 1–15/s);
   - old senders read as disabled.
 - Measured latency, Art-Net step → camera: ≤123 ms (webcam delay included).
 

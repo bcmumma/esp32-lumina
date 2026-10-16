@@ -61,6 +61,7 @@ void render_strand(uint8_t s, const AudioLedPacket &p, bool newBeat) {
     case 33: render_kick_pump(s, p, st, newBeat); break;
     case 34: render_kick_ripple(s, p, st, newBeat); break;
     case 35: render_break_chopper(s, p, st, newBeat); break;
+    case 36: render_acid_squelch(s, p, st); break;
     default: render_solid(s, p, st); break;
   }
 }

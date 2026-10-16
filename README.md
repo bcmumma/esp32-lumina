@@ -5,7 +5,7 @@ Lumina is a distributed ESP32-based smart lighting platform featuring real-time 
 
 The current v1.0 release is a working prototype that captures line-level audio from a PCM1808 I2S ADC, analyzes the signal on an ESP32-S3, broadcasts compact lighting-control packets over ESP-NOW, and renders effects on a separate ESP32 LED receiver.
 
-> **⚠️ Photosensitivity warning.** Lumina can produce flashing and strobing light. Flashing at roughly **3–30 flashes per second** can trigger seizures in people with photosensitive epilepsy. In v3, strobe is **off at boot**. When it's enabled, every flash effect is capped at **3 flashes/s by default** (hard maximum 8/s, rig-wide), and it can be switched off globally (`/api/control?strobe=0`). Don't raise the cap or use strobe effects around people who may be affected, and warn your audience when strobe is in use.
+> **⚠️ Photosensitivity warning.** Lumina can produce flashing and strobing light. Flashing at roughly **3–30 flashes per second** can trigger seizures in people with photosensitive epilepsy. In v3, strobe is **off at boot**. When it's enabled, every flash effect is capped at **3 flashes/s by default** (hard maximum 15/s, rig-wide), and it can be switched off globally (`/api/control?strobe=0`). Don't raise the cap or use strobe effects around people who may be affected, and warn your audience when strobe is in use.
 
 ## Project Status
 

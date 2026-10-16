@@ -50,6 +50,7 @@ void render_stereo_vu(uint8_t s, const AudioLedPacket &p, const StrandSettings &
 void render_kick_pump(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat);
 void render_kick_ripple(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat);
 void render_break_chopper(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat);
+void render_acid_squelch(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
 
 // Rig-wide strobe gate; .events (flash events since boot) is printed in the status line.
 extern StrobeGate strobeGate;

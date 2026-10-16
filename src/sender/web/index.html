@@ -1,0 +1,759 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lumina Controller</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one column for phones; a stage-console look (dark panels, amber backlight)
+   because the controller is used in a dark room next to the lights. */
+:root {
+  color-scheme: dark;
+  --bg: #0f1117;
+  --panel: #171a23;
+  --panel-2: #1f2330;
+  --line: #2b3040;
+  --fg: #ecebf3;
+  --muted: #9298ab;
+  --accent: #ffb03a;
+  --accent-ink: #1b1305;
+  --live: #4fd1c5;
+  --warn: #ff5a5f;
+  --g-house: #ffb03a;
+  --g-techno: #5ab0ff;
+  --g-dnb: #ff5ad1;
+  --g-acid: #c8f03c;
+  --g-general: #ecebf3;
+  --g-chill: #7ee0b0;
+  --g-meters: #9298ab;
+  --display: "Bahnschrift", "DIN Alternate", "Barlow Condensed", "Roboto Condensed", system-ui, sans-serif;
+  --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  --r: 10px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--fg); font: 15px/1.45 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 96px;
+  -webkit-tap-highlight-color: transparent;
+}
+.wrap { max-width: 760px; margin: 0 auto; display: grid; gap: 14px; }
+h2 { font: 600 13px/1.2 var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0; }
+button, select, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* Top bar */
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  margin: 0 calc(-1 * max(16px, env(safe-area-inset-right, 0px))) 0 calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px));
+  background: var(--bg);
+  background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.top-in { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
+.brand { font: 700 18px/1 var(--display); letter-spacing: .28em; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); font-size: 12px; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.dot.ok { background: var(--live); box-shadow: 0 0 8px var(--live); }
+.dot.bad { background: var(--warn); }
+.kick { width: 12px; height: 12px; border-radius: 50%; background: var(--panel-2); border: 1px solid var(--line); transition: background .25s, box-shadow .25s; }
+.kick.on { background: var(--accent); box-shadow: 0 0 14px var(--accent); transition: none; }
+.spacer { flex: 1; }
+.tabs { display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.tabs button { border: 0; background: none; padding: 6px 12px; border-radius: 999px; font: 600 13px var(--display); letter-spacing: .06em; color: var(--muted); }
+.tabs button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+
+/* Panels */
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; display: grid; gap: 12px; }
+.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.note { color: var(--muted); font-size: 13px; margin: 0; }
+.warnnote { color: var(--warn); font-size: 13px; margin: 0; }
+
+/* Live strip */
+.live { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: end; }
+.meters { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; height: 62px; align-items: end; }
+.mcol { display: grid; grid-template-rows: 1fr auto; gap: 4px; height: 100%; text-align: center; }
+.mtrack { position: relative; background: var(--panel-2); border-radius: 4px; overflow: hidden; }
+.mfill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: var(--fg); opacity: .85; transition: height .12s linear; }
+.mcol:nth-child(1) .mfill { background: var(--warn); }
+.mcol:nth-child(2) .mfill { background: var(--g-chill); }
+.mcol:nth-child(3) .mfill { background: var(--g-techno); }
+.mlabel { font: 600 11px var(--display); letter-spacing: .08em; color: var(--muted); }
+.master { display: grid; gap: 6px; min-width: 128px; }
+.master .big { font: 600 28px/1 var(--display); }
+.capline { font-size: 12px; color: var(--muted); }
+
+/* Segmented controls */
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 3px; gap: 3px; }
+.seg button { border: 0; background: none; padding: 9px 6px; border-radius: 6px; font: 600 13px var(--display); letter-spacing: .04em; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.seg.small button { padding: 6px 4px; }
+
+/* Genres and modes */
+.genres { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.genres button { flex: none; border: 1px solid var(--line); background: var(--panel-2); padding: 7px 12px; border-radius: 999px; font: 600 13px var(--display); letter-spacing: .04em; display: inline-flex; align-items: center; gap: 7px; color: var(--muted); }
+.genres button[aria-pressed="true"] { color: var(--fg); border-color: var(--fg); }
+.gdot { width: 8px; height: 8px; border-radius: 50%; }
+.modes { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+.mode { text-align: left; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 11px; display: grid; gap: 4px; min-width: 0; }
+.mode b { font: 600 15px/1.2 var(--display); letter-spacing: .02em; }
+.mode span { font-size: 12px; color: var(--muted); line-height: 1.35; }
+.mode[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.mode[aria-pressed="true"] b { color: var(--accent); }
+.tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.tag { font: 600 10px var(--display); letter-spacing: .08em; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); }
+.tag.strobe { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); }
+.tag.kick { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.offbtn { justify-self: start; border: 1px solid var(--line); background: none; padding: 7px 14px; border-radius: 8px; color: var(--muted); }
+.offbtn[aria-pressed="true"] { color: var(--fg); border-color: var(--fg); }
+
+/* Colour */
+.swatches { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; }
+.sw { aspect-ratio: 1; max-width: 100%; border-radius: 50%; border: 2px solid transparent; padding: 0; }
+.sw[aria-pressed="true"] { border-color: var(--fg); box-shadow: 0 0 0 2px var(--bg) inset; }
+
+/* Sliders */
+.sl { display: grid; grid-template-columns: 110px 1fr 44px; gap: 10px; align-items: center; }
+.sl label { font-size: 13px; color: var(--muted); }
+.sl output { text-align: right; font-size: 13px; }
+input[type=range] { width: 100%; accent-color: var(--accent); min-width: 0; }
+input.hue { -webkit-appearance: none; appearance: none; height: 10px; border-radius: 5px; background: linear-gradient(90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); }
+input.hue::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--fg); border: 2px solid var(--bg); }
+input.hue::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--fg); border: 2px solid var(--bg); }
+details > summary { cursor: pointer; color: var(--muted); font-size: 13px; list-style: none; }
+details > summary::before { content: "+ "; }
+details[open] > summary::before { content: "\2212 "; }
+details > .inner { display: grid; gap: 10px; margin-top: 10px; }
+
+/* Switch */
+.switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tog { position: relative; width: 52px; height: 30px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); flex: none; padding: 0; }
+.tog::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--muted); transition: left .15s; }
+.tog[aria-pressed="true"] { background: var(--warn); border-color: var(--warn); }
+.tog[aria-pressed="true"]::after { left: 25px; background: #fff; }
+.tog.calm[aria-pressed="true"] { background: var(--live); border-color: var(--live); }
+
+/* Buttons */
+.btn { border: 1px solid var(--line); background: var(--panel-2); padding: 9px 14px; border-radius: 8px; font: 600 14px var(--display); letter-spacing: .03em; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.danger { color: var(--warn); }
+.btn.armed { background: var(--warn); color: #fff; border-color: var(--warn); }
+.btn.black[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+
+/* Setup */
+.setup details.sec { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; }
+.setup details.sec > summary { font: 600 13px var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--fg); }
+.setup details.sec > summary::before { color: var(--accent); }
+.strands { display: grid; gap: 8px; }
+.strandrow { display: grid; grid-template-columns: auto 1fr 1fr; gap: 8px; align-items: center; background: var(--panel-2); border-radius: 8px; padding: 8px 10px; }
+.strandrow .name { font: 600 14px var(--display); }
+.strandrow select { grid-column: 1 / -1; }
+.field { display: grid; gap: 3px; font-size: 12px; color: var(--muted); }
+input[type=number], select { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; min-width: 0; width: 100%; }
+.diag { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
+.diag div { background: var(--panel-2); border-radius: 6px; padding: 7px 9px; font-size: 12px; color: var(--muted); }
+.diag b { display: block; color: var(--fg); font: 500 14px var(--mono); font-variant-numeric: tabular-nums; }
+.hmeters { display: grid; gap: 5px; }
+.hm { display: grid; grid-template-columns: 54px 1fr 34px; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+.hm .t { height: 8px; background: var(--panel-2); border-radius: 4px; overflow: hidden; }
+.hm .f { height: 100%; width: 0; background: var(--accent); }
+
+/* Save bar and toast */
+.savebar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
+  padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  background: var(--panel); border-top: 1px solid var(--line);
+}
+.savebar .row { max-width: 760px; margin: 0 auto; justify-content: space-between; flex-wrap: nowrap; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 7; max-width: calc(100% - 32px); }
+.toast.show { opacity: 1; }
+.toast.err { background: var(--warn); color: #fff; }
+
+@media (max-width: 460px) {
+  .live { grid-template-columns: 1fr; }
+  .sl { grid-template-columns: 92px 1fr 40px; }
+  .swatches { grid-template-columns: repeat(5, 1fr); }
+  .modes { grid-template-columns: 1fr 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <span class="brand">LUMINA</span>
+    <span class="chip" title="Who is driving the lights"><span class="dot" id="srcDot"></span><span id="srcChip">…</span></span>
+    <span class="kick" id="kick" title="Bass hit"></span>
+    <span class="spacer"></span>
+    <nav class="tabs" aria-label="Screens">
+      <button id="tabShow" aria-pressed="true" onclick="showScreen('show')">Show</button>
+      <button id="tabSetup" aria-pressed="false" onclick="showScreen('setup')">Setup</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" id="screenShow" style="margin-top:14px">
+  <section class="panel">
+    <div class="live">
+      <div class="meters" aria-label="Live audio levels">
+        <div class="mcol"><div class="mtrack"><div class="mfill" id="mBass"></div></div><span class="mlabel">BASS</span></div>
+        <div class="mcol"><div class="mtrack"><div class="mfill" id="mMid"></div></div><span class="mlabel">MID</span></div>
+        <div class="mcol"><div class="mtrack"><div class="mfill" id="mTreble"></div></div><span class="mlabel">HIGH</span></div>
+        <div class="mcol"><div class="mtrack"><div class="mfill" id="mLeft"></div></div><span class="mlabel">L</span></div>
+        <div class="mcol"><div class="mtrack"><div class="mfill" id="mRight"></div></div><span class="mlabel">R</span></div>
+      </div>
+      <div class="master">
+        <h2>Master</h2>
+        <div class="row" style="justify-content:space-between"><span class="big num" id="masterPct">–</span>
+          <button class="btn black" id="blackout" aria-pressed="false" onclick="toggleBlackout()">Blackout</button></div>
+      </div>
+    </div>
+    <input type="range" id="master" min="0" max="255" aria-label="Master brightness">
+    <p class="capline" id="capLine"></p>
+  </section>
+
+  <section class="panel">
+    <h2>Source</h2>
+    <div class="seg" id="srcSeg">
+      <button data-src="auto">Auto</button>
+      <button data-src="audio">Audio</button>
+      <button data-src="artnet">SoundSwitch</button>
+      <button data-src="standalone">Standalone</button>
+    </div>
+    <p class="note" id="srcNote"></p>
+  </section>
+
+  <section class="panel">
+    <div class="row" style="justify-content:space-between"><h2>Look</h2><span class="note" id="applyNote"></span></div>
+    <div class="seg small" id="targetSeg" aria-label="Apply to">
+      <button data-t="all">All</button><button data-t="0">1</button><button data-t="1">2</button><button data-t="2">3</button><button data-t="3">4</button>
+    </div>
+    <div class="genres" id="genres"></div>
+    <div class="modes" id="modes"></div>
+    <button class="offbtn" id="offBtn" aria-pressed="false" onclick="pickMode(0)">Turn off</button>
+  </section>
+
+  <section class="panel">
+    <h2>Colour</h2>
+    <div class="swatches" id="swatches"></div>
+    <input type="range" class="hue" id="hue" min="0" max="255" aria-label="Hue">
+  </section>
+
+  <section class="panel">
+    <h2>Feel</h2>
+    <div class="sl"><label for="f_speed">Speed</label><input type="range" id="f_speed" min="0" max="255"><output class="num" id="o_speed"></output></div>
+    <div class="sl"><label for="f_sensitivity">Audio response</label><input type="range" id="f_sensitivity" min="0" max="255"><output class="num" id="o_sensitivity"></output></div>
+    <div class="sl"><label for="f_brightness">Strand level</label><input type="range" id="f_brightness" min="0" max="255"><output class="num" id="o_brightness"></output></div>
+    <details id="moreFeel"><summary>More: density, decay, sparkle, saturation, direction</summary>
+      <div class="inner">
+        <div class="sl"><label for="f_density">Density</label><input type="range" id="f_density" min="0" max="255"><output class="num" id="o_density"></output></div>
+        <div class="sl"><label for="f_strobe">Decay / trail</label><input type="range" id="f_strobe" min="0" max="255"><output class="num" id="o_strobe"></output></div>
+        <div class="sl"><label for="f_twinkle">Sparkle</label><input type="range" id="f_twinkle" min="0" max="255"><output class="num" id="o_twinkle"></output></div>
+        <div class="sl"><label for="f_saturation">Saturation</label><input type="range" id="f_saturation" min="0" max="255"><output class="num" id="o_saturation"></output></div>
+        <div class="sl"><label>Direction</label><div class="seg small" id="dirSeg"><button data-d="0">Forward</button><button data-d="1">Reverse</button><button data-d="2">Centre</button></div><span></span></div>
+      </div>
+    </details>
+  </section>
+
+  <section class="panel">
+    <div class="switch"><div><h2>Strobe</h2><p class="note" id="strobeNote">Off. Flash modes stay dark until you turn it on.</p></div>
+      <button class="tog" id="strobeTog" aria-pressed="false" aria-label="Strobe" onclick="toggleStrobe()"></button></div>
+    <div class="sl"><label for="strobeHz">Max flashes/s</label><input type="range" id="strobeHz" min="1" max="15"><output class="num" id="o_strobeHz"></output></div>
+    <p class="warnnote">Flashing at about 3–30 flashes per second can trigger seizures in people with photosensitive epilepsy. Strobe is off after every restart.</p>
+  </section>
+</main>
+
+<main class="wrap setup" id="screenSetup" style="margin-top:14px" hidden>
+  <details class="sec" open><summary>Power &amp; safety</summary>
+    <div class="inner">
+      <div class="sl"><label for="cap">Brightness cap</label><input type="range" id="cap" min="8" max="64"><output class="num" id="o_cap"></output></div>
+      <p class="note" id="capNote"></p>
+      <div class="sl"><label for="fallback">Auto falls back to</label><select id="fallback"><option value="audio">Audio</option><option value="standalone">Standalone</option></select><span></span></div>
+      <div class="sl"><label for="standalone">Standalone level</label><input type="range" id="standalone" min="0" max="255"><output class="num" id="o_standalone"></output></div>
+      <p class="note">These save immediately. The cap applies to every source.</p>
+    </div>
+  </details>
+
+  <details class="sec"><summary>Strands</summary>
+    <div class="inner">
+      <div class="sl"><label>Active strands</label><div class="seg small" id="activeSeg"><button data-n="1">1</button><button data-n="2">2</button><button data-n="3">3</button><button data-n="4">4</button></div><span></span></div>
+      <div class="strands" id="strandRows"></div>
+      <div class="sl"><label for="maxLeds">Max LEDs/strand</label><input type="number" id="maxLeds" min="1" max="1000"><span></span></div>
+      <p class="note">Pin, count, and type changes make the receiver reconfigure. Proven pins: 33, 25, 26, 27.</p>
+    </div>
+  </details>
+
+  <details class="sec"><summary>Colour calibration</summary>
+    <div class="inner">
+      <div class="sl"><label>Channel order</label><div class="seg small" id="mapSeg"></div><span></span></div>
+      <div class="sl"><label for="redScale">Red</label><input type="range" id="redScale" min="0" max="255"><output class="num" id="o_redScale"></output></div>
+      <div class="sl"><label for="greenScale">Green</label><input type="range" id="greenScale" min="0" max="255"><output class="num" id="o_greenScale"></output></div>
+      <div class="sl"><label for="blueScale">Blue</label><input type="range" id="blueScale" min="0" max="255"><output class="num" id="o_blueScale"></output></div>
+      <div class="sl"><label for="gamma10">Gamma ×10</label><input type="range" id="gamma10" min="10" max="30"><output class="num" id="o_gamma10"></output></div>
+      <div class="row">
+        <button class="btn" onclick="calTest(0,255)">Test red</button><button class="btn" onclick="calTest(96,255)">Test green</button>
+        <button class="btn" onclick="calTest(165,255)">Test blue</button><button class="btn" onclick="calTest(0,0)">Test white</button>
+        <button class="btn" onclick="calReset()">Reset</button>
+      </div>
+      <p class="note">Tests put every active strand on a solid colour. Pick a look again afterwards.</p>
+    </div>
+  </details>
+
+  <details class="sec" id="audioSec"><summary>Audio input</summary>
+    <div class="inner">
+      <div class="hmeters" id="hmeters"></div>
+      <p class="note num" id="rawText"></p>
+      <div id="tuneSliders" class="inner" style="margin:0"></div>
+      <div class="row"><button class="btn" onclick="call('/api/resetAgc').then(()=>toast('Levels re-learned'))">Re-learn levels</button>
+        <button class="btn" onclick="cleanBaseline()">Load clean baseline</button></div>
+    </div>
+  </details>
+
+  <details class="sec" id="diagSec"><summary>Diagnostics</summary>
+    <div class="inner"><div class="diag" id="diag"></div></div>
+  </details>
+
+  <details class="sec"><summary>Reset</summary>
+    <div class="inner"><p class="note">Loads default audio and LED settings. Nothing is saved until you press Save.</p>
+      <div class="row"><button class="btn danger" id="defaultsBtn" onclick="loadDefaults()">Load defaults</button></div></div>
+  </details>
+</main>
+
+<div class="savebar" id="saveBar" hidden>
+  <div class="row"><span class="note">Unsaved changes. They're live now and are lost on restart.</span>
+    <button class="btn primary" id="saveBtn" onclick="saveAll()">Save</button></div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const MAX_STRANDS = 4;
+
+// Mode catalogue. IDs never change (saved settings and the SoundSwitch fixture use them).
+// Tags: k = reacts to bass hits, s = needs Strobe on for its flashes.
+const MODES = {
+  0:  ["Off", "", ""],
+  1:  ["Space Pulse", "Whole strand breathes with the volume.", ""],
+  2:  ["Kick Strobe", "Full-strand flash on each kick.", "ks"],
+  4:  ["Twinkle", "Random twinkles, more on kicks.", "k"],
+  5:  ["Spectrum", "Bass, mid, high in three blocks.", ""],
+  6:  ["Overall VU", "Classic level meter.", ""],
+  7:  ["Glitter Kick", "Glitter that bursts on kicks.", "k"],
+  9:  ["Solid", "One steady colour.", ""],
+  10: ["Test Chase", "One dot walking the strand.", ""],
+  11: ["Bass VU", "Level meter for bass.", ""],
+  12: ["Mid VU", "Level meter for mids.", ""],
+  13: ["High VU", "Level meter for highs.", ""],
+  15: ["Aurora Drift", "Slow clouds of colour.", ""],
+  16: ["Starfield", "Twinkling stars, some white.", ""],
+  17: ["Neon Scanner", "A comet scanning end to end.", ""],
+  18: ["Laser Sweep", "Thin beams sweep back and forth.", ""],
+  19: ["Rave Chase", "Colour blocks chase with dark gaps.", ""],
+  20: ["Bass Cannons", "Bass fires bars in from both ends.", ""],
+  21: ["DnB Chopper", "Bass, mid and high chop into fast tiles.", ""],
+  22: ["Acid Chase", "Comets that speed up with mids and highs.", ""],
+  23: ["Portal Pulse", "Rings open from the centre, brighter on bass.", ""],
+  24: ["Spectrum Sparks", "Sparks for each band, in band colours.", ""],
+  25: ["Hyper Strobe", "White bursts on energy spikes.", "s"],
+  26: ["Cyber Tunnel", "Dashes rush outward with the volume.", ""],
+  27: ["White Lightning", "Forked flashes on hi-hat spikes.", "s"],
+  28: ["DnB Split", "Three chopped band meters side by side.", ""],
+  29: ["Rave Tiles", "Sliding tiles lit by each band.", ""],
+  30: ["Pulse Train", "Pulses race along, pushed by volume.", ""],
+  31: ["Void Bloom", "Blooms open from the centre, with dark cycles.", ""],
+  32: ["Stereo VU", "Left channel on one half, right on the other.", ""],
+  33: ["Kick Pump", "The strand pumps on every kick over a bass glow.", "ks"],
+  34: ["Kick Ripple", "Each kick sends a ring out from the centre.", "k"],
+  35: ["Break Chopper", "Kicks slam blocks into random slots; hats spark.", "k"],
+  36: ["Acid Squelch", "A resonant peak glides with the mids, like a 303 sweep.", ""],
+  3:  ["Bass Comet", "Legacy mode.", ""],
+  8:  ["Void Scanner", "Legacy mode.", ""],
+  14: ["Beat Tracker", "Legacy mode (needs the old beat detector).", ""],
+};
+const GENRES = [
+  ["house", "House", [33, 23, 19, 7, 24]],
+  ["techno", "Techno", [34, 18, 26, 30, 25, 2]],
+  ["dnb", "Drum & Bass", [35, 21, 28, 20, 29, 27]],
+  ["acid", "Acid", [36, 22, 31]],
+  ["general", "General", [9, 1, 4, 5]],
+  ["chill", "Chill", [15, 16, 17]],
+  ["meters", "Meters", [32, 6, 11, 12, 13, 10]],
+];
+// Starting values applied when a mode is picked: speed, density, sensitivity, strobe (decay), twinkle.
+const DEFAULTS = {
+  9: [0, 0, 0, 0, 0], 15: [48, 118, 0, 175, 24], 16: [62, 48, 0, 205, 170], 17: [118, 76, 0, 185, 8],
+  18: [168, 82, 0, 210, 0], 19: [178, 112, 0, 150, 20], 20: [118, 105, 168, 175, 0], 21: [220, 142, 180, 205, 16],
+  22: [194, 78, 148, 175, 38], 23: [130, 108, 158, 185, 0], 24: [154, 125, 175, 180, 190], 25: [232, 74, 185, 225, 0],
+  26: [168, 98, 138, 185, 0], 27: [178, 82, 185, 230, 12], 28: [198, 124, 168, 185, 16], 29: [184, 150, 155, 165, 0],
+  30: [205, 88, 158, 180, 0], 31: [120, 82, 165, 195, 92],
+  32: [0, 0, 128, 150, 0], 33: [0, 0, 160, 170, 0], 34: [150, 90, 0, 170, 0], 35: [0, 100, 160, 160, 120],
+  36: [120, 60, 170, 0, 160],
+  6: [0, 0, 128, 150, 0], 11: [0, 0, 128, 150, 0], 12: [0, 0, 128, 150, 0], 13: [0, 0, 128, 150, 0],
+};
+const DEFAULT_FIELDS = ["speed", "density", "sensitivity", "strobe", "twinkle"];
+const COLOURS = [["Red", 0, 255, "#ff2b2b"], ["Orange", 22, 255, "#ff8c1a"], ["Yellow", 42, 255, "#ffd83d"],
+  ["Green", 96, 255, "#00d464"], ["Cyan", 128, 255, "#00d9ff"], ["Blue", 165, 255, "#2d74ff"],
+  ["Purple", 190, 255, "#9d4dff"], ["Pink", 222, 255, "#ff4db8"], ["White", 0, 0, "#ffffff"]];
+const LED_TYPES = ["WS2815 / WS2812 RGB 800 kHz (proven)", "WS2811 RGB 800 kHz", "WS2811 GRB 800 kHz", "WS2811 RGB 400 kHz",
+  "SK6812 RGB (GRB)", "SK6812 RGBW (GRBW)", "SK6812 RGBW (RGBW)"];
+const COLOR_MAPS = ["RGB", "RBG", "GRB", "GBR", "BRG", "BGR"];
+const TUNING = [ // id, label, min, max, step
+  ["volumeGain", "Volume gain", 0.1, 8, 0.05], ["bassGain", "Bass gain", 0.1, 12, 0.05], ["midGain", "Mid gain", 0.1, 12, 0.05],
+  ["trebleGain", "High gain", 0.1, 12, 0.05], ["lrGain", "L/R gain", 0.1, 8, 0.05],
+  ["volumeFloor", "Volume floor", 0, 500, 1], ["bassFloor", "Bass floor", 0, 500, 1], ["midFloor", "Mid floor", 0, 500, 1],
+  ["trebleFloor", "High floor", 0, 500, 1], ["attack", "Attack", 0.02, 1, 0.01], ["release", "Release", 0.01, 0.8, 0.01],
+  ["peakDecay", "Peak decay", 0.9, 0.999, 0.001], ["shiftTo16", "Input shift", 13, 18, 1], ["packetIntervalMs", "Send every (ms)", 20, 120, 1],
+];
+// Strip power estimate: seller rating 9 W/m at 30 LEDs/m and 12 V = 25 mA per LED at full white (UNVERIFIED until measured).
+const MA_PER_LED = 25, SUPPLY_BUDGET_A = 6;
+
+let led = null, cfg = null, ctl = null;
+let target = "all", genre = "house", dirty = false, lastPulse = null, kickTimer = null, preBlackout = null;
+let screen = "show";
+
+// ---------- networking ----------
+function call(path) {
+  return fetch(path, { cache: "no-store" }).then(r => {
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.text();
+  }).then(t => { try { return JSON.parse(t); } catch (e) { return {}; } });
+}
+const pending = new Map();
+let sendTimer = null, sending = false;
+function queue(params) {
+  for (const [k, v] of Object.entries(params)) pending.set(k, v);
+  markDirty();
+  clearTimeout(sendTimer);
+  sendTimer = setTimeout(flush, 80);
+}
+function flush() {
+  if (sending || pending.size === 0) return;
+  const q = new URLSearchParams();
+  for (const [k, v] of pending) q.set(k, v);
+  pending.clear();
+  sending = true;
+  call("/api/setLed?" + q).catch(() => toast("Couldn't reach Lumina", true)).finally(() => {
+    sending = false;
+    if (pending.size) sendTimer = setTimeout(flush, 20);
+  });
+}
+function control(query) {
+  return call("/api/control" + (query ? "?" + query : "")).then(renderControl).catch(() => toast("Couldn't update the source", true));
+}
+
+// ---------- helpers ----------
+function targets() {
+  const n = led ? Math.max(1, Math.min(MAX_STRANDS, led.activeStrands)) : 1;
+  return target === "all" ? [...Array(n).keys()] : [Number(target)];
+}
+function first() { return led.strand[targets()[0]]; }
+function setStrandFields(fields) {
+  const p = {};
+  for (const s of targets()) for (const [f, v] of Object.entries(fields)) { led.strand[s][f] = v; p[`s${s}_${f}`] = v; }
+  queue(p);
+}
+function pct(v) { return Math.round(v / 255 * 100) + "%"; }
+function pressed(container, attr, value) {
+  for (const b of container.querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset[attr] === String(value)));
+}
+function markDirty() { dirty = true; $("saveBar").hidden = false; }
+let toastTimer = null;
+function toast(msg, err) {
+  const t = $("toast"); t.textContent = msg; t.classList.toggle("err", !!err); t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2400);
+}
+
+// ---------- build static UI ----------
+function buildGenres() {
+  $("genres").innerHTML = GENRES.map(([id, name]) =>
+    `<button data-g="${id}"><span class="gdot" style="background:var(--g-${id})"></span>${name}</button>`).join("");
+  $("genres").onclick = (e) => { const b = e.target.closest("button"); if (b) { genre = b.dataset.g; renderModes(); } };
+}
+function renderModes() {
+  pressed($("genres"), "g", genre);
+  const cur = led ? first().mode : -1;
+  const list = GENRES.find(g => g[0] === genre)[2];
+  $("modes").innerHTML = list.map(id => {
+    const [name, desc, tags] = MODES[id];
+    const t = (tags.includes("k") ? `<span class="tag kick">Kick</span>` : "") + (tags.includes("s") ? `<span class="tag strobe">Strobe</span>` : "");
+    return `<button class="mode" data-m="${id}" aria-pressed="${id === cur}"><b>${name}</b><span>${desc}</span>${t ? `<div class="tags">${t}</div>` : ""}</button>`;
+  }).join("");
+  $("offBtn").setAttribute("aria-pressed", String(cur === 0));
+}
+function buildSwatches() {
+  $("swatches").innerHTML = COLOURS.map(([n, h, s, css]) =>
+    `<button class="sw" style="background:${css}" data-h="${h}" data-s="${s}" title="${n}" aria-label="${n}"></button>`).join("");
+  $("swatches").onclick = (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    setStrandFields({ hue: +b.dataset.h, saturation: +b.dataset.s }); renderLook();
+  };
+}
+function buildSetup() {
+  $("mapSeg").innerHTML = COLOR_MAPS.map((m, i) => `<button data-c="${i}">${m}</button>`).join("");
+  $("tuneSliders").innerHTML = TUNING.map(([id, label, mn, mx, st]) =>
+    `<div class="sl"><label for="t_${id}">${label}</label><input type="range" id="t_${id}" min="${mn}" max="${mx}" step="${st}"><output class="num" id="o_t_${id}"></output></div>`).join("");
+  $("hmeters").innerHTML = ["volume", "bass", "mid", "treble", "left", "right"].map(n =>
+    `<div class="hm"><span>${n}</span><div class="t"><div class="f" id="h_${n}"></div></div><span class="num" id="hn_${n}">0</span></div>`).join("");
+  let rows = "";
+  for (let s = 0; s < MAX_STRANDS; s++) {
+    rows += `<div class="strandrow"><span class="name">Strand ${s + 1}</span>
+      <label class="field">GPIO<input type="number" id="pin${s}" min="0" max="48"></label>
+      <label class="field">LEDs<input type="number" id="cnt${s}" min="0" max="1000"></label>
+      <select id="type${s}" aria-label="Strand ${s + 1} LED type">${LED_TYPES.map((t, i) => `<option value="${i}">${t}</option>`).join("")}</select>
+      <div class="switch" style="grid-column:1/-1"><span class="note">On</span><button class="tog calm" id="en${s}" aria-label="Strand ${s + 1} on"></button></div></div>`;
+  }
+  $("strandRows").innerHTML = rows;
+}
+
+// ---------- render from state ----------
+function renderAll() {
+  if (!led) return;
+  const m = led.globalBrightness;
+  $("master").value = m;
+  $("masterPct").textContent = pct(m);
+  $("blackout").setAttribute("aria-pressed", String(m === 0));
+  renderCapLine();
+  pressed($("targetSeg"), "t", target);
+  const n = led.activeStrands;
+  $("applyNote").textContent = target === "all" ? `Applies to ${n} strand${n === 1 ? "" : "s"}` : `Strand ${+target + 1} only`;
+  renderLook();
+  renderSetup();
+}
+function renderLook() {
+  const st = first();
+  const owner = GENRES.find(g => g[2].includes(st.mode));
+  if (owner && !renderLook.userPicked) genre = owner[0];
+  renderModes();
+  for (const b of $("swatches").children) {
+    const h = +b.dataset.h, s = +b.dataset.s;
+    const on = s === 0 ? st.saturation < 20 : (st.saturation > 100 && Math.abs(((st.hue - h + 384) % 256) - 128) < 8);
+    b.setAttribute("aria-pressed", String(on));
+  }
+  $("hue").value = st.hue;
+  for (const f of ["speed", "sensitivity", "brightness", "density", "strobe", "twinkle", "saturation"]) {
+    $("f_" + f).value = st[f]; $("o_" + f).textContent = st[f];
+  }
+  pressed($("dirSeg"), "d", st.direction);
+}
+function renderCapLine() {
+  if (!led || !ctl) return;
+  const cap = ctl.brightnessCap, m = led.globalBrightness;
+  $("capLine").textContent = m > cap
+    ? `Limited to ${pct(cap)} by the power cap (Setup → Power & safety).`
+    : `Power cap ${pct(cap)}.`;
+}
+function renderSetup() {
+  if (!led) return;
+  pressed($("activeSeg"), "n", led.activeStrands);
+  for (let s = 0; s < MAX_STRANDS; s++) {
+    const st = led.strand[s];
+    $("pin" + s).value = st.pin; $("cnt" + s).value = st.ledCount; $("type" + s).value = st.ledType;
+    $("en" + s).setAttribute("aria-pressed", String(!!st.enabled));
+  }
+  $("maxLeds").value = led.maxLedsPerStrand;
+  pressed($("mapSeg"), "c", led.colorMap);
+  for (const id of ["redScale", "greenScale", "blueScale", "gamma10"]) { $(id).value = led[id]; $("o_" + id).textContent = led[id]; }
+  if (cfg) for (const [id] of TUNING) { $("t_" + id).value = cfg[id]; $("o_t_" + id).textContent = cfg[id]; }
+  renderPower();
+}
+function renderPower() {
+  if (!led || !ctl) return;
+  $("cap").value = ctl.brightnessCap; $("o_cap").textContent = pct(ctl.brightnessCap);
+  let leds = 0;
+  for (let s = 0; s < led.activeStrands; s++) if (led.strand[s].enabled) leds += led.strand[s].ledCount;
+  const amps = leds * MA_PER_LED / 1000 * ctl.brightnessCap / 255;
+  $("capNote").textContent = `At this cap, ${leds} LEDs at full white draw about ${amps.toFixed(1)} A of the supply's ~${SUPPLY_BUDGET_A} A budget. ` +
+    `Estimate from the strip rating (9 W/m); measure before raising the ${pct(ctl.brightnessCapMax)} ceiling.`;
+  $("fallback").value = ctl.autoFallback;
+  $("standalone").value = ctl.standaloneLevel; $("o_standalone").textContent = ctl.standaloneLevel;
+}
+const SRC_NAMES = { auto: "Auto", audio: "Audio", artnet: "SoundSwitch", standalone: "Standalone" };
+function renderControl(c) {
+  if (!c || !c.source) return;
+  ctl = c;
+  pressed($("srcSeg"), "src", c.source);
+  const active = SRC_NAMES[c.active] || c.active;
+  $("srcChip").textContent = c.source === "auto" ? `Auto · ${active}` : active;
+  $("srcDot").className = "dot ok";
+  const age = c.artnetAgeMs > 4e9 ? "not seen since restart" : `last seen ${(c.artnetAgeMs / 1000).toFixed(c.artnetAgeMs < 10000 ? 1 : 0)} s ago`;
+  const notes = {
+    auto: `Following ${active}. SoundSwitch takes over while it sends and hands back about 1 s after it stops. SoundSwitch ${age}.`,
+    audio: "Lights react to the line input with the look below.",
+    artnet: `SoundSwitch only. If it stops, the last frame holds. SoundSwitch ${age}.`,
+    standalone: "The look below runs at a steady level, without audio.",
+  };
+  $("srcNote").textContent = notes[c.source] || "";
+  $("strobeTog").setAttribute("aria-pressed", String(c.strobeEnabled));
+  $("strobeNote").textContent = c.strobeEnabled ? `On, capped at ${c.strobeHz} flashes/s across the whole rig.` : "Off. Flash modes stay dark until you turn it on.";
+  if (c.strobeMaxHz) $("strobeHz").max = c.strobeMaxHz;
+  $("strobeHz").value = c.strobeHz; $("o_strobeHz").textContent = c.strobeHz;
+  renderCapLine();
+  renderPower();
+}
+function renderLive(j) {
+  const bars = { mBass: j.bass, mMid: j.mid, mTreble: j.treble, mLeft: j.left, mRight: j.right };
+  for (const [id, v] of Object.entries(bars)) $(id).style.height = (Math.min(255, v || 0) / 255 * 100) + "%";
+  if (lastPulse !== null && j.beatPulse !== lastPulse) {
+    $("kick").classList.add("on"); clearTimeout(kickTimer);
+    kickTimer = setTimeout(() => $("kick").classList.remove("on"), 90);
+  }
+  lastPulse = j.beatPulse;
+  if (screen === "setup") {
+    for (const n of ["volume", "bass", "mid", "treble", "left", "right"]) {
+      $("h_" + n).style.width = (Math.min(255, j[n] || 0) / 255 * 100) + "%"; $("hn_" + n).textContent = j[n] || 0;
+    }
+    if (j.rawVolume !== undefined) $("rawText").textContent =
+      `raw volume ${j.rawVolume.toFixed(0)} · bass ${j.rawBass.toFixed(0)} · mid ${j.rawMid.toFixed(0)} · high ${j.rawTreble.toFixed(0)} · clip ${j.clip}`;
+    if ($("diagSec").open) renderDiag(j);
+  }
+}
+function renderDiag(j) {
+  const items = [["Wi-Fi", `${j.wifiRssi} dBm`], ["Channel", j.wifiChannel], ["Address", j.wifiIp], ["Packets/s", j.pps],
+    ["Sent OK", j.cbOk], ["Send fails", j.cbFail], ["Queue errors", j.enqErr], ["Busy skips", j.busySkip],
+    ["Free heap", j.freeHeap], ["Loop µs", j.loopUs], ["Analyze µs", j.analyzeUs], ["HTTP µs", j.httpUs]];
+  if (ctl) items.push(["Source switches", ctl.switches], ["Art-Net frames used", ctl.appliedPackets]);
+  $("diag").innerHTML = items.map(([k, v]) => `<div>${k}<b>${v}</b></div>`).join("");
+}
+
+// ---------- actions ----------
+function pickMode(mode) {
+  const f = { mode, enabled: 1 };
+  if (DEFAULTS[mode]) DEFAULT_FIELDS.forEach((k, i) => f[k] = DEFAULTS[mode][i]);
+  setStrandFields(f);
+  renderLook();
+}
+function toggleBlackout() {
+  if (led.globalBrightness === 0) { setGlobal(preBlackout || 255); }
+  else { preBlackout = led.globalBrightness; setGlobal(0); }
+}
+function setGlobal(v) { led.globalBrightness = v; queue({ globalBrightness: v }); renderAll(); }
+function toggleStrobe() { control("strobe=" + (ctl && ctl.strobeEnabled ? 0 : 1)); }
+function calTest(hue, sat) {
+  const p = {};
+  for (let s = 0; s < led.activeStrands; s++) {
+    Object.assign(led.strand[s], { mode: 9, enabled: 1, brightness: 255, hue, saturation: sat });
+    for (const f of ["mode", "enabled", "brightness", "hue", "saturation"]) p[`s${s}_${f}`] = led.strand[s][f];
+  }
+  queue(p); renderAll();
+}
+function calReset() {
+  Object.assign(led, { colorMap: 0, redScale: 255, greenScale: 255, blueScale: 255, gamma10: 10 });
+  queue({ colorMap: 0, redScale: 255, greenScale: 255, blueScale: 255, gamma10: 10 }); renderSetup();
+}
+let defaultsArmed = null;
+function loadDefaults() {
+  const b = $("defaultsBtn");
+  if (!defaultsArmed) {
+    b.textContent = "Tap again to load defaults"; b.classList.add("armed");
+    defaultsArmed = setTimeout(() => { defaultsArmed = null; b.textContent = "Load defaults"; b.classList.remove("armed"); }, 4000);
+    return;
+  }
+  clearTimeout(defaultsArmed); defaultsArmed = null; b.textContent = "Load defaults"; b.classList.remove("armed");
+  call("/api/defaults").then(loadState).then(() => { markDirty(); toast("Defaults loaded. Save to keep them."); });
+}
+function cleanBaseline() {
+  const v = { shiftTo16: 16, volumeGain: 0.9, bassGain: 1.15, midGain: 1.05, trebleGain: 1.45, lrGain: 0.55, volumeFloor: 44, bassFloor: 70,
+    midFloor: 126, trebleFloor: 83, attack: 0.6, release: 0.08, peakDecay: 0.995, packetIntervalMs: 33 };
+  Object.assign(cfg, v);
+  call("/api/setTuning?" + new URLSearchParams(v)).then(() => call("/api/resetAgc")).then(() => {
+    markDirty(); renderSetup(); toast("Clean baseline loaded. Tune the floors in silence first.");
+  });
+}
+async function saveAll() {
+  const btn = $("saveBtn"); btn.disabled = true; btn.textContent = "Saving…";
+  try {
+    clearTimeout(sendTimer); pending.clear();
+    for (let i = 0; i < 100 && sending; i++) await new Promise(r => setTimeout(r, 25));
+    const lp = new URLSearchParams();
+    for (const k of ["activeStrands", "maxLedsPerStrand", "globalBrightness", "globalHue", "colorMap", "redScale", "greenScale", "blueScale", "gamma10"]) lp.set(k, led[k]);
+    for (let s = 0; s < MAX_STRANDS; s++) for (const [f, v] of Object.entries(led.strand[s])) lp.set(`s${s}_${f}`, v);
+    await call("/api/setLed?" + lp);
+    await call("/api/setTuning?" + new URLSearchParams(cfg));
+    const r = await call("/api/save");
+    if (!r.saved) throw new Error(r.error || "the flash check failed");
+    dirty = false; $("saveBar").hidden = true; toast("Saved");
+  } catch (e) { toast("Save failed: " + e.message, true); }
+  btn.disabled = false; btn.textContent = "Save";
+}
+function showScreen(name) {
+  screen = name;
+  $("screenShow").hidden = name !== "show"; $("screenSetup").hidden = name !== "setup";
+  $("tabShow").setAttribute("aria-pressed", String(name === "show")); $("tabSetup").setAttribute("aria-pressed", String(name === "setup"));
+  try { localStorage.setItem("lumina.screen", name); } catch (e) {}
+  window.scrollTo(0, 0);
+}
+
+// ---------- wire inputs ----------
+function wire() {
+  $("master").oninput = (e) => setGlobal(+e.target.value);
+  $("hue").oninput = (e) => { setStrandFields({ hue: +e.target.value, saturation: Math.max(first().saturation, 200) }); renderLook(); };
+  for (const f of ["speed", "sensitivity", "brightness", "density", "strobe", "twinkle", "saturation"]) {
+    $("f_" + f).oninput = (e) => { $("o_" + f).textContent = e.target.value; setStrandFields({ [f]: +e.target.value }); };
+  }
+  $("dirSeg").onclick = (e) => { const b = e.target.closest("button"); if (b) { setStrandFields({ direction: +b.dataset.d }); renderLook(); } };
+  $("modes").onclick = (e) => { const b = e.target.closest("button"); if (b) pickMode(+b.dataset.m); };
+  $("genres").addEventListener("click", () => { renderLook.userPicked = true; });
+  $("targetSeg").onclick = (e) => { const b = e.target.closest("button"); if (b) { target = b.dataset.t; renderLook.userPicked = false; renderAll(); } };
+  $("srcSeg").onclick = (e) => { const b = e.target.closest("button"); if (b) control("source=" + b.dataset.src); };
+  $("strobeHz").oninput = (e) => { $("o_strobeHz").textContent = e.target.value; };
+  $("strobeHz").onchange = (e) => control("strobeHz=" + e.target.value);
+  $("cap").oninput = (e) => { $("o_cap").textContent = pct(+e.target.value); };
+  $("cap").onchange = (e) => control("cap=" + e.target.value);
+  $("fallback").onchange = (e) => control("fallback=" + e.target.value);
+  $("standalone").oninput = (e) => { $("o_standalone").textContent = e.target.value; };
+  $("standalone").onchange = (e) => control("standalone=" + e.target.value);
+  $("activeSeg").onclick = (e) => { const b = e.target.closest("button"); if (b) { led.activeStrands = +b.dataset.n; queue({ activeStrands: led.activeStrands }); renderAll(); } };
+  $("maxLeds").onchange = (e) => { led.maxLedsPerStrand = +e.target.value; queue({ maxLedsPerStrand: led.maxLedsPerStrand }); };
+  for (let s = 0; s < MAX_STRANDS; s++) {
+    $("pin" + s).onchange = (e) => { led.strand[s].pin = +e.target.value; queue({ [`s${s}_pin`]: led.strand[s].pin }); };
+    $("cnt" + s).onchange = (e) => { led.strand[s].ledCount = +e.target.value; queue({ [`s${s}_ledCount`]: led.strand[s].ledCount }); renderPower(); };
+    $("type" + s).onchange = (e) => { led.strand[s].ledType = +e.target.value; queue({ [`s${s}_ledType`]: led.strand[s].ledType }); };
+    $("en" + s).onclick = () => { led.strand[s].enabled = led.strand[s].enabled ? 0 : 1; queue({ [`s${s}_enabled`]: led.strand[s].enabled }); renderSetup(); };
+  }
+  $("mapSeg").onclick = (e) => { const b = e.target.closest("button"); if (b) { led.colorMap = +b.dataset.c; queue({ colorMap: led.colorMap }); renderSetup(); } };
+  for (const id of ["redScale", "greenScale", "blueScale", "gamma10"]) {
+    $(id).oninput = (e) => { led[id] = +e.target.value; $("o_" + id).textContent = led[id]; queue({ [id]: led[id] }); };
+  }
+  let tuneTimer = null;
+  for (const [id] of TUNING) {
+    $("t_" + id).oninput = (e) => {
+      cfg[id] = +e.target.value; $("o_t_" + id).textContent = e.target.value; markDirty();
+      clearTimeout(tuneTimer); tuneTimer = setTimeout(() => call("/api/setTuning?" + new URLSearchParams({ [id]: cfg[id] })), 100);
+    };
+  }
+}
+
+// ---------- polling ----------
+async function loadState() {
+  const j = await call("/api/state");
+  led = j.led; cfg = j.cfg;
+  renderAll();
+  renderLive(j);
+}
+let liveBusy = false;
+async function pollLive() {
+  if (!liveBusy && !document.hidden) {
+    liveBusy = true;
+    try { renderLive(await call("/api/live")); } catch (e) { $("srcDot").className = "dot bad"; }
+    liveBusy = false;
+  }
+  setTimeout(pollLive, document.hidden ? 2000 : 250);
+}
+
+buildGenres(); buildSwatches(); buildSetup(); wire();
+try { if (localStorage.getItem("lumina.screen") === "setup") showScreen("setup"); } catch (e) {}
+control("");
+setInterval(() => { if (!document.hidden) control(""); }, 2000);
+loadState().catch(() => toast("Couldn't load settings from Lumina", true)).finally(pollLive);
+</script>
+</body>
+</html>
