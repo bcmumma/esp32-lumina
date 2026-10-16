@@ -65,13 +65,26 @@ The web UI can override the source manually. Diagnostics show the active source.
   - The Phase 10 receiver needs an ArtPollReply, so it shows up as a node, and it must **advertise its own LAN IP** in that reply. SoundSwitch sends only there.
   - The Phase 13 "Art-Net timeout → fall back" only triggers when SoundSwitch quits or the network drops. A paused show looks live (frozen frames). Telling "paused" apart needs another signal (e.g. frames unchanged for N seconds), if it matters.
 
+## Control-Source Arbitration (Phase 13)
+
+- **Decision:** `lib/SourceRouter` is a pure function with unit tests. **Application:** the S3's `lighting/ControlRouter` runs `control_apply()` on every packet after audio analysis.
+- **Sources:**
+  - **AUTO** (boot default): ARTNET while a frame for the fixture's universe arrived in the last 1000 ms, otherwise the fallback (AUDIO, or STANDALONE if set).
+  - **AUDIO:** the web-configured effects react to the PCM1808.
+  - **STANDALONE:** the same saved look, with the audio fields held at a steady level (default 128).
+  - **ARTNET** (forced): `LUMINA-16`; if frames stop, it holds the last frame.
+- "Fresh" means a frame arrived, whatever its values. A paused or blacked-out show still sends frames, so it stays on ARTNET.
+- The 1 s timeout clears the measured stalls of up to 480 ms. Measured: AUTO → ARTNET 78 ms after frames start, → AUDIO 1045 ms after they stop.
+- **Persistence:** a separate CRC-checked NVS record (`lumina_ctl`), not part of the main dual-slot blob. It holds the source, fallback, standalone level, and strobe rate. Strobe enable is never saved.
+- **Interface:** `/api/control` reads or changes the settings and reports the active source and the reason. `artnet=1|0` stays as an alias for `source=artnet|auto`. The controller page has a "Control Source & Strobe Safety" card. The serial log prints `Source: X -> active Y (reason)` on each switch.
+
 ## Intelligent Fixture Profile `LUMINA-16` (v1 implemented in Phase 12)
 
 **v1 (2026-10-14):**
 - `lib/Lumina16` maps CH1–11 onto the existing per-strand effect fields, the same on all strands.
 - CH12–16 are reserved until v2, which needs a packet change.
 - In SoundSwitch 2.11 the fixture is one cell (`Main`): its **Intensity** function on CH1, Strobe on CH6, RGB on CH9–11, and attributes on CH2–5 and CH7–8 (CH4 named "Reactivity").
-- The S3's `lighting/Lumina16Control` applies it when Art-Net control is on (`/api/control`, live-only, off at boot) and frames are under 1 s old. Brightness is capped at 25%.
+- The S3's `lighting/ControlRouter` applies it when the active source is ARTNET (see Control-Source Arbitration below). Brightness is capped at 25% on this path only.
 - **Strobe safety:**
   - lives in the receiver: one rig-wide gate (`strobe_gate_allow`) for all flash effects;
   - its state travels in `AudioLedPacket.flags` (bit 7 enable; bits 4–6 rate 1–8/s);
