@@ -101,6 +101,7 @@ button { cursor: pointer; }
 .seg button { border: 0; background: none; padding: 9px 6px; border-radius: 6px; font: 600 13px var(--display); letter-spacing: .04em; color: var(--muted); }
 .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
 .seg.small button { padding: 6px 4px; }
+#srcSeg { grid-auto-flow: row; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); }
 
 /* Genres and modes */
 .genres { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
@@ -229,8 +230,9 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
     <h2>Source</h2>
     <div class="seg" id="srcSeg">
       <button data-src="auto">Auto</button>
-      <button data-src="audio">Audio</button>
       <button data-src="artnet">SoundSwitch</button>
+      <button data-src="hybrid">Hybrid</button>
+      <button data-src="audio">Audio</button>
       <button data-src="standalone">Standalone</button>
     </div>
     <p class="note" id="srcNote"></p>
@@ -286,6 +288,14 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
       <div class="sl"><label for="fallback">Auto falls back to</label><select id="fallback"><option value="audio">Audio</option><option value="standalone">Standalone</option></select><span></span></div>
       <div class="sl"><label for="standalone">Standalone level</label><input type="range" id="standalone" min="0" max="255"><output class="num" id="o_standalone"></output></div>
       <p class="note">These save immediately. The cap applies to every source.</p>
+    </div>
+  </details>
+
+  <details class="sec"><summary>SoundSwitch fixture</summary>
+    <div class="inner">
+      <div class="sl"><label>Fixture</label><div class="seg small" id="fixSeg"><button data-f="cells">Cells</button><button data-f="lumina16">LUMINA-16</button></div><span></span></div>
+      <div class="sl" id="cellRow"><label for="cellCount">Cells</label><input type="number" id="cellCount" min="1" max="150"><span></span></div>
+      <p class="note" id="fixNote"></p>
     </div>
   </details>
 
@@ -585,9 +595,18 @@ function renderPower() {
   $("capNote").textContent = `${ctl.brightnessCap >= 255 ? "No cap: " : "At this cap, "}${leds} enabled LEDs at full white draw about ${amps.toFixed(1)} A; ` +
     `the 90 W supply manages about ${SUPPLY_BUDGET_A} A.${over ? " Lower the cap or add power before running full white." : ""} Estimate from the strip rating (9 W/m).`;
   $("fallback").value = ctl.autoFallback;
+  const cellsOn = ctl.fixtureCells > 0;
+  pressed($("fixSeg"), "f", cellsOn ? "cells" : "lumina16");
+  $("cellRow").hidden = !cellsOn;
+  if (cellsOn && document.activeElement !== $("cellCount")) $("cellCount").value = ctl.fixtureCells;
+  const strandLeds = led ? led.strand[0].ledCount : 0;
+  $("fixNote").textContent = cellsOn
+    ? `Patch an RGB fixture with ${ctl.fixtureCells} cells (${ctl.fixtureCells * 3} channels) at DMX address 1 on Universe One. ` +
+      `On ${strandLeds} LEDs that's about ${(strandLeds / ctl.fixtureCells).toFixed(1)} LEDs per cell, blended smoothly.`
+    : "Patch the 16-channel LUMINA-16 fixture at DMX address 1 on Universe One.";
   $("standalone").value = ctl.standaloneLevel; $("o_standalone").textContent = ctl.standaloneLevel;
 }
-const SRC_NAMES = { auto: "Auto", audio: "Audio", artnet: "SoundSwitch", standalone: "Standalone" };
+const SRC_NAMES = { auto: "Auto", audio: "Audio", artnet: "SoundSwitch", hybrid: "Hybrid", standalone: "Standalone" };
 function renderControl(c) {
   if (!c || !c.source) return;
   ctl = c;
@@ -597,7 +616,8 @@ function renderControl(c) {
   $("srcDot").className = "dot ok";
   const age = c.artnetAgeMs > 4e9 ? "not seen since restart" : `last seen ${(c.artnetAgeMs / 1000).toFixed(c.artnetAgeMs < 10000 ? 1 : 0)} s ago`;
   const notes = {
-    auto: `Following ${active}. SoundSwitch takes over while it sends and hands back about 1 s after it stops. SoundSwitch ${age}.`,
+    auto: `Following ${active}. SoundSwitch while it sends light; Hybrid for ${Math.round((c.hybridHoldMs || 10000) / 1000)} s after it stops or goes dark; then Audio. SoundSwitch ${age}.`,
+    hybrid: "Your Audio look, in SoundSwitch's latest colour. The music drives the motion and kicks.",
     audio: "Lights react to the line input with the look below.",
     artnet: `SoundSwitch only. If it stops, the last frame holds. SoundSwitch ${age}.`,
     standalone: "The look below runs at a steady level, without audio.",
@@ -632,7 +652,7 @@ function renderDiag(j) {
   const items = [["Wi-Fi", `${j.wifiRssi} dBm`], ["Channel", j.wifiChannel], ["Address", j.wifiIp], ["Packets/s", j.pps],
     ["Sent OK", j.cbOk], ["Send fails", j.cbFail], ["Queue errors", j.enqErr], ["Busy skips", j.busySkip],
     ["Free heap", j.freeHeap], ["Loop µs", j.loopUs], ["Analyze µs", j.analyzeUs], ["HTTP µs", j.httpUs]];
-  if (ctl) items.push(["Source switches", ctl.switches], ["Art-Net frames used", ctl.appliedPackets]);
+  if (ctl) items.push(["Source switches", ctl.switches], ["Art-Net frames used", ctl.appliedPackets], ["Cell packets sent", ctl.cellPacketsSent || 0]);
   $("diag").innerHTML = items.map(([k, v]) => `<div>${k}<b>${v}</b></div>`).join("");
 }
 
@@ -724,6 +744,8 @@ function wire() {
   $("cap").oninput = (e) => { $("o_cap").textContent = pct(+e.target.value); };
   $("cap").onchange = (e) => control("cap=" + e.target.value);
   $("fallback").onchange = (e) => control("fallback=" + e.target.value);
+  $("fixSeg").onclick = (e) => { const b = e.target.closest("button"); if (b) control(b.dataset.f === "cells" ? "cells=" + (+$("cellCount").value || 30) : "fixture=lumina16"); };
+  $("cellCount").onchange = (e) => control("cells=" + Math.max(1, Math.min(150, +e.target.value || 30)));
   $("standalone").oninput = (e) => { $("o_standalone").textContent = e.target.value; };
   $("standalone").onchange = (e) => control("standalone=" + e.target.value);
   $("activeSeg").onclick = (e) => { const b = e.target.closest("button"); if (b) { led.activeStrands = +b.dataset.n; queue({ activeStrands: led.activeStrands }); renderAll(); } };

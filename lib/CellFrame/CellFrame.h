@@ -21,6 +21,13 @@ void reset(Frame &f);
 // (at most maxPackets); bytes[i] is the length to send for out[i].
 uint8_t encode(const uint8_t *rgb, uint8_t total, uint16_t frameId, CellPacket *out, uint16_t *bytes, uint8_t maxPackets);
 
+// Reads `total` RGB cells starting at the 1-based DMX `address`. Cells past the end of
+// the frame read as black. False if total is 0 or too large, or dmx is null.
+bool from_dmx(const uint8_t *dmx, uint16_t length, uint16_t address, uint8_t total, uint8_t *rgb);
+
+// True if any cell has a non-zero channel (SoundSwitch sends all-zero frames when blacked out).
+bool any_lit(const uint8_t *rgb, uint8_t total);
+
 // Accepts one received packet into the frame. Each part overwrites only its own cells,
 // so a lost part leaves those cells at their previous colours. False if invalid.
 bool accept(Frame &f, const uint8_t *data, int len);

@@ -7,7 +7,8 @@
 static constexpr uint16_t PACKET_MAGIC = 0xA17D;
 static constexpr uint8_t PACKET_VERSION = 12;
 static constexpr uint8_t MAX_STRANDS = 4;
-static constexpr uint8_t LED_MODE_MAX = 38;  // highest render mode (32-38 added in Phase 14; IDs never renumbered)
+static constexpr uint8_t CELLS_MODE = 39;     // receiver draws the latest SoundSwitch cell frame (Phase 15)
+static constexpr uint8_t LED_MODE_MAX = 39;  // highest render mode (32-39 added in Phase 14; IDs never renumbered)
 
 enum LedType : uint8_t {
   LED_TYPE_WS2815_WS2812_RGB_800 = 0,

@@ -5,6 +5,18 @@
 #include <esp_idf_version.h>
 #include "WiFiManager.h"
 #include "../config/ConfigManager.h"
+#include "CellFrame.h"
+
+static uint8_t pendingCells[MAX_CELLS * 3];
+static uint8_t pendingCellCount = 0;
+static uint16_t cellFrameId = 0;
+uint32_t cell_packets_sent = 0;
+
+void queue_cell_frame(const uint8_t *rgb, uint8_t total) {
+  if (total > MAX_CELLS) total = MAX_CELLS;
+  if (total) memcpy(pendingCells, rgb, total * 3U);
+  pendingCellCount = total;
+}
 
 // ESP-NOW broadcast. Your LED receiver must be on the same Wi-Fi channel
 // as the router channel printed by this sender.
@@ -89,6 +101,14 @@ void maybe_send_espnow(AudioLedPacket &p) {
     sequence_num++;
     send_enqueue_ok++;
     forceEspNowSend = false;
+    if (pendingCellCount) {  // cell colours ride in the same slot, right behind the state packet
+      CellPacket parts[2];
+      uint16_t bytes[2];
+      const uint8_t n = cells::encode(pendingCells, pendingCellCount, cellFrameId++, parts, bytes, 2);
+      for (uint8_t k = 0; k < n; k++) {
+        if (esp_now_send(BROADCAST_ADDR, (const uint8_t *)&parts[k], bytes[k]) == ESP_OK) cell_packets_sent++;
+      }
+    }
   } else {
     espnow_busy = false;
     send_enqueue_err++;

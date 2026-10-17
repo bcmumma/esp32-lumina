@@ -115,6 +115,23 @@ static void test_sample_30_cells_on_900_leds() {
   }
 }
 
+static void test_from_dmx() {
+  uint8_t dmx[512];
+  for (int i = 0; i < 512; i++) dmx[i] = (uint8_t)(i + 1);
+  uint8_t rgb[MAX_CELLS * 3];
+  TEST_ASSERT_TRUE(cells::from_dmx(dmx, 512, 1, 30, rgb));
+  TEST_ASSERT_EQUAL_UINT8(1, rgb[0]);    // cell 1 red = CH1
+  TEST_ASSERT_EQUAL_UINT8(90, rgb[89]);  // cell 30 blue = CH90
+  TEST_ASSERT_TRUE(cells::from_dmx(dmx, 100, 91, 5, rgb));  // runs past a short frame
+  TEST_ASSERT_EQUAL_UINT8(91, rgb[0]);
+  TEST_ASSERT_EQUAL_UINT8(0, rgb[14]);
+  TEST_ASSERT_FALSE(cells::from_dmx(nullptr, 512, 1, 30, rgb));
+  TEST_ASSERT_FALSE(cells::from_dmx(dmx, 512, 1, 0, rgb));
+  TEST_ASSERT_TRUE(cells::any_lit(rgb, 5));
+  uint8_t dark[90] = {0};
+  TEST_ASSERT_FALSE(cells::any_lit(dark, 30));
+}
+
 void setup() {
   delay(2000);
   UNITY_BEGIN();
@@ -125,6 +142,7 @@ void setup() {
   RUN_TEST(test_rejects_bad_packets);
   RUN_TEST(test_sample_hard_and_smooth);
   RUN_TEST(test_sample_30_cells_on_900_leds);
+  RUN_TEST(test_from_dmx);
   UNITY_END();
 }
 

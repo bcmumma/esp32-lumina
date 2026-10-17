@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "LuminaProtocol.h"
+#include "CellFrame.h"
 
 static constexpr bool FORCE_VISIBLE_IF_BAD_SETTINGS = false; // normal operation: Off/disabled/white must be honored
 static constexpr uint8_t SAFE_BRIGHTNESS = 220;
@@ -53,6 +54,9 @@ void render_break_chopper(uint8_t s, const AudioLedPacket &p, const StrandSettin
 void render_acid_squelch(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
 void render_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
 void render_drop_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat);
+// SoundSwitch cells (CELLS_MODE); main.cpp copies the received frame into cellSnapshot each frame.
+extern cells::Frame cellSnapshot;
+void render_cells(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
 // Kick Flash overlay: update once per frame, then apply after each strand's mode.
 void update_kick_flash(const AudioLedPacket &p, bool newBeat);
 void apply_kick_flash(uint8_t s, const AudioLedPacket &p);

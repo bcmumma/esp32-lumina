@@ -21,6 +21,7 @@ struct ControlState {
   uint8_t strobeHz;             // saved; 1..STROBE_MAX_HZ
   bool strobeEnabled;           // never saved: always off at boot
   uint16_t address;             // fixture's 1-based DMX start address in the listen universe
+  uint8_t fixtureCells;         // saved; 0 = LUMINA-16 fixture, 1..MAX_CELLS = N-cell RGB fixture (Phase 15)
   uint8_t kickFlash;            // saved; 0..255 rig-wide white flash on bass hits (0 = off)
   uint8_t brightnessCap;        // saved; RIG_BRIGHTNESS_CAP_MIN..MAX, caps globalBrightness in every source
 };

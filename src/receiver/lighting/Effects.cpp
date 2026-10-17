@@ -45,6 +45,7 @@ static uint8_t scaled_audio(uint8_t v, uint8_t sensitivity) {
 //   30 Pulse Train, 31 Void Bloom
 //   Phase 14: 32 Stereo VU, 33 Kick Pump, 34 Kick Ripple, 35 Break Chopper, 36 Acid Squelch,
 //   37 Strobe, 38 Drop Strobe; plus the rig-wide Kick Flash overlay
+//   39 SoundSwitch cells (Phase 15, set by the S3, not listed on the page)
 // Internal/legacy modes 0-14 remain available for VU tuning and compatibility.
 // ============================================================
 void render_off(uint8_t s) {
@@ -822,4 +823,21 @@ void apply_kick_flash(uint8_t s, const AudioLedPacket &p) {
   uint16_t n = count_for(s);
   uint8_t v = scale8_video(scale8_video(p.globalBrightness, p.kickFlash), kickFlashLevel);
   for (uint16_t i = 0; i < n; i++) add_pixel(s, i, {v, v, v});
+}
+
+// Phase 15: SoundSwitch cells. The S3 picks this mode while a cell fixture drives the
+// strip; each LED takes its colour from the cell frame, blended between cell centres
+// (density >= 128 gives hard-edged cells). Reverse direction flips the strand.
+cells::Frame cellSnapshot = {};
+
+void render_cells(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
+  uint16_t n = count_for(s);
+  if (n == 0) return;
+  const uint8_t level = combined_brightness(p, st);
+  const bool smooth = st.density < 128;
+  for (uint16_t i = 0; i < n; i++) {
+    uint8_t r, g, b;
+    cells::sample(cellSnapshot, st.direction == 1 ? (uint16_t)(n - 1U - i) : i, n, smooth, r, g, b);
+    set_pixel(s, i, {scale8_video(r, level), scale8_video(g, level), scale8_video(b, level)});
+  }
 }

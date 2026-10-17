@@ -21,4 +21,7 @@ extern uint32_t packets_per_sec;
 
 void setup_espnow();
 void maybe_send_espnow(AudioLedPacket &p);
+// Phase 15: cell colours to send right after the next state packet (total = 0 sends none).
+void queue_cell_frame(const uint8_t *rgb, uint8_t total);
+extern uint32_t cell_packets_sent;
 void update_packet_rate(uint32_t now);

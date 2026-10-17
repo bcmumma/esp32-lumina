@@ -25,6 +25,20 @@ uint8_t encode(const uint8_t *rgb, uint8_t total, uint16_t frameId, CellPacket *
   return n;
 }
 
+bool from_dmx(const uint8_t *dmx, uint16_t length, uint16_t address, uint8_t total, uint8_t *rgb) {
+  if (!dmx || total == 0 || total > MAX_CELLS || address == 0) return false;
+  for (uint16_t k = 0; k < total * 3U; k++) {
+    const uint32_t ch = (uint32_t)address - 1U + k;
+    rgb[k] = ch < length ? dmx[ch] : 0;
+  }
+  return true;
+}
+
+bool any_lit(const uint8_t *rgb, uint8_t total) {
+  for (uint16_t k = 0; k < total * 3U; k++) if (rgb[k]) return true;
+  return false;
+}
+
 bool accept(Frame &f, const uint8_t *data, int len) {
   if (len < CELL_HEADER_BYTES) return false;
   CellPacket p;
