@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "LuminaProtocol.h"
+#include "CellFrame.h"
 
 // In home-Wi-Fi mode, the sender must use the router's 2.4 GHz channel.
 // This receiver automatically scans channels until it finds valid Lumina
@@ -33,6 +34,10 @@ extern volatile uint32_t goodPackets;
 extern volatile uint32_t badPackets;
 extern volatile uint32_t packetGeneration;
 extern uint32_t lastPacketMs;  // set by loop() on each new packet; drives the rescan timeout
+
+// Latest SoundSwitch cell frame (Phase 15); copy it out under packetMux.
+extern cells::Frame cellFrame;
+extern volatile uint32_t lastCellMs;  // millis() of the last accepted cell packet, 0 = none
 
 void setup_wifi_espnow();
 void maintain_channel_discovery(uint32_t now);

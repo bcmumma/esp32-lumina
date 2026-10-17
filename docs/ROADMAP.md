@@ -19,7 +19,7 @@
 | 12 | Intelligent Fixture v1 (`LUMINA-16`) | Claude Code + owner | A SoundSwitch control changes a real Lumina effect live | |
 | 13 | Control-source arbitration | Claude Code | AUTO / STANDALONE / AUDIO / ARTNET switch without a reboot; Art-Net timeout falls back after about 1 s; the web UI can override; diagnostics show the active source | |
 | 14 | PCM1808 fallback | Claude Code + owner | Energy, bass, mid, treble, left, right (and transients if useful) drive effects. Beat detection is not a goal. | |
-| 15 | Direct Pixel Art-Net | Claude Code + owner | External software drives individual pixels (likely Art-Net straight to the WROOM); on timeout it falls back to ESP-NOW intelligent mode | |
+| 15 | SoundSwitch cells and fallback chain | Claude Code + owner | A multi-cell SoundSwitch fixture shows chases on the strip; Auto runs SoundSwitch → Hybrid → Audio; one long strand (900 LEDs) with length-scaled looks (re-scoped by the owner 2026-10-17; Direct Pixel Art-Net moved to Later) | |
 
 ## Two Parallel Tracks
 
@@ -56,6 +56,8 @@ Extract one subsystem at a time and build after each extraction.
 **Phase 11.** The preferred live setup is the Mac on Ethernet and the S3 on Wi-Fi, so there's only one wireless hop. Use unicast if Art-Net has to cross VLANs. Check Suricata only if the traffic actually passes through it.
 
 ## Later
+
+- **Direct Pixel Art-Net** (was Phase 15): external software drives individual pixels, likely Art-Net straight to the WROOM, falling back to ESP-NOW on timeout. 900 LEDs need 6 universes, too much for ESP-NOW.
 
 These are tracked in `docs/DEV_BACKLOG.md`:
 

@@ -37,7 +37,18 @@ volatile uint8_t announcedChannel = 0;
 
 static void reset_channel_survey();
 
+// Phase 15: SoundSwitch cell frames arrive as a second packet type (CellPacket).
+cells::Frame cellFrame = {};
+volatile uint32_t lastCellMs = 0;
+
 static void copy_packet_from_callback(const uint8_t *mac, const uint8_t *data, int len, int rssi) {
+  if (len != sizeof(AudioLedPacket) && len >= 2 && (uint16_t)(data[0] | (data[1] << 8)) == CELL_PACKET_MAGIC) {
+    portENTER_CRITICAL(&packetMux);
+    bool ok = cells::accept(cellFrame, data, len);
+    portEXIT_CRITICAL(&packetMux);
+    if (ok) lastCellMs = millis(); else badPackets = badPackets + 1;
+    return;
+  }
   if (len != sizeof(AudioLedPacket)) {
     badPackets = badPackets + 1;
     return;

@@ -102,6 +102,33 @@ static_assert(sizeof(StrandSettings) == 18, "StrandSettings layout changed; upda
 static_assert(sizeof(AudioLedPacket) == 107, "AudioLedPacket layout changed; update PACKET_VERSION on both boards");
 
 // ------------------------------------------------------------
+// Cell frames (Phase 15): colours of a multi-cell SoundSwitch fixture, sent as a
+// second ESP-NOW packet type next to AudioLedPacket. Variable length: an 8-byte
+// header plus 3 bytes per cell carried. Up to 150 cells (900 LEDs / 6) in at most
+// two packets per frame. Receivers that only know AudioLedPacket drop it by length.
+// ------------------------------------------------------------
+static constexpr uint16_t CELL_PACKET_MAGIC = 0xA17E;
+static constexpr uint8_t CELL_PACKET_VERSION = 1;
+static constexpr uint8_t MAX_CELLS = 150;
+static constexpr uint8_t CELLS_PER_PACKET = 80;
+static constexpr uint8_t CELL_HEADER_BYTES = 8;
+
+struct __attribute__((packed)) CellPacket {
+  uint16_t magic;
+  uint8_t version;
+  uint8_t totalCells;  // cells in the whole frame (1..MAX_CELLS)
+  uint8_t firstCell;   // index of rgb[0] within the frame
+  uint8_t count;       // cells carried here (1..CELLS_PER_PACKET)
+  uint16_t frameId;    // groups the parts of one frame
+  uint8_t rgb[CELLS_PER_PACKET * 3];
+};
+
+static_assert(sizeof(CellPacket) == CELL_HEADER_BYTES + CELLS_PER_PACKET * 3, "CellPacket layout changed");
+static_assert(sizeof(CellPacket) <= 250, "CellPacket must fit in an ESP-NOW v1 payload");
+
+static inline uint16_t cell_packet_bytes(uint8_t count) { return (uint16_t)(CELL_HEADER_BYTES + count * 3U); }
+
+// ------------------------------------------------------------
 // Strobe safety (Phase 12, docs/DECISIONS.md). Carried in AudioLedPacket.flags:
 //   bits 0-1: beat diagnostics (unchanged)
 //   bits 4-6: low 3 bits of (max flash rate - 1)
