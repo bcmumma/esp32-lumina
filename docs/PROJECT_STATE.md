@@ -1,6 +1,6 @@
 # Project State
 
-_Last updated: 2026-10-15_
+_Last updated: 2026-10-17_
 
 ## Current
 
@@ -9,66 +9,50 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are sequential (se
 | Track | Phase | Status | Authorization |
 |---|---|---|---|
 | DJ (Mac + PC capture) | Complete (Phases 4–6) | Done | n/a |
-| Firmware | 14: PCM1808 fallback | In progress | Authorized 2026-10-15 for Phase 14 |
+| Firmware | 15: scope to be confirmed (see draft) | Not started | Not authorized |
 
 - Authorize a phase with `/start-milestone Phase <N>` in Claude Code. Until then, everything is read-only.
-- **Branch:** `main` holds v2 unchanged. `develop-v23` = `c368c96` (Phases 7–12). Phases 13 and 14 are on `feature/control-router` (owner, 2026-10-15: no new branch, and no develop fast-forward yet).
-- **Last verified commit:** `98a73e6` on `feature/control-router` (Phase 13, closed 2026-10-15).
-- **Boards:** both run the Phase 14 firmware. At boot: source AUTO, strobe off (saved rate when on), brightness cap 100% (owner removed the 25% limit 2026-10-16).
+- **Branch:** `main` holds v2 unchanged. `develop-v23` = `c368c96` (Phases 7–12). Phases 13–14 are on `feature/control-router`.
+- **Last verified commit:** `7e3b8ff` on `feature/control-router` (Phase 14, closed 2026-10-17).
+- **Boards:** both run the Phase 14 firmware. At boot: source AUTO, strobe off, brightness cap 100% (owner). Saved by the owner: strobe rate 10/s, Kick Flash 100%.
 
 ## What works
 
-- v3 firmware: v2 parity, modular, warning-free; 34/34 on-device unit tests.
-- **SoundSwitch → Art-Net → S3:** discovery, universe 0, loss 0.08% with the Mac wired (Phase 11).
-- **`LUMINA-16` v1:** SoundSwitch drives a shared effect on all strands.
-- **Control sources:** AUTO (the default) uses SoundSwitch while it sends and falls back to audio about 1 s after it stops. AUDIO, STANDALONE, and ARTNET can be picked on the controller page or through `/api/control`.
-- **Strobe safety:** rig-wide gate, off at boot, at most 3/s by default (15/s ceiling, owner 2026-10-15). No confirm dialog, since the venue is signposted.
-- **Test bench:** serial, tones, webcam, strand colours, and the Art-Net tools (monitor, sender, compare, soak, `--lumina16`).
-- **Phases done:** 0–13.
+- v3 firmware: v2 parity, modular, warning-free; 41/41 on-device unit tests.
+- **SoundSwitch → Art-Net → S3:** `LUMINA-16` drives a shared effect; AUTO switches to it while it sends and falls back to audio about 1 s after.
+- **Audio looks:** bass-hit detection (not tempo) drives kick modes. Owner favourites: Twinkle, Kick Pump, Kick Strobe, Kick Ripple, Glitter Kick.
+- **Strobe:** Strobe and Drop Strobe modes and a rig-wide Kick Flash, all behind one gate: off at boot, max rate 3/s default, 15/s ceiling.
+- **Controller page:** Show/Setup screens, genre groups, source and strobe controls. Source `src/sender/web/index.html`, built by `tools/build_page.py`.
+- **Phases done:** 0–14.
 
 ## Next step
 
-1. **Owner:** decide whether to fast-forward `develop-v23` to `feature/control-router` (Phase 13). Then authorize Phase 14 with `/start-milestone Phase 14`.
-2. **Owner, before connecting strands 2–4 (no brightness cap now):**
-   - [ ] Fusing and power injection. The strips are rated 9 W/m, so 4 × 150 LEDs is about 15 A at full white, against about 6 A continuous from the 90 W supply. Proposal in `docs/HARDWARE.md`.
-   - [ ] One measured current per strand at full white, to confirm the seller's 9 W/m. Then a bigger supply, or the cap in Setup at about 40% for four strands.
+1. **Owner:** confirm the Phase 15 scope below, or keep the ROADMAP's "Direct Pixel Art-Net". Also decide whether to fast-forward `develop-v23` to `feature/control-router` (Phases 13–14).
+2. **Owner, before more LEDs are lit (no brightness cap now):**
+   - [ ] Fusing and power injection; proposal in `docs/HARDWARE.md`.
+   - [ ] One measured current at full white, to confirm the seller's 9 W/m.
    - [ ] Level converter: a reading on each side, and the part number.
-3. **Owner, when convenient:**
-   - [ ] Strands 2–4 mounted (same effect on all four).
-   - [ ] AP security mode (the S3's first join is sometimes about 6 s).
-   - [ ] SoundSwitch blackout/resume quirks. Under AUTO a blackout keeps the rig dark (KNOWN_ISSUES).
-   - [ ] Re-measure S3 RSSI at the install position.
+3. **Owner, when convenient:** AP security mode (slow first join); SoundSwitch blackout quirks; S3 RSSI at the install position.
 
-## Phase 14 draft checklist (PCM1808 fallback)
+## Phase 15 draft (proposed re-scope, owner to confirm): one long strand, high-quality looks
 
-Gate (ROADMAP): energy, bass, mid, treble, left, and right (plus transients if useful) drive effects. Beat detection is not a goal.
+Owner direction (2026-10-17): one strand (or two) of 900 LEDs total, powered by three 90 W supplies; SoundSwitch's AUTO scripting looks flat ("breathing"); interest in a hybrid where SoundSwitch and the audio decide together.
 
-Owner decisions, 2026-10-15: stay on `feature/control-router`; add a brightness cap for every source; add a bass-hit pulse; add a new Stereo VU mode. Scope added: regroup the modes by genre (DnB, techno/house, harder EDM) and overhaul the controller page, with a demo first.
-
-- [x] Audit *(Claude)*:
-  - volume, bass, mid, and treble already drive most modes;
-  - left and right are sent but no mode uses them;
-  - modes 2, 4, 7, and 14 wait for a beat pulse that never comes, because beat detection is off.
-- [x] Bass-hit pulse on the S3 (an energy jump, not tempo), sent through the existing `beatPulse` field. Modes 2, 4, and 7 react again, and flashes stay behind the strobe gate *(Claude; `79b774e`)*
-- [x] New Stereo VU mode (32): left level on one half of the strand, right on the other *(Claude)*
-- [x] Saved brightness cap applied after every source. Default was 25%; owner removed the limit 2026-10-16, so default and ceiling are now 100% *(Claude)*
-- [x] New hit-driven modes 33 Kick Pump, 34 Kick Ripple, 35 Break Chopper *(Claude)*
-- [x] Modes grouped by genre on the page (owner's list: House, Techno, Drum & Bass, Acid, General, Chill, Meters), with mode numbers unchanged; 3, 8, and 14 hidden as legacy. New mode 36 Acid Squelch *(Claude)*
-- [x] Controller page overhaul: `src/sender/web/index.html` is the source and `tools/build_page.py` generates `IndexHtml.cpp` and the demo. Owner: "looks good overall" (2026-10-15); now on the S3 *(owner)*
-- [x] Strobe ceiling 15/s (owner request; flagged as inside the 3–30 Hz band). Receiver verified above 8/s *(Claude)*
-- [x] "Flashy, strobe-like, intense" (owner): modes 37 Strobe and 38 Drop Strobe (General), plus a rig-wide Kick Flash slider (saved; packet byte 106). All gated. At a 10/s cap, strobe on: 9.7, 2.2 (kicks), 9.4 (drop), 2.0 (Kick Flash) events/s; strobe off: 0 *(Claude)*
-- [ ] Tests: hit-detector unit tests; left-only and right-only tones; bass hits vs. a steady tone; webcam frames; AUTO fallback still within about 1 s; parity *(Claude)*
-- [ ] Owner: music through the Modi; does the audio fallback look good?
+- [ ] Wiring plan for 900 LEDs and three supplies (owner wires; Claude proposes): each supply feeds its own 300 LEDs, +12 V sections kept separate, grounds common, injection at each roll, a fuse per feed. 900 × 25 mA is about 22.5 A at full white against about 18 A from three supplies, so the cap goes to about 80% *(owner)*
+- [ ] One logical strand of up to 900 LEDs; measure the frame rate (about 33 fps expected on one pin) *(Claude)*
+- [ ] Length-scaled motion (speed in strand lengths per second), favourites first *(Claude; owner judges)*
+- [ ] Hybrid source: SoundSwitch sets colour, intensity and mode per section while the PCM1808 supplies the kicks *(Claude; owner tests with SoundSwitch)*
+- [ ] Research, read-only: whether Serato or SoundSwitch can share a beat clock (for example Ableton Link) the S3 could join. UNVERIFIED *(Claude)*
 
 ## Open questions
 
 - Mac model; dev board models (the modules are known).
-- Fusing and injection; the real per-LED current. The strips are known: WS2815 12 V, 30 LEDs/m, 9 W/m, IP30, 6 × 5 m rolls.
-- Why SoundSwitch sometimes outputs all-zero frames, and why its rate is about 21 fps wired vs about 36 on Wi-Fi.
+- Real per-LED current; the final strand layout (one 900-LED strand, or two).
+- Why SoundSwitch sometimes outputs all-zero frames, and why its rate differs wired vs Wi-Fi.
 
 ## Recent decisions
 
-See `docs/DECISIONS.md`. Latest (2026-10-15):
-- Control sources: boot default AUTO; settings in a separate NVS record; strobe enable never saved.
-- No strobe confirm dialog (the venue is signposted); every other strobe safety stays.
-- Brightness cap removed (owner, 2026-10-16); about 40% is needed for four strands on the 90 W supply.
+See `docs/DECISIONS.md`. Latest (2026-10-15 to 2026-10-17):
+- Brightness cap removed by the owner; strobe ceiling raised to 15/s; no strobe confirm dialog (venue signposted).
+- Intense strobe features added, all behind the strobe gate.
+- Modes grouped by the owner's genres; mode IDs never renumber.
