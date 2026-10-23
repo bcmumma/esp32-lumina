@@ -8,6 +8,7 @@
 #include "../network/EspNowSender.h"
 #include "../network/ArtNetReceiver.h"
 #include "../lighting/ControlRouter.h"
+#include "FixtureLayout.h"
 #include "../util/Clamp.h"
 
 WebServer server(80);
@@ -413,7 +414,8 @@ static void handle_artnet() {
 //   ?source=auto|artnet|hybrid|audio|standalone &fallback=audio|standalone &standalone=0..255
 //   &strobe=0|1 &strobeHz=1..8 &cap=8..255 (rig brightness cap, every source; 255 = none) &address=1..497
 //   &kickFlash=0..255 (rig-wide white flash on bass hits, saved; 0 = off)
-//   &cells=0..150 (SoundSwitch fixture: 0 = LUMINA-16, N = N-cell RGB; saved) &fixture=lumina16
+//   &cells=0..150 (SoundSwitch fixture: 0 = LUMINA-16, N = N plain RGB cells; saved)
+//   &fixture=lumina16|<layout id> (named layouts, see /api/fixtures; saved)
 //   (?artnet=1|0 = source artnet|audio)
 static void handle_control() {
   bool persist = false;
@@ -440,12 +442,18 @@ static void handle_control() {
   }
   if (server.hasArg("strobe")) control.strobeEnabled = server.arg("strobe").toInt() != 0;
   if (server.hasArg("address")) control.address = (uint16_t)clamp_int(server.arg("address").toInt(), 1, 512 - 15);
-  if (server.hasArg("fixture") && server.arg("fixture") == "lumina16") {
-    control.fixtureCells = 0;
-    persist = true;
+  if (server.hasArg("fixture")) {  // "lumina16", or a named layout id 1..N (/api/fixtures)
+    const String f = server.arg("fixture");
+    if (f == "lumina16") {
+      control.fixture = 0;
+      persist = true;
+    } else if (layout::preset((uint8_t)clamp_int(f.toInt(), 0, 255)) != nullptr) {
+      control.fixture = layout::preset_code((uint8_t)f.toInt());
+      persist = true;
+    }
   }
-  if (server.hasArg("cells")) {  // 0 = LUMINA-16, 1..150 = N-cell RGB fixture
-    control.fixtureCells = (uint8_t)clamp_int(server.arg("cells").toInt(), 0, MAX_CELLS);
+  if (server.hasArg("cells")) {  // 0 = LUMINA-16, 1..150 = N plain RGB cells
+    control.fixture = (uint8_t)clamp_int(server.arg("cells").toInt(), 0, MAX_CELLS);
     persist = true;
   }
   if (server.hasArg("kickFlash")) {
@@ -472,6 +480,13 @@ void setup_web_server() {
   server.on("/health", handle_health);
   server.on("/api/artnet", handle_artnet);
   server.on("/api/control", handle_control);
+  server.on("/api/fixtures", []() {  // Phase 15: named SoundSwitch layouts for the Setup page
+    String s;
+    s.reserve(4096);
+    append_fixture_list_json(s);
+    no_cache();
+    server.send(200, "application/json", s);
+  });
   server.on("/api/setTuning", handle_set_tuning);
   server.on("/api/setLed", handle_set_led);
   server.on("/api/save", handle_save);

@@ -21,7 +21,7 @@ struct ControlState {
   uint8_t strobeHz;             // saved; 1..STROBE_MAX_HZ
   bool strobeEnabled;           // never saved: always off at boot
   uint16_t address;             // fixture's 1-based DMX start address in the listen universe
-  uint8_t fixtureCells;         // saved; 0 = LUMINA-16 fixture, 1..MAX_CELLS = N-cell RGB fixture (Phase 15)
+  uint8_t fixture;              // saved; 0 = LUMINA-16, 1..150 = N plain RGB cells, 151.. = named layout (lib/FixtureLayout)
   uint8_t kickFlash;            // saved; 0..255 rig-wide white flash on bass hits (0 = off)
   uint8_t brightnessCap;        // saved; RIG_BRIGHTNESS_CAP_MIN..MAX, caps globalBrightness in every source
 };
@@ -36,3 +36,7 @@ bool save_control_settings();
 // Called on every analyzed packet, before it is sent.
 void control_apply(AudioLedPacket &p, uint32_t nowMs);
 void append_control_json(String &s, uint32_t nowMs);
+// "LUMINA-16", "30 cells", or a named layout such as "10x3 Dim Strobe".
+const char *control_fixture_name();
+// JSON list of the named layouts for the page (/api/fixtures).
+void append_fixture_list_json(String &s);

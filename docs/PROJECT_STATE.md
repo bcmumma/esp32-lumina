@@ -36,6 +36,8 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are sequential (se
 
 ## Phase 15 owner checklist (now)
 
+- [ ] Build the `Lumina Strip` profile (13 modes) and the test venues **L01–L20** from `docs/ARTNET_SOUNDSWITCH_GUIDE.md` Part 6. For each venue: pick the same layout in Setup → SoundSwitch fixture, re-AutoScript, play a house and a techno track, and report what chases and what looks good.
+- [x] Receiver upload: after a USB replug the WROOM uploads normally again (2026-10-22); it now draws SoundSwitch cells.
 - [ ] Build `Lumina 30-Cell` in Fixture Manager: mode `30 Cell`, 90 channels, cells `Cell 01`…`Cell 30` with Red/Green/Blue = 3n−2 / 3n−1 / 3n, no `MASTER`; Check Fixture passes. Also note whether Fixture Manager can **export** a fixture, and the file type.
 - [ ] Venue `Lumina 30` with the fixture on Universe 1, address 1; Lumina S3 on Universe One.
 - [ ] Play a moving Autoloop and tell Claude "autoloop" plus its name; then AutoScript a track in the `Lumina 30` venue, play it from Serato, and tell Claude "autoscript playing". Claude reports whether the cells chase or breathe.
@@ -45,12 +47,13 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are sequential (se
 Scope (owner, 2026-10-17): make SoundSwitch's auto program look good with a multi-cell fixture, Auto chain SoundSwitch → Hybrid → Audio, one long strand (900 LEDs). Direct Pixel Art-Net moves to Later.
 
 - [x] Branch `feature/cells` off `develop-v23` (fast-forwarded to Phase 14) *(owner OK)*
-- [ ] Cells packet (protocol only): second ESP-NOW packet type with up to 150 cells; receiver accepts it, nothing drawn yet *(Claude)*
+- [x] Cells packet (protocol only): second ESP-NOW packet type with up to 150 cells; receiver accepts it, nothing drawn yet. 7 tests *(Claude; `deaf907`)*
 - [ ] Cells on the strip: S3 decodes a 30-cell fixture (saved fixture type and cell count), receiver blends cells along the strand; Kick Flash still applies *(Claude; owner judges)*
-- [ ] Chain: SoundSwitch while lit frames arrive; Hybrid (Audio look coloured by SoundSwitch's last colour, audio drives motion) after a stop or about 3 s of black; Audio after about 10 s. Each can be picked by hand; the page gains Hybrid. Router unit tests *(Claude; owner runs SoundSwitch)*
-- [ ] Long strand: favourites scale motion and sparkle density to strand length (150 LEDs unchanged); frame rate measured at 900 *(Claude)*
+- [x] Chain (bench, synthetic 30-cell Art-Net: ->SoundSwitch 75 ms, black->Hybrid 3.01 s, stop->Hybrid 1.05 s, ->Audio 10.05 s; router tests 14/14; `bc62701`): SoundSwitch while lit frames arrive; Hybrid (Audio look coloured by SoundSwitch's last colour, audio drives motion) after a stop or about 3 s of black; Audio after about 10 s. Each can be picked by hand; the page gains Hybrid. Router unit tests *(Claude; owner runs SoundSwitch)*
+- [ ] Long strand: favourites scale motion and sparkle density to strand length (150 LEDs unchanged); frame rate at 900 LEDs measured: 35 fps (27.3 ms per frame) *(Claude; receiver upload pending)*
 - [ ] Wiring plan for 900 LEDs and three 90 W supplies in `docs/HARDWARE.md` *(Claude proposes; owner wires)*
 - [ ] Parity at 150 LEDs; strobe gate unchanged *(Claude)*
+- [x] Named SoundSwitch layouts L01–L20 (splits, hard blocks, per-fixture Dimmer and Strobe, mirrored, 60-cell): `lib/FixtureLayout` (7 tests), Setup → SoundSwitch fixture → Layout shows the build plan. Bench: L13 strobe off 0 flashes, on (cap 10, wanted ~7/s) 6.9/s, channel 0 → 0 *(Claude)*
 - [ ] Owner look check: SoundSwitch cells, Hybrid, Audio *(owner)*
 
 ## Open questions

@@ -17,7 +17,20 @@
   };
   const ctl = { source: "auto", active: "audio", reason: "auto: no fresh art-net, fallback", autoFallback: "audio", timeoutMs: 1000,
     standaloneLevel: 128, switches: 7, artnetAgeMs: 84641, applyingArtnet: false, appliedPackets: 46847, address: 1,
-    brightnessCap: 255, brightnessCapMin: 8, brightnessCapMax: 255, strobeEnabled: false, strobeHz: 3, strobeMaxHz: 15, kickFlash: 0, fixtureCells: 30, cellFrames: 0, cellPacketsSent: 0, hybridHoldMs: 10000 };
+    brightnessCap: 255, brightnessCapMin: 8, brightnessCapMax: 255, strobeEnabled: false, strobeHz: 3, strobeMaxHz: 15, kickFlash: 0, fixture: 153, fixtureName: "10x3 RGB", fixtureCells: 30, fixtureChannels: 90, cellFrames: 0, cellPacketsSent: 0, cellFlashes: 0, hybridHoldMs: 10000 };
+  const L = (id, name, mode, fixtures, cells, dimmer, strobe, mirror, hard) => {
+    const per = (dimmer ? 1 : 0) + 3 * cells + (strobe ? 1 : 0);
+    return { id, name, mode, fixtures, cells, perFixture: per, total: per * fixtures, stripCells: fixtures * cells * (mirror ? 2 : 1),
+      dimmer: +dimmer, strobe: +strobe, mirror: +mirror, hard: +hard };
+  };
+  const FIXTURES = [L(1, "30x1 RGB", "1 Cell", 30, 1), L(2, "15x2 RGB", "2 Cell", 15, 2), L(3, "10x3 RGB", "3 Cell", 10, 3),
+    L(4, "6x5 RGB", "5 Cell", 6, 5), L(5, "3x10 RGB", "10 Cell", 3, 10), L(6, "1x30 RGB", "30 Cell", 1, 30),
+    L(7, "10x3 RGB Blocks", "3 Cell", 10, 3, 0, 0, 0, 1), L(8, "6x5 RGB Blocks", "5 Cell", 6, 5, 0, 0, 0, 1),
+    L(9, "30x1 Dim", "1 Cell Dim", 30, 1, 1), L(10, "10x3 Dim", "3 Cell Dim", 10, 3, 1), L(11, "6x5 Dim", "5 Cell Dim", 6, 5, 1),
+    L(12, "30x1 Dim Strobe", "1 Cell Dim Strobe", 30, 1, 1, 1), L(13, "10x3 Dim Strobe", "3 Cell Dim Strobe", 10, 3, 1, 1),
+    L(14, "6x5 Dim Strobe", "5 Cell Dim Strobe", 6, 5, 1, 1), L(15, "Mirror 15x1 RGB", "1 Cell", 15, 1, 0, 0, 1),
+    L(16, "Mirror 5x3 RGB", "3 Cell", 5, 3, 0, 0, 1), L(17, "Mirror 5x3 Dim Strobe", "3 Cell Dim Strobe", 5, 3, 1, 1, 1),
+    L(18, "Fine 60x1 RGB", "1 Cell", 60, 1), L(19, "Fine 30x2 RGB", "2 Cell", 30, 2), L(20, "Fine 15x4 RGB", "4 Cell", 15, 4)];
   const t0 = performance.now();
   let pulse = 0, lastKick = -1;
 
@@ -42,8 +55,12 @@
     if (q.has("fallback")) ctl.autoFallback = q.get("fallback");
     if (q.has("standalone")) ctl.standaloneLevel = +q.get("standalone");
     if (q.has("strobeHz")) ctl.strobeHz = Math.max(1, Math.min(15, +q.get("strobeHz")));
-    if (q.has("cells")) ctl.fixtureCells = Math.max(0, Math.min(150, +q.get("cells")));
-    if (q.get("fixture") === "lumina16") ctl.fixtureCells = 0;
+    if (q.has("cells")) { ctl.fixture = Math.max(0, Math.min(150, +q.get("cells"))); ctl.fixtureCells = ctl.fixture; }
+    if (q.has("fixture")) {
+      const f = q.get("fixture"), p = FIXTURES.find((x) => x.id === +f);
+      if (f === "lumina16") { ctl.fixture = 0; ctl.fixtureCells = 0; }
+      else if (p) { ctl.fixture = 150 + p.id; ctl.fixtureCells = p.stripCells; }
+    }
     if (q.has("kickFlash")) ctl.kickFlash = Math.max(0, Math.min(255, +q.get("kickFlash")));
     if (q.has("strobe")) ctl.strobeEnabled = q.get("strobe") !== "0";
     if (q.has("cap")) ctl.brightnessCap = Math.max(8, Math.min(255, +q.get("cap")));
@@ -70,6 +87,7 @@
       case "/api/state": body = Object.assign(live(), JSON.parse(JSON.stringify(state))); break;
       case "/api/live": body = live(); break;
       case "/api/control": body = applyControl(q); break;
+      case "/api/fixtures": body = FIXTURES; break;
       case "/api/setLed": body = applyLed(q); break;
       case "/api/setTuning": for (const [k, v] of q) state.cfg[k] = +v; body = { ok: true }; break;
       case "/api/save": body = { saved: true, activeStrands: state.led.activeStrands }; break;
