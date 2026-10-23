@@ -681,13 +681,14 @@ function renderFixture() {
   } else {
     const f = preset, addrs = [];
     for (let i = 0; i < f.fixtures; i++) addrs.push(1 + i * f.perFixture);
-    const extras = [f.dimmer && "Dimmer first", f.strobe && "Strobe last"].filter(Boolean).join(", ");
+    const extras = [f.dimmer && "Dimmer = ch 1, in Cell 1", f.strobe && "Strobe = last ch, in the last cell"].filter(Boolean).join("; ");
     plan = `<div>Venue <b>${lnum(f.id)} ${f.name}</b></div>
       <div>Patch <b>${f.fixtures} ×</b> Lumina Strip, mode <b>${f.mode}</b> (${f.perFixture} ch each${extras ? "; " + extras : ""}), ${f.total} channels in all.</div>
       <div class="num">Start addresses: ${addrs.join(", ")}</div>`
       + (f.mirror ? `<div>Lumina mirrors it from the centre, so ${f.fixtures * f.cells} cells fill the whole strip.</div>` : "")
       + (f.hard ? `<div>Cells show as hard-edged blocks.</div>` : "")
-      + (f.strobe ? `<div>Strobe channels flash only while Strobe is on, at most your max flashes/s. Kick Flash pauses while they flash.</div>` : "");
+      + (f.dimmer && f.cells > 1 ? `<div>The Dimmer dims Cell 1 only, as SoundSwitch scripts it.</div>` : "")
+      + (f.strobe ? `<div>Each fixture's Strobe flashes its last cell, only while Strobe is on and at most your max flashes/s. Kick Flash pauses while it flashes.</div>` : "");
   }
   const cellsOnStrip = ctl.fixtureCells || 0;
   if (cellsOnStrip && leds) plan += `<div>On ${leds} LEDs: ${cellsOnStrip} cells, about ${(leds / cellsOnStrip).toFixed(1)} LEDs each.</div>`;

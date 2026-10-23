@@ -77,12 +77,11 @@ bool current_layout(layout::Layout &out) {
   return true;
 }
 
-uint8_t strobeVal[MAX_CELLS];
-uint8_t cellFixture[MAX_CELLS];
+uint8_t cellStrobe[MAX_CELLS];  // strobe value per strip cell (layouts with Strobe)
 
 // Decodes the frame into cellRgb for the current layout. Returns strip cells, 0 on failure.
 uint8_t decode_cells(const layout::Layout &l, const uint8_t *dmx, uint16_t length) {
-  return layout::decode(l, dmx, length, control.address, cellRgb, strobeVal, cellFixture) ? layout::strip_cells(l) : 0;
+  return layout::decode(l, dmx, length, control.address, cellRgb, cellStrobe) ? layout::strip_cells(l) : 0;
 }
 
 // Looks at a new frame once: is anything lit in the fixture's channels, and what colour leads?
@@ -116,9 +115,10 @@ void track_frame(const uint8_t *dmx, uint16_t length, uint32_t rxMs) {
   haveSswColour = true;
 }
 
-// Fixture Strobe channels (named layouts with "Strobe"). Rig-wide and safety-first: strobing
-// fixtures flash only while Strobe is enabled, never faster than the rig's max rate (the fastest
-// fixture sets the pace); with Strobe off they stay steady. Between flashes they go dark.
+// Fixture Strobe channels (named layouts with "Strobe"; each strobes its fixture's last cell).
+// Rig-wide and safety-first: strobing cells flash only while Strobe is enabled, never faster than
+// the rig's max rate (the fastest sets the pace); with Strobe off they stay steady. Between
+// flashes they go dark.
 uint32_t lastCellFlashMs = 0;
 uint32_t cellFlashUntilMs = 0;
 uint32_t cellFlashes = 0;
@@ -126,8 +126,8 @@ uint32_t cellFlashes = 0;
 bool apply_cell_strobe(const layout::Layout &l, uint8_t n, uint32_t nowMs) {
   if (!l.strobe || !control.strobeEnabled) return false;
   uint8_t hz = 0;
-  for (uint8_t f = 0; f < l.fixtures; f++) {
-    const uint8_t h = layout::strobe_hz(strobeVal[f], control.strobeHz);
+  for (uint8_t c = 0; c < n; c++) {
+    const uint8_t h = layout::strobe_hz(cellStrobe[c], control.strobeHz);
     if (h > hz) hz = h;
   }
   if (hz == 0) return false;
@@ -138,7 +138,7 @@ bool apply_cell_strobe(const layout::Layout &l, uint8_t n, uint32_t nowMs) {
   }
   const bool on = (int32_t)(cellFlashUntilMs - nowMs) > 0;
   for (uint8_t c = 0; c < n; c++) {
-    if (strobeVal[cellFixture[c]] >= 10 && !on) cellRgb[c * 3] = cellRgb[c * 3 + 1] = cellRgb[c * 3 + 2] = 0;
+    if (cellStrobe[c] >= 10 && !on) cellRgb[c * 3] = cellRgb[c * 3 + 1] = cellRgb[c * 3 + 2] = 0;
   }
   return true;
 }

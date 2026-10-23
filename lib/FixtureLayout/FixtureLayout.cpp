@@ -37,8 +37,7 @@ uint16_t total_channels(const Layout &l) { return (uint16_t)(channels_per_fixtur
 uint8_t source_cells(const Layout &l) { return (uint8_t)(l.fixtures * l.cells); }
 uint8_t strip_cells(const Layout &l) { return (uint8_t)(source_cells(l) * (l.mirror ? 2 : 1)); }
 
-bool decode(const Layout &l, const uint8_t *dmx, uint16_t length, uint16_t address, uint8_t *rgb, uint8_t *strobeVal,
-            uint8_t *cellFixture) {
+bool decode(const Layout &l, const uint8_t *dmx, uint16_t length, uint16_t address, uint8_t *rgb, uint8_t *cellStrobe) {
   const uint16_t n = source_cells(l);
   if (!dmx || address == 0 || n == 0 || strip_cells(l) > MAX_CELLS || l.fixtures * (l.mirror ? 2U : 1U) > MAX_CELLS) return false;
   const uint16_t per = channels_per_fixture(l);
@@ -51,16 +50,17 @@ bool decode(const Layout &l, const uint8_t *dmx, uint16_t length, uint16_t addre
     const uint32_t base = (uint32_t)f * per;
     const uint8_t dim = l.dimmer ? ch(base) : 255;
     const uint32_t first = base + (l.dimmer ? 1 : 0);
-    strobeVal[f] = l.strobe ? ch(first + 3U * l.cells) : 0;
+    const uint8_t strobe = l.strobe ? ch(first + 3U * l.cells) : 0;
     for (uint8_t c = 0; c < l.cells; c++, cell++) {
-      for (uint8_t k = 0; k < 3; k++) rgb[cell * 3 + k] = (uint8_t)((ch(first + 3U * c + k) * (uint16_t)dim + 127U) / 255U);
-      cellFixture[cell] = f;
+      const uint16_t scale = c == 0 ? dim : 255;  // the Dimmer is Cell 1's
+      for (uint8_t k = 0; k < 3; k++) rgb[cell * 3 + k] = (uint8_t)((ch(first + 3U * c + k) * scale + 127U) / 255U);
+      cellStrobe[cell] = c == l.cells - 1 ? strobe : 0;  // the Strobe is the last cell's
     }
   }
   if (l.mirror) {  // strip = cells n-1 .. 0, then 0 .. n-1: SoundSwitch's first cell sits at the centre
     for (uint16_t i = 0; i < n; i++) {  // copy to the right half as-is
       for (uint8_t k = 0; k < 3; k++) rgb[(n + i) * 3 + k] = rgb[i * 3 + k];
-      cellFixture[n + i] = cellFixture[i];
+      cellStrobe[n + i] = cellStrobe[i];
     }
     for (uint16_t i = 0; i < n / 2; i++) {  // reverse the first half in place
       const uint16_t j = (uint16_t)(n - 1U - i);
@@ -69,9 +69,9 @@ bool decode(const Layout &l, const uint8_t *dmx, uint16_t length, uint16_t addre
         rgb[i * 3 + k] = rgb[j * 3 + k];
         rgb[j * 3 + k] = t;
       }
-      const uint8_t t = cellFixture[i];
-      cellFixture[i] = cellFixture[j];
-      cellFixture[j] = t;
+      const uint8_t t = cellStrobe[i];
+      cellStrobe[i] = cellStrobe[j];
+      cellStrobe[j] = t;
     }
   }
   return true;

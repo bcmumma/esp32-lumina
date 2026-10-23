@@ -367,9 +367,7 @@ Build **one** profile, `Lumina Strip`, with these modes. Use **File → New Fixt
 - **RGB:** each cell's Red/Green/Blue go in the **Coarse** column, as before.
 - **Dimmer:** use SoundSwitch's **Intensity** function, the one `LUMINA-16` uses on CH1.
 - **Strobe:** use the **Strobe** function.
-- **Where Dimmer and Strobe go:**
-  - In `1 Cell …` modes, put them **in Cell 1**, next to its RGB.
-  - In multi-cell modes, put them in a cell named **`MASTER`**. **UNVERIFIED:** in 2.11, Check Fixture failed with an *empty* `MASTER` cell (Phase 4). A `MASTER` cell that holds Dimmer/Strobe is expected to pass. If it doesn't, write down the exact message.
+- **Where Dimmer and Strobe go:** the **Dimmer** goes **in Cell 1** and the **Strobe** **in the last cell**. In `1 Cell …` modes both sit in Cell 1. **Verified by the owner (2026-10-23, SoundSwitch 2.11):** Check Fixture also fails with a `MASTER` cell that holds Dimmer and Strobe, so don't use `MASTER`.
 - Finish with **Fixtures → Check Fixture**, then **File → Save Workspace**.
 
 | Mode | Channels | Layout |
@@ -382,11 +380,11 @@ Build **one** profile, `Lumina Strip`, with these modes. Use **File → New Fixt
 | `10 Cell` | 30 | Cell 1 R/G/B = 1/2/3 … Cell 10 = 28/29/30 |
 | `30 Cell` | 90 | Cell 1 R/G/B = 1/2/3 … Cell 30 = 88/89/90 |
 | `1 Cell Dim` | 4 | Dimmer (Intensity) = 1; Cell 1 R/G/B = 2/3/4 |
-| `3 Cell Dim` | 10 | Dimmer (Intensity) = 1; Cell 1 R/G/B = 2/3/4 … Cell 3 = 8/9/10 |
-| `5 Cell Dim` | 16 | Dimmer (Intensity) = 1; Cell 1 R/G/B = 2/3/4 … Cell 5 = 14/15/16 |
+| `3 Cell Dim` | 10 | Dimmer (Intensity, in Cell 1) = 1; Cell 1 R/G/B = 2/3/4 … Cell 3 = 8/9/10 |
+| `5 Cell Dim` | 16 | Dimmer (Intensity, in Cell 1) = 1; Cell 1 R/G/B = 2/3/4 … Cell 5 = 14/15/16 |
 | `1 Cell Dim Strobe` | 5 | Dimmer (Intensity) = 1; Cell 1 R/G/B = 2/3/4; Strobe = 5 |
-| `3 Cell Dim Strobe` | 11 | Dimmer (Intensity) = 1; Cell 1 R/G/B = 2/3/4 … Cell 3 = 8/9/10; Strobe = 11 |
-| `5 Cell Dim Strobe` | 17 | Dimmer (Intensity) = 1; Cell 1 R/G/B = 2/3/4 … Cell 5 = 14/15/16; Strobe = 17 |
+| `3 Cell Dim Strobe` | 11 | Dimmer (Intensity, in Cell 1) = 1; Cell 1 R/G/B = 2/3/4 … Cell 3 = 8/9/10; Strobe (in Cell 3) = 11 |
+| `5 Cell Dim Strobe` | 17 | Dimmer (Intensity, in Cell 1) = 1; Cell 1 R/G/B = 2/3/4 … Cell 5 = 14/15/16; Strobe (in Cell 5) = 17 |
 
 ### 6.2 Venues
 
@@ -422,11 +420,11 @@ Make each venue in Edit Mode:
 
 ### 6.3 How Lumina treats the extras
 
-- **Dimmer:** scales that fixture's cells. AutoScript can then chase brightness across fixtures while the colour holds.
-- **Strobe:** 0–9 means steady; 10–255 flashes slow to fast.
-  - Flashes happen **only while Strobe is on** on the page, and never faster than the max flashes/s. The fastest fixture sets the pace.
-  - Between flashes, strobing fixtures go dark. Kick Flash pauses while any fixture strobes.
-  - With Strobe off, those fixtures simply stay lit.
+- **Dimmer:** Cell 1's intensity, because that's how SoundSwitch scripts it. In `1 Cell Dim` layouts (L09, L12) every cell has its own dimmer, so AutoScript can chase brightness along the whole strip. In multi-cell Dim layouts only each fixture's first cell is dimmed.
+- **Strobe:** each fixture's Strobe flashes **its last cell** (the whole cell in `1 Cell Dim Strobe`). 0–9 means steady; 10–255 flashes slow to fast.
+  - Flashes happen **only while Strobe is on** on the page, and never faster than the max flashes/s. The fastest cell sets the pace.
+  - Between flashes, strobing cells go dark. Kick Flash pauses while any cell strobes.
+  - With Strobe off, those cells simply stay lit.
 - **Mirrored:** SoundSwitch drives half the strip and Lumina mirrors it from the centre. The first fixture sits in the middle, so chases run outward or inward.
 - **Hard blocks:** each cell shows as a crisp block instead of blending into its neighbours.
 - **Fine (60 cells):** twice the detail, 180 channels; on 900 LEDs that's 15 LEDs per cell.

@@ -7,7 +7,7 @@
 void setUp() {}
 void tearDown() {}
 
-static uint8_t dmx[512], rgb[MAX_CELLS * 3], strobeVal[MAX_CELLS], cellFix[MAX_CELLS];
+static uint8_t dmx[512], rgb[MAX_CELLS * 3], cellStrobe[MAX_CELLS];
 
 static void test_preset_table_fits() {
   TEST_ASSERT_EQUAL_UINT8(20, layout::preset_count());
@@ -38,38 +38,35 @@ static void test_channel_maths() {
 
 static void test_plain_layout_equals_contiguous_cells() {
   for (int i = 0; i < 512; i++) dmx[i] = (uint8_t)(i * 3 + 1);
-  TEST_ASSERT_TRUE(layout::decode(*layout::preset(4), dmx, 512, 1, rgb, strobeVal, cellFix));  // 6x5 RGB
+  TEST_ASSERT_TRUE(layout::decode(*layout::preset(4), dmx, 512, 1, rgb, cellStrobe));  // 6x5 RGB
   TEST_ASSERT_EQUAL_MEMORY(dmx, rgb, 90);
-  TEST_ASSERT_EQUAL_UINT8(0, cellFix[0]);
-  TEST_ASSERT_EQUAL_UINT8(1, cellFix[5]);
-  TEST_ASSERT_EQUAL_UINT8(5, cellFix[29]);
+  for (int c = 0; c < 30; c++) TEST_ASSERT_EQUAL_UINT8(0, cellStrobe[c]);
 }
 
 static void test_dimmer_and_strobe_channels() {
   memset(dmx, 0, sizeof(dmx));
   const layout::Layout &l = *layout::preset(13);  // 10x3 Dim Strobe: D, 9 x RGB, S = 11 ch
-  // fixture 0: dim 255, cell 0 red 200, strobe 0; fixture 1 (ch 12..22): dim 128, cell 0 red 200, strobe 200
+  // fixture 0: dim 255, cell 1 red 200, strobe 0; fixture 1 (ch 12..22): dim 128, cells 1 and 2 red 200, strobe 200
   dmx[0] = 255; dmx[1] = 200; dmx[10] = 0;
-  dmx[11] = 128; dmx[12] = 200; dmx[21] = 200;
-  TEST_ASSERT_TRUE(layout::decode(l, dmx, 512, 1, rgb, strobeVal, cellFix));
+  dmx[11] = 128; dmx[12] = 200; dmx[15] = 200; dmx[21] = 200;
+  TEST_ASSERT_TRUE(layout::decode(l, dmx, 512, 1, rgb, cellStrobe));
   TEST_ASSERT_EQUAL_UINT8(200, rgb[0]);
-  TEST_ASSERT_UINT8_WITHIN(1, 100, rgb[3 * 3]);  // fixture 1, first cell: 200 x 128/255
-  TEST_ASSERT_EQUAL_UINT8(0, strobeVal[0]);
-  TEST_ASSERT_EQUAL_UINT8(200, strobeVal[1]);
-  TEST_ASSERT_EQUAL_UINT8(1, cellFix[3]);
+  TEST_ASSERT_UINT8_WITHIN(1, 100, rgb[3 * 3]);  // fixture 1, Cell 1: 200 x 128/255 (the Dimmer is Cell 1's)
+  TEST_ASSERT_EQUAL_UINT8(200, rgb[4 * 3]);      // fixture 1, Cell 2: not dimmed
+  TEST_ASSERT_EQUAL_UINT8(0, cellStrobe[2]);     // fixture 0's last cell: strobe 0
+  TEST_ASSERT_EQUAL_UINT8(0, cellStrobe[3]);     // fixture 1, Cell 1: no strobe
+  TEST_ASSERT_EQUAL_UINT8(200, cellStrobe[5]);   // fixture 1, last cell: the Strobe is its
 }
 
 static void test_mirror_puts_first_cell_at_centre() {
   memset(dmx, 0, sizeof(dmx));
   const layout::Layout &l = *layout::preset(15);  // Mirror 15x1 RGB
   for (int c = 0; c < 15; c++) dmx[c * 3] = (uint8_t)(c + 1);  // red = cell number
-  TEST_ASSERT_TRUE(layout::decode(l, dmx, 512, 1, rgb, strobeVal, cellFix));
+  TEST_ASSERT_TRUE(layout::decode(l, dmx, 512, 1, rgb, cellStrobe));
   TEST_ASSERT_EQUAL_UINT8(15, rgb[0]);        // strip start: SoundSwitch's last cell
   TEST_ASSERT_EQUAL_UINT8(1, rgb[14 * 3]);    // just left of centre: first cell
   TEST_ASSERT_EQUAL_UINT8(1, rgb[15 * 3]);    // just right of centre: first cell
   TEST_ASSERT_EQUAL_UINT8(15, rgb[29 * 3]);   // strip end: last cell
-  TEST_ASSERT_EQUAL_UINT8(14, cellFix[0]);
-  TEST_ASSERT_EQUAL_UINT8(0, cellFix[15]);
 }
 
 static void test_strobe_rate_mapping() {
@@ -82,7 +79,7 @@ static void test_strobe_rate_mapping() {
 
 static void test_short_frame_reads_black() {
   memset(dmx, 77, sizeof(dmx));
-  TEST_ASSERT_TRUE(layout::decode(*layout::preset(18), dmx, 100, 1, rgb, strobeVal, cellFix));  // 180 ch needed
+  TEST_ASSERT_TRUE(layout::decode(*layout::preset(18), dmx, 100, 1, rgb, cellStrobe));  // 180 ch needed
   TEST_ASSERT_EQUAL_UINT8(77, rgb[99]);
   TEST_ASSERT_EQUAL_UINT8(0, rgb[100]);
 }
