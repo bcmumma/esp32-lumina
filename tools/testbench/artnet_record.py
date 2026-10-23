@@ -36,11 +36,17 @@ def autocorr_period(values, times, lo_ms=150, hi_ms=2000):
     var = sum(v * v for v in x)
     if var == 0:
         return None, 0.0
-    best_lag, best_r = None, 0.0
-    for lag in range(int(lo_ms / step), min(int(hi_ms / step), len(x) // 2)):
-        r = sum(x[i] * x[i + lag] for i in range(len(x) - lag)) / var
-        if r > best_r:
-            best_lag, best_r = lag, r
+    # The first real repeat: after the autocorrelation has dropped below zero, take its highest
+    # peak. (Slow, smooth channels correlate strongly at short lags without repeating.)
+    rs = []
+    for lag in range(1, min(int(hi_ms / step), len(x) // 2)):
+        rs.append(sum(x[i] * x[i + lag] for i in range(len(x) - lag)) / var)
+    crossed, best_lag, best_r = False, None, 0.0
+    for i, r in enumerate(rs, start=1):
+        if r < 0:
+            crossed = True
+        elif crossed and i * step >= lo_ms and r > best_r:
+            best_lag, best_r = i, r
     return (best_lag * step if best_lag else None), best_r
 
 
