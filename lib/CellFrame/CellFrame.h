@@ -36,4 +36,8 @@ bool accept(Frame &f, const uint8_t *data, int len);
 // false gives hard-edged cells.
 void sample(const Frame &f, uint16_t i, uint16_t n, bool smooth, uint8_t &r, uint8_t &g, uint8_t &b);
 
+// Same, but LED i of n shows only cells first .. first+count-1 (one strand's share when split).
+void sample_range(const Frame &f, uint8_t first, uint8_t count, uint16_t i, uint16_t n, bool smooth, uint8_t &r, uint8_t &g,
+                  uint8_t &b);
+
 }  // namespace cells

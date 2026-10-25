@@ -31,6 +31,7 @@ struct ControlState {
   bool sparkleOn;
   bool fxStrobeOn;
   bool kicksAlways;             // false = kick looks only in busy sections
+  bool splitStrands;            // saved; cell layouts: strand k shows its share of the cells, not all of them
   uint8_t beamStrength;         // 0..255
   uint8_t beamSpread;           // 1..8
 };

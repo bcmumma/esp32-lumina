@@ -837,7 +837,8 @@ void apply_kick_flash(uint8_t s, const AudioLedPacket &p) {
 
 // Phase 15: SoundSwitch cells. The S3 picks this mode while a cell fixture drives the
 // strip; each LED takes its colour from the cell frame, blended between cell centres
-// (density >= 128 gives hard-edged cells). Reverse direction flips the strand.
+// (density bit 7 gives hard-edged cells; bit 6 splits the cells across the active strands, so
+// strand k shows its share and the beam runs across all of them). Reverse direction flips the strand.
 // The strand fields carry the Lumina FX cues from the S3 on top:
 //   speed = beam position, sensitivity = beam level (0 = none), twinkle = UV sparkle,
 //   strobe = kick look on each hit: 0 none, 1 ripple, 2 glitter, 3 pump*, 4 shatter, 5 comet, 6 duck*,
@@ -848,9 +849,13 @@ void render_cells(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, 
   uint16_t n = count_for(s);
   if (n == 0) return;
   uint8_t level = combined_brightness(p, st);
-  const bool smooth = st.density < 128;
+  const bool smooth = (st.density & 0x80) == 0;
   const bool rev = st.direction == 1;
   const uint32_t now = millis();
+  const uint8_t strands = p.activeStrands < 1 ? 1 : (p.activeStrands > MAX_STRANDS ? MAX_STRANDS : p.activeStrands);
+  const bool split = (st.density & 0x40) && strands > 1 && s < strands && cellSnapshot.total >= strands;
+  const uint8_t first = split ? (uint8_t)((uint16_t)s * cellSnapshot.total / strands) : 0;
+  const uint8_t count = split ? (uint8_t)((uint16_t)(s + 1) * cellSnapshot.total / strands - first) : cellSnapshot.total;
   if (st.strobe == 6) {  // duck: the colours dip on the kick and swell back (sidechain feel)
     if (newBeat && flash_allowed(s, p, now)) rt[s].flash = 255;
     level = scale8_video(level, (uint8_t)(255U - scale8(rt[s].flash, 225)));
@@ -858,14 +863,17 @@ void render_cells(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, 
   }
   for (uint16_t i = 0; i < n; i++) {
     uint8_t r, g, b;
-    cells::sample(cellSnapshot, rev ? (uint16_t)(n - 1U - i) : i, n, smooth, r, g, b);
+    cells::sample_range(cellSnapshot, first, count, rev ? (uint16_t)(n - 1U - i) : i, n, smooth, r, g, b);
     set_pixel(s, i, {scale8_video(r, level), scale8_video(g, level), scale8_video(b, level)});
   }
   const uint8_t gb = p.globalBrightness;  // overlays respect the rig brightness cap
 
   // Beam: a soft white spot where SoundSwitch's Pan/Tilt point.
-  if (st.sensitivity) {
-    const uint16_t pos = (uint16_t)(((uint32_t)st.speed * (n - 1U)) / 255U);
+  // Split: the beam position covers all strands end to end, so it shows only on the strand it is over.
+  const uint32_t beamAlong = (uint32_t)st.speed * (split ? strands : 1U);
+  const uint32_t beamLo = split ? (uint32_t)s * 255U : 0;
+  if (st.sensitivity && beamAlong >= beamLo && beamAlong <= beamLo + 255U) {
+    const uint16_t pos = (uint16_t)(((beamAlong - beamLo) * (n - 1U)) / 255U);
     const uint16_t centre = rev ? (uint16_t)(n - 1U - pos) : pos;
     const uint16_t half = max<uint16_t>(2, n / 24);
     const uint8_t top = scale8_video(gb, st.sensitivity);

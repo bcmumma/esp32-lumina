@@ -56,27 +56,34 @@ bool accept(Frame &f, const uint8_t *data, int len) {
 }
 
 void sample(const Frame &f, uint16_t i, uint16_t n, bool smooth, uint8_t &r, uint8_t &g, uint8_t &b) {
+  sample_range(f, 0, f.total, i, n, smooth, r, g, b);
+}
+
+void sample_range(const Frame &f, uint8_t first, uint8_t count, uint16_t i, uint16_t n, bool smooth, uint8_t &r, uint8_t &g,
+                  uint8_t &b) {
   r = g = b = 0;
-  if (f.total == 0 || n == 0 || i >= n) return;
-  // Position of LED i's centre in cell units, x256: ((i + 0.5) * total / n) * 256.
-  const uint32_t pos = ((2U * i + 1U) * f.total * 256U) / (2U * n);
-  if (!smooth || f.total == 1) {
+  if (f.total == 0 || n == 0 || i >= n || count == 0 || first >= f.total) return;
+  if (first + count > f.total) count = (uint8_t)(f.total - first);
+  const uint8_t *cells = f.rgb + first * 3;
+  // Position of LED i's centre in cell units, x256: ((i + 0.5) * count / n) * 256.
+  const uint32_t pos = ((2U * i + 1U) * count * 256U) / (2U * n);
+  if (!smooth || count == 1) {
     uint16_t c = (uint16_t)(pos >> 8);
-    if (c >= f.total) c = f.total - 1;
-    r = f.rgb[c * 3]; g = f.rgb[c * 3 + 1]; b = f.rgb[c * 3 + 2];
+    if (c >= count) c = count - 1;
+    r = cells[c * 3]; g = cells[c * 3 + 1]; b = cells[c * 3 + 2];
     return;
   }
   // Blend between cell centres (cell c's centre is at c + 0.5).
   int32_t x = (int32_t)pos - 128;
   if (x < 0) x = 0;
   uint16_t c0 = (uint16_t)(x >> 8);
-  if (c0 >= f.total - 1) {
-    c0 = f.total - 1;
-    r = f.rgb[c0 * 3]; g = f.rgb[c0 * 3 + 1]; b = f.rgb[c0 * 3 + 2];
+  if (c0 >= count - 1) {
+    c0 = count - 1;
+    r = cells[c0 * 3]; g = cells[c0 * 3 + 1]; b = cells[c0 * 3 + 2];
     return;
   }
   const uint16_t t = (uint16_t)(x & 0xFF);
-  const uint8_t *a = f.rgb + c0 * 3, *z = a + 3;
+  const uint8_t *a = cells + c0 * 3, *z = a + 3;
   r = (uint8_t)((a[0] * (256U - t) + z[0] * t) >> 8);
   g = (uint8_t)((a[1] * (256U - t) + z[1] * t) >> 8);
   b = (uint8_t)((a[2] * (256U - t) + z[2] * t) >> 8);

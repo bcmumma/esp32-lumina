@@ -351,109 +351,58 @@ Same tool as Part 1.2. The steps follow SoundSwitch's "Creating a profile for an
 
 Without Art-Net control (Claude switches it off, or Lumina reboots), Lumina goes back to its own web settings and audio mode.
 
-## Part 6: Phase 15, test layouts (cells, fixtures, attributes)
+## Part 6: Phase 15, SoundSwitch layouts (cells + Lumina FX)
 
-Lumina reads SoundSwitch's channels the way the selected **layout** says. Each layout on this list has a matching venue you build once in SoundSwitch. To test one:
+Lumina reads SoundSwitch's channels the way the selected **layout** says. Six layouts, chosen by the owner after testing (2026-10-25), replace the 20-layout test chart:
 
-1. On the controller page, open **Setup → SoundSwitch fixture → Layout**, pick it, and check the plan shown under the list.
-2. In SoundSwitch (Edit Mode), select the venue with the same name, re-run **AutoScript** on the test track, and play it.
+- **L1–L3** are `5 Cell Dim` fixtures (L1 is the old L11, which tested best).
+- **L4–L6** are the same with a Strobe channel.
+- **Every layout ends with the 5-channel Lumina FX fixture.**
 
-The list lives in `lib/FixtureLayout/FixtureLayout.cpp`. Its ids never change: new layouts are added at the end.
+Retired layouts load as L1.
 
-### 6.1 One fixture profile, many modes (Fixture Manager)
+To use one:
+1. Pick it in **Setup → SoundSwitch fixture → Layout**; the page shows the build plan.
+2. Select the matching venue in SoundSwitch and re-run **AutoScript**.
 
-Build **one** profile, `Lumina Strip`, with these modes. Use **File → New Fixture**, the same manufacturer placeholder as before, and **Model** `Lumina Strip`, then **Add Mode** once per row.
+### 6.1 Fixture profiles (Fixture Manager)
 
-- **RGB:** each cell's Red/Green/Blue go in the **Coarse** column, as before.
-- **Dimmer:** use SoundSwitch's **Intensity** function, the one `LUMINA-16` uses on CH1.
-- **Strobe:** use the **Strobe** function.
-- **Where Dimmer and Strobe go:** the **Dimmer** goes **in Cell 1** and the **Strobe** **in the last cell**. In `1 Cell …` modes both sit in Cell 1. **Verified by the owner (2026-10-23, SoundSwitch 2.11):** Check Fixture also fails with a `MASTER` cell that holds Dimmer and Strobe, so don't use `MASTER`.
-- Finish with **Fixtures → Check Fixture**, then **File → Save Workspace**.
+In the **`Lumina Strip`** profile, keep these two modes:
 
 | Mode | Channels | Layout |
 |---|---|---|
-| `1 Cell` | 3 | Cell 1 R/G/B = 1/2/3 |
-| `2 Cell` | 6 | Cell 1 R/G/B = 1/2/3 … Cell 2 = 4/5/6 |
-| `3 Cell` | 9 | Cell 1 R/G/B = 1/2/3 … Cell 3 = 7/8/9 |
-| `4 Cell` | 12 | Cell 1 R/G/B = 1/2/3 … Cell 4 = 10/11/12 |
-| `5 Cell` | 15 | Cell 1 R/G/B = 1/2/3 … Cell 5 = 13/14/15 |
-| `10 Cell` | 30 | Cell 1 R/G/B = 1/2/3 … Cell 10 = 28/29/30 |
-| `30 Cell` | 90 | Cell 1 R/G/B = 1/2/3 … Cell 30 = 88/89/90 |
-| `1 Cell Dim` | 4 | Dimmer (Intensity) = 1; Cell 1 R/G/B = 2/3/4 |
-| `3 Cell Dim` | 10 | Dimmer (Intensity, in Cell 1) = 1; Cell 1 R/G/B = 2/3/4 … Cell 3 = 8/9/10 |
 | `5 Cell Dim` | 16 | Dimmer (Intensity, in Cell 1) = 1; Cell 1 R/G/B = 2/3/4 … Cell 5 = 14/15/16 |
-| `1 Cell Dim Strobe` | 5 | Dimmer (Intensity) = 1; Cell 1 R/G/B = 2/3/4; Strobe = 5 |
-| `3 Cell Dim Strobe` | 11 | Dimmer (Intensity, in Cell 1) = 1; Cell 1 R/G/B = 2/3/4 … Cell 3 = 8/9/10; Strobe (in Cell 3) = 11 |
 | `5 Cell Dim Strobe` | 17 | Dimmer (Intensity, in Cell 1) = 1; Cell 1 R/G/B = 2/3/4 … Cell 5 = 14/15/16; Strobe (in Cell 5) = 17 |
+
+**`Lumina FX`** (a separate profile, one cell named `Main`, set up as a moving head) has 5 channels: **Intensity, Strobe, Pan, Tilt, UV**.
+
+Don't use a `MASTER` cell. SoundSwitch 2.11's Check Fixture rejects one, so Dimmer and Strobe sit in Cell 1 and the last cell. Lumina applies them to those cells only, exactly as SoundSwitch scripts them.
 
 ### 6.2 Venues
 
-Make each venue in Edit Mode:
-1. Click **+**, type the venue name exactly as in the first column, and press **Return**.
-2. Open **DMX Map**, select the **Universe 1** tab, and drag the mode onto each start address.
-3. Check that nothing shows the yellow warning.
-4. Put the fixtures in strip order (first address = data-input end).
-5. Re-run AutoScript with that venue selected.
+| Venue (= Lumina layout) | Patch | Start addresses | Lumina FX at | Cells |
+|---|---|---|---|---|
+| **L1 6x5 Dim + FX** | 6 × `5 Cell Dim` | 1, 17, 33, 49, 65, 81 | 97 | 30 |
+| **L2 12x5 Dim + FX** | 12 × `5 Cell Dim` | 1, 17, 33 … 177 (every 16) | 193 | 60 |
+| **L3 18x5 Dim + FX** | 18 × `5 Cell Dim` | 1, 17, 33 … 273 (every 16) | 289 | 90 |
+| **L4 6x5 Dim Strobe + FX** | 6 × `5 Cell Dim Strobe` | 1, 18, 35, 52, 69, 86 | 103 | 30 |
+| **L5 12x5 Dim Strobe + FX** | 12 × `5 Cell Dim Strobe` | 1, 18, 35 … 188 (every 17) | 205 | 60 |
+| **L6 18x5 Dim Strobe + FX** | 18 × `5 Cell Dim Strobe` | 1, 18, 35 … 290 (every 17) | 307 | 90 |
 
-| Venue (= Lumina layout) | Patch | Start addresses | Channels | Strip cells | Extras |
-|---|---|---|---|---|---|
-| **L01 30x1 RGB** | 30 × `1 Cell` | 1, 4, 7, 10, … 88 (every 3) | 90 | 30 | — |
-| **L02 15x2 RGB** | 15 × `2 Cell` | 1, 7, 13, 19, … 85 (every 6) | 90 | 30 | — |
-| **L03 10x3 RGB** | 10 × `3 Cell` | 1, 10, 19, 28, … 82 (every 9) | 90 | 30 | — |
-| **L04 6x5 RGB** | 6 × `5 Cell` | 1, 16, 31, 46, 61, 76 | 90 | 30 | — |
-| **L05 3x10 RGB** | 3 × `10 Cell` | 1, 31, 61 | 90 | 30 | — |
-| **L06 1x30 RGB** | 1 × `30 Cell` | 1 | 90 | 30 | — |
-| **L07 10x3 RGB Blocks** | 10 × `3 Cell` | 1, 10, 19, 28, … 82 (every 9) | 90 | 30 | hard blocks |
-| **L08 6x5 RGB Blocks** | 6 × `5 Cell` | 1, 16, 31, 46, 61, 76 | 90 | 30 | hard blocks |
-| **L09 30x1 Dim** | 30 × `1 Cell Dim` | 1, 5, 9, 13, … 117 (every 4) | 120 | 30 | dimmer |
-| **L10 10x3 Dim** | 10 × `3 Cell Dim` | 1, 11, 21, 31, … 91 (every 10) | 100 | 30 | dimmer |
-| **L11 6x5 Dim** | 6 × `5 Cell Dim` | 1, 17, 33, 49, 65, 81 | 96 | 30 | dimmer |
-| **L12 30x1 Dim Strobe** | 30 × `1 Cell Dim Strobe` | 1, 6, 11, 16, … 146 (every 5) | 150 | 30 | dimmer, strobe |
-| **L13 10x3 Dim Strobe** | 10 × `3 Cell Dim Strobe` | 1, 12, 23, 34, … 100 (every 11) | 110 | 30 | dimmer, strobe |
-| **L14 6x5 Dim Strobe** | 6 × `5 Cell Dim Strobe` | 1, 18, 35, 52, 69, 86 | 102 | 30 | dimmer, strobe |
-| **L15 Mirror 15x1 RGB** | 15 × `1 Cell` | 1, 4, 7, 10, … 43 (every 3) | 45 | 30 | mirrored |
-| **L16 Mirror 5x3 RGB** | 5 × `3 Cell` | 1, 10, 19, 28, 37 | 45 | 30 | mirrored |
-| **L17 Mirror 5x3 Dim Strobe** | 5 × `3 Cell Dim Strobe` | 1, 12, 23, 34, 45 | 55 | 30 | dimmer, strobe, mirrored |
-| **L18 Fine 60x1 RGB** | 60 × `1 Cell` | 1, 4, 7, 10, … 178 (every 3) | 180 | 60 | — |
-| **L19 Fine 30x2 RGB** | 30 × `2 Cell` | 1, 7, 13, 19, … 175 (every 6) | 180 | 60 | — |
-| **L20 Fine 15x4 RGB** | 15 × `4 Cell` | 1, 13, 25, 37, … 169 (every 12) | 180 | 60 | — |
+Patch the fixtures in strip order: the first address is the strand's data-input end. With two strands and **Split cells across strands** on, strand 1 gets the first half of the fixtures and strand 2 the second.
 
-### 6.3 How Lumina treats the extras
+### 6.3 What Lumina does with it
 
-- **Dimmer:** Cell 1's intensity, because that's how SoundSwitch scripts it. In `1 Cell Dim` layouts (L09, L12) every cell has its own dimmer, so AutoScript can chase brightness along the whole strip. In multi-cell Dim layouts only each fixture's first cell is dimmed.
-- **Strobe:** each fixture's Strobe flashes **its last cell** (the whole cell in `1 Cell Dim Strobe`). 0–9 means steady; 10–255 flashes slow to fast.
-  - Flashes happen **only while Strobe is on** on the page, and never faster than the max flashes/s. The fastest cell sets the pace.
-  - Between flashes, strobing cells go dark. Kick Flash pauses while any cell strobes.
-  - With Strobe off, those cells simply stay lit.
-- **Mirrored:** SoundSwitch drives half the strip and Lumina mirrors it from the centre. The first fixture sits in the middle, so chases run outward or inward.
-- **Hard blocks:** each cell shows as a crisp block instead of blending into its neighbours.
-- **Fine (60 cells):** twice the detail, 180 channels; on 900 LEDs that's 15 LEDs per cell.
+- **Cells:** SoundSwitch's colours and chases, blended between neighbouring cells.
+- **Dimmer:** Cell 1's intensity.
+- **Strobe** (L4–L6): flashes each fixture's last cell, only while Strobe is on and never faster than the max flashes/s.
+- **Split cells across strands** (Setup): each strand shows its share of the fixtures, and the beam runs across all the strands. Off: every strand shows them all.
+- **Lumina FX looks** (Show screen → **SoundSwitch looks**):
+  - a **beam** that follows Pan/Tilt;
+  - a **kick look** on each kick: Ripple, Glitter, Shatter, Comet, Pump\*, Duck\*, Ping-Pong\*, or Off. Kick looks run in busy sections, or on every kick with **Kicks always**;
+  - a **UV sparkle** burst;
+  - **FX Strobe** across all cells.
 
-### 6.4 What to report
-
-For each venue, report one house track and one techno track: does it chase, does it look good, and what would you change? Claude measures the cells (spread and motion) and grabs webcam frames.
-
-### 6.5 The Lumina FX fixture and kick looks
-
-A 5-channel `Lumina FX` fixture (one cell: **Intensity, Strobe, Pan, Tilt, UV**), patched right after the cell layout, gives Lumina SoundSwitch's sections and movement. Turn it on in **Setup → SoundSwitch fixture → Lumina FX fixture**; the page shows its address (97 after L11).
-
-The **Show** screen then has a **SoundSwitch looks** panel:
-
-- **Kick look:** what happens on each kick.
-  - **Ripple:** rings burst from the centre.
-  - **Glitter:** a burst of sparkles.
-  - **Shatter:** random shards light up.
-  - **Comet:** a comet shoots along the strip, alternating ends.
-  - **Pump\*:** the whole strip flashes white.
-  - **Duck\*:** the colours dip dark and swell back, sidechain style.
-  - **Ping-Pong\*:** alternate halves flash.
-  - **Off.**
-
-  \* goes through the strobe gate: only with Strobe on, never faster than the max flashes/s.
-- **Beam:** a white spot that follows SoundSwitch's Pan/Tilt sweeps.
-- **UV sparkle:** a sparkle burst when SoundSwitch hits UV.
-- **FX Strobe:** the FX fixture's Strobe flashes every cell (needs Strobe on).
-- **Kicks always:** off means kick looks only in busy sections (SoundSwitch's Intensity pulsing); on means every kick.
-
-**Where the kicks come from:** with music on the line input, Lumina's own kick detector times them. With no audio, SoundSwitch's FX Intensity pulses stand in.
-
+  \* goes through the strobe gate: only with Strobe on, never past the max rate.
+- **Where the kicks come from:** with music on the line input, Lumina's kick detector times them; without audio, SoundSwitch's FX Intensity pulses stand in.
+- **Setup:** Beam strength and Beam reach (how far a Pan/Tilt sweep moves the beam).

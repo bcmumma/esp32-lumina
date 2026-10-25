@@ -20,6 +20,7 @@ struct Layout {
   bool strobe;           // last channel of each fixture: the last cell's strobe, 0-9 steady, 10-255 slow..fast
   bool mirror;           // SoundSwitch drives half the strip; Lumina mirrors it from the centre
   bool hardEdges;        // cells as crisp blocks instead of blended
+  bool fx;               // a 5-channel Lumina FX fixture follows the cells (Intensity, Strobe, Pan, Tilt, UV)
 };
 
 uint8_t preset_count();
@@ -38,10 +39,12 @@ bool decode(const Layout &l, const uint8_t *dmx, uint16_t length, uint16_t addre
 // Strobe channel value -> wanted flashes per second (0 = steady). Capped later by the rig gate.
 uint8_t strobe_hz(uint8_t value, uint8_t maxHz);
 
-// Saved fixture byte: 0 = LUMINA-16, 1..150 = N plain RGB cells, 151.. = preset (code - 150).
-constexpr uint8_t kPresetBase = 150;
+// Saved fixture byte: 0 = LUMINA-16, 1..150 = N plain RGB cells, 201.. = layout (code - 200).
+// 151..200 held the retired 20-layout test chart (2026-10-23..25); they load as L1.
+constexpr uint8_t kPresetBase = 200;
 inline bool is_preset_code(uint8_t code) { return code > kPresetBase; }
 inline uint8_t preset_id(uint8_t code) { return (uint8_t)(code - kPresetBase); }
 inline uint8_t preset_code(uint8_t id) { return (uint8_t)(kPresetBase + id); }
+inline uint8_t migrate_code(uint8_t code) { return (code > 150 && code <= kPresetBase) ? preset_code(1) : code; }
 
 }  // namespace layout

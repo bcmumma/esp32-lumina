@@ -132,6 +132,24 @@ static void test_from_dmx() {
   TEST_ASSERT_FALSE(cells::any_lit(dark, 30));
 }
 
+static void test_sample_range_for_split_strands() {
+  cells::Frame f;
+  cells::reset(f);
+  f.total = 60;
+  for (int c = 0; c < 60; c++) f.rgb[c * 3] = (uint8_t)c;
+  uint8_t r, g, b;
+  cells::sample_range(f, 0, 30, 0, 450, false, r, g, b);    // strand 1 starts at cell 0
+  TEST_ASSERT_EQUAL_UINT8(0, r);
+  cells::sample_range(f, 0, 30, 449, 450, false, r, g, b);  // strand 1 ends at cell 29
+  TEST_ASSERT_EQUAL_UINT8(29, r);
+  cells::sample_range(f, 30, 30, 0, 450, false, r, g, b);   // strand 2 starts at cell 30
+  TEST_ASSERT_EQUAL_UINT8(30, r);
+  cells::sample_range(f, 30, 30, 449, 450, false, r, g, b);
+  TEST_ASSERT_EQUAL_UINT8(59, r);
+  cells::sample_range(f, 30, 30, 0, 450, true, r, g, b);    // smooth edge holds its own first cell
+  TEST_ASSERT_EQUAL_UINT8(30, r);
+}
+
 void setup() {
   delay(2000);
   UNITY_BEGIN();
@@ -143,6 +161,7 @@ void setup() {
   RUN_TEST(test_sample_hard_and_smooth);
   RUN_TEST(test_sample_30_cells_on_900_leds);
   RUN_TEST(test_from_dmx);
+  RUN_TEST(test_sample_range_for_split_strands);
   UNITY_END();
 }
 

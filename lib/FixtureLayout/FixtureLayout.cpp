@@ -2,30 +2,17 @@
 
 namespace layout {
 
-// The test chart (docs/ARTNET_SOUNDSWITCH_GUIDE.md, Part 6). Order and ids are fixed: the S3
-// saves the id, so append new layouts at the end and never reorder.
-//                  name                     SoundSwitch mode        F   C   dim    strobe mirror hard
+// The owner's layouts (2026-10-25): L1 is the old L11 (6x5 Dim) that tested best; L2/L3 scale it
+// for two 450-LED strands; L4-L6 are the same with a Strobe channel. Every one ends with the
+// Lumina FX fixture. The S3 saves the id: append new layouts, don't reorder.
+//                  name                    SoundSwitch mode      F   C   dim   strobe mirror hard  fx
 static const Layout kPresets[] = {
-    {"30x1 RGB",              "1 Cell",               30,  1, false, false, false, false},  // L01
-    {"15x2 RGB",              "2 Cell",               15,  2, false, false, false, false},  // L02
-    {"10x3 RGB",              "3 Cell",               10,  3, false, false, false, false},  // L03
-    {"6x5 RGB",               "5 Cell",                6,  5, false, false, false, false},  // L04
-    {"3x10 RGB",              "10 Cell",               3, 10, false, false, false, false},  // L05
-    {"1x30 RGB",              "30 Cell",               1, 30, false, false, false, false},  // L06
-    {"10x3 RGB Blocks",       "3 Cell",               10,  3, false, false, false, true},   // L07
-    {"6x5 RGB Blocks",        "5 Cell",                6,  5, false, false, false, true},   // L08
-    {"30x1 Dim",              "1 Cell Dim",           30,  1, true,  false, false, false},  // L09
-    {"10x3 Dim",              "3 Cell Dim",           10,  3, true,  false, false, false},  // L10
-    {"6x5 Dim",               "5 Cell Dim",            6,  5, true,  false, false, false},  // L11
-    {"30x1 Dim Strobe",       "1 Cell Dim Strobe",    30,  1, true,  true,  false, false},  // L12
-    {"10x3 Dim Strobe",       "3 Cell Dim Strobe",    10,  3, true,  true,  false, false},  // L13
-    {"6x5 Dim Strobe",        "5 Cell Dim Strobe",     6,  5, true,  true,  false, false},  // L14
-    {"Mirror 15x1 RGB",       "1 Cell",               15,  1, false, false, true,  false},  // L15
-    {"Mirror 5x3 RGB",        "3 Cell",                5,  3, false, false, true,  false},  // L16
-    {"Mirror 5x3 Dim Strobe", "3 Cell Dim Strobe",     5,  3, true,  true,  true,  false},  // L17
-    {"Fine 60x1 RGB",         "1 Cell",               60,  1, false, false, false, false},  // L18
-    {"Fine 30x2 RGB",         "2 Cell",               30,  2, false, false, false, false},  // L19
-    {"Fine 15x4 RGB",         "4 Cell",               15,  4, false, false, false, false},  // L20
+    {"6x5 Dim + FX",          "5 Cell Dim",          6, 5, true, false, false, false, true},  // L1
+    {"12x5 Dim + FX",         "5 Cell Dim",         12, 5, true, false, false, false, true},  // L2
+    {"18x5 Dim + FX",         "5 Cell Dim",         18, 5, true, false, false, false, true},  // L3
+    {"6x5 Dim Strobe + FX",   "5 Cell Dim Strobe",   6, 5, true, true,  false, false, true},  // L4
+    {"12x5 Dim Strobe + FX",  "5 Cell Dim Strobe",  12, 5, true, true,  false, false, true},  // L5
+    {"18x5 Dim Strobe + FX",  "5 Cell Dim Strobe",  18, 5, true, true,  false, false, true},  // L6
 };
 
 uint8_t preset_count() { return (uint8_t)(sizeof(kPresets) / sizeof(kPresets[0])); }

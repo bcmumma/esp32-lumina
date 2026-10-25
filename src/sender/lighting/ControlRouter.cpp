@@ -11,7 +11,7 @@
 #include "../network/ArtNetReceiver.h"
 
 ControlState control = {router::Source::Auto, router::Source::Audio, router::kDefaultStandaloneLevel, STROBE_DEFAULT_HZ,
-                        false, 1, 0, 0, RIG_BRIGHTNESS_CAP_MAX, false, 1, true, true, true, false, 255, 3};
+                        false, 1, 0, 0, RIG_BRIGHTNESS_CAP_MAX, false, 1, true, true, true, false, false, 255, 3};
 
 namespace {
 
@@ -42,7 +42,7 @@ struct ControlRecordV3 {
                        // bit 7 kicks always ("OFF" bits so older v3 records keep every look on)
   uint8_t beamStrength;
   uint8_t beamSpread;
-  uint8_t reserved;
+  uint8_t flags2;      // bit 0 split cells across strands (was reserved, 0 = off)
   uint32_t crc32;
 };
 
@@ -98,7 +98,7 @@ bool current_layout(layout::Layout &out) {
     out = *p;
     return true;
   }
-  out = {"custom", "", 1, code, false, false, false, false};
+  out = {"custom", "", 1, code, false, false, false, false, false};
   return true;
 }
 
@@ -206,8 +206,9 @@ void load_control_settings() {
     control.standaloneLevel = r.standaloneLevel;
     control.brightnessCap = r.version >= 2 ? clamp_cap(r.brightnessCap) : RIG_BRIGHTNESS_CAP_MAX;
     control.kickFlash = r.version >= 2 ? r.kickFlash : 0;
-    const bool known = r.fixture <= MAX_CELLS || layout::preset(layout::preset_id(r.fixture)) != nullptr;
-    control.fixture = (r.version >= 2 && known) ? r.fixture : 0;
+    const uint8_t code = layout::migrate_code(r.fixture);  // retired test layouts load as L1
+    const bool known = code <= MAX_CELLS || layout::preset(layout::preset_id(code)) != nullptr;
+    control.fixture = (r.version >= 2 && known) ? code : 0;
     if (v3) {
       control.fxEnabled = (r3.fxFlags & 1) != 0;
       control.fxHit = (uint8_t)((r3.fxFlags >> 1) & 7);
@@ -215,6 +216,7 @@ void load_control_settings() {
       control.sparkleOn = (r3.fxFlags & 0x20) == 0;
       control.fxStrobeOn = (r3.fxFlags & 0x40) == 0;
       control.kicksAlways = (r3.fxFlags & 0x80) != 0;
+      control.splitStrands = (r3.flags2 & 1) != 0;
       control.beamStrength = r3.beamStrength;
       control.beamSpread = r3.beamSpread < 1 || r3.beamSpread > 8 ? 3 : r3.beamSpread;
     }
@@ -240,6 +242,7 @@ bool save_control_settings() {
   r.fixture = control.fixture;
   r3.fxFlags = (uint8_t)((control.fxEnabled ? 1 : 0) | ((control.fxHit & 7) << 1) | (control.beamOn ? 0 : 0x10) |
                          (control.sparkleOn ? 0 : 0x20) | (control.fxStrobeOn ? 0 : 0x40) | (control.kicksAlways ? 0x80 : 0));
+  r3.flags2 = control.splitStrands ? 1 : 0;
   r3.beamStrength = control.beamStrength;
   r3.beamSpread = control.beamSpread;
   r3.crc32 = record_crc_v3(r3);
@@ -271,6 +274,7 @@ void control_apply(AudioLedPacket &p, uint32_t nowMs) {
 
   bool cellsActive = false;
   bool cellStrobing = false;
+  bool fxActive = false;
   layout::Layout l;
   if (d.applyArtnet && current_layout(l)) {
     // Phase 15: a cell fixture or named layout. The receiver draws the cells (CELLS_MODE) along each strand.
@@ -278,7 +282,8 @@ void control_apply(AudioLedPacket &p, uint32_t nowMs) {
     if (n) {
       // Lumina FX fixture: 5 channels right after the layout. Its Strobe strobes every cell.
       fxOut = fx::Output{};
-      if (control.fxEnabled) {
+      fxActive = l.fx;
+      if (l.fx) {
         fx::Input in;
         const uint16_t fxAddress = control.address + layout::total_channels(l);
         if (fx::read(dmx, length, fxAddress, in)) {
@@ -297,12 +302,13 @@ void control_apply(AudioLedPacket &p, uint32_t nowMs) {
       // speed = beam position, sensitivity = beam level, twinkle = sparkle, strobe = kick effect.
       // Gated looks (pump, duck, ping-pong) pause while FX/fixture Strobe flashes, so the two can't add up.
       const bool gatedLook = control.fxHit == 3 || control.fxHit == 6 || control.fxHit == 7;
-      const bool kicksNow = control.fxEnabled && (control.kicksAlways || fxOut.pulsing);
+      const bool kicksNow = l.fx && (control.kicksAlways || fxOut.pulsing);
       const uint8_t hitStyle = (kicksNow && !(cellStrobing && gatedLook)) ? control.fxHit : 0;
       for (uint8_t s = 0; s < MAX_STRANDS; s++) {
         p.strand[s].mode = CELLS_MODE;
         p.strand[s].brightness = 255;                    // intensity is in the cell colours; the rig cap still applies
-        p.strand[s].density = l.hardEdges ? 255 : 0;     // hard-edged blocks or smooth blending
+        // density bit 7: hard-edged blocks (else smooth); bit 6: split the cells across the active strands
+        p.strand[s].density = (uint8_t)((l.hardEdges ? 0x80 : 0) | (control.splitStrands ? 0x40 : 0));
         p.strand[s].speed = fxOut.beamPos;
         p.strand[s].sensitivity = fxOut.beamLevel;
         p.strand[s].twinkle = fxOut.sparkle;
@@ -336,7 +342,7 @@ void control_apply(AudioLedPacket &p, uint32_t nowMs) {
   if (p.volume > 8) lastAudioMs = nowMs ? nowMs : 1;
   if (d.active == router::Source::Audio || d.active == router::Source::Hybrid || cellsActive) {
     // With no line input, SoundSwitch's FX Intensity edges stand in for the kicks.
-    if (cellsActive && control.fxEnabled && (lastAudioMs == 0 || nowMs - lastAudioMs > kAudioSilentMs)) p.beatPulse = fxPulse;
+    if (cellsActive && fxActive && (lastAudioMs == 0 || nowMs - lastAudioMs > kAudioSilentMs)) p.beatPulse = fxPulse;
     heldBeatPulse = p.beatPulse;
   } else {
     p.beatPulse = heldBeatPulse;
@@ -386,7 +392,11 @@ void append_control_json(String &s, uint32_t nowMs) {
   s += ",\"cellFrames\":" + String(cellFrames);
   s += ",\"cellPacketsSent\":" + String(cell_packets_sent);
   s += ",\"cellFlashes\":" + String(cellFlashes);
-  s += ",\"fxEnabled\":" + String(control.fxEnabled ? 1 : 0) + ",\"fxHit\":" + String(control.fxHit);
+  {
+    layout::Layout fl;
+    s += ",\"fxEnabled\":" + String(current_layout(fl) && fl.fx ? 1 : 0);
+  }
+  s += ",\"fxHit\":" + String(control.fxHit) + ",\"splitStrands\":" + String(control.splitStrands ? 1 : 0);
   s += ",\"beamOn\":" + String(control.beamOn ? 1 : 0) + ",\"sparkleOn\":" + String(control.sparkleOn ? 1 : 0);
   s += ",\"fxStrobeOn\":" + String(control.fxStrobeOn ? 1 : 0) + ",\"kicksAlways\":" + String(control.kicksAlways ? 1 : 0);
   s += ",\"beamStrength\":" + String(control.beamStrength) + ",\"beamSpread\":" + String(control.beamSpread);
@@ -421,7 +431,8 @@ void append_fixture_list_json(String &s) {
     s += ",\"perFixture\":" + String(layout::channels_per_fixture(l)) + ",\"total\":" + String(layout::total_channels(l));
     s += ",\"stripCells\":" + String(layout::strip_cells(l));
     s += ",\"dimmer\":" + String(l.dimmer ? 1 : 0) + ",\"strobe\":" + String(l.strobe ? 1 : 0);
-    s += ",\"mirror\":" + String(l.mirror ? 1 : 0) + ",\"hard\":" + String(l.hardEdges ? 1 : 0) + "}";
+    s += ",\"mirror\":" + String(l.mirror ? 1 : 0) + ",\"hard\":" + String(l.hardEdges ? 1 : 0);
+    s += ",\"fx\":" + String(l.fx ? 1 : 0) + ",\"fxAddress\":" + String(1 + layout::total_channels(l)) + "}";
   }
   s += "]";
 }
