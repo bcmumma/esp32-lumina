@@ -24,6 +24,11 @@ struct ControlState {
   uint8_t fixture;              // saved; 0 = LUMINA-16, 1..150 = N plain RGB cells, 151.. = named layout (lib/FixtureLayout)
   uint8_t kickFlash;            // saved; 0..255 rig-wide white flash on bass hits (0 = off)
   uint8_t brightnessCap;        // saved; RIG_BRIGHTNESS_CAP_MIN..MAX, caps globalBrightness in every source
+  // Lumina FX fixture (Phase 15): 5 channels right after the cell layout. All saved.
+  bool fxEnabled;
+  uint8_t fxHit;                // kick effect in busy sections: 0 none, 1 ripple, 2 glitter, 3 pump flash (gated)
+  uint8_t beamStrength;         // 0..255
+  uint8_t beamSpread;           // 1..8
 };
 
 extern ControlState control;

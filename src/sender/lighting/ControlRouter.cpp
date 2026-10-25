@@ -5,12 +5,13 @@
 #include "Lumina16.h"
 #include "CellFrame.h"
 #include "FixtureLayout.h"
+#include "FxLayer.h"
 #include "../network/EspNowSender.h"
 #include "../config/ConfigManager.h"
 #include "../network/ArtNetReceiver.h"
 
 ControlState control = {router::Source::Auto, router::Source::Audio, router::kDefaultStandaloneLevel, STROBE_DEFAULT_HZ,
-                        false, 1, 0, 0, RIG_BRIGHTNESS_CAP_MAX};
+                        false, 1, 0, 0, RIG_BRIGHTNESS_CAP_MAX, false, 1, 255, 3};
 
 namespace {
 
@@ -18,7 +19,7 @@ namespace {
 constexpr char kNamespace[] = "lumina_ctl";
 constexpr char kKey[] = "rec";
 constexpr uint32_t kMagic = 0x4C435431UL;  // "LCT1"
-constexpr uint8_t kVersion = 2;  // v2 adds brightnessCap in a byte that v1 left zero; v1 still loads
+constexpr uint8_t kVersion = 3;  // v3 appends the FX settings; v1 and v2 records still load
 
 struct ControlRecord {
   uint32_t magic;
@@ -32,6 +33,21 @@ struct ControlRecord {
   uint8_t fixture;       // v2 reserved byte: 0 = LUMINA-16, 1..150 = N cells, 151.. = named layout (Phase 15)
   uint32_t crc32;
 };
+
+// v3 (Phase 15 FX): the v2 fields, then the FX settings. Stored separately sized, so a v2 record
+// (sizeof(ControlRecord)) still loads and gets FX defaults.
+struct ControlRecordV3 {
+  ControlRecord base;  // base.crc32 unused in v3
+  uint8_t fxFlags;     // bit 0 FX on, bits 1-2 hit effect
+  uint8_t beamStrength;
+  uint8_t beamSpread;
+  uint8_t reserved;
+  uint32_t crc32;
+};
+
+uint32_t record_crc_v3(const ControlRecordV3 &r) {
+  return config_crc32(reinterpret_cast<const uint8_t *>(&r), offsetof(ControlRecordV3, crc32));
+}
 
 uint8_t clamp_cap(int v) {
   return (uint8_t)(v < RIG_BRIGHTNESS_CAP_MIN ? RIG_BRIGHTNESS_CAP_MIN : (v > RIG_BRIGHTNESS_CAP_MAX ? RIG_BRIGHTNESS_CAP_MAX : v));
@@ -50,6 +66,14 @@ uint32_t appliedPackets = 0;
 uint8_t cellRgb[MAX_CELLS * 3];
 uint32_t cellFrames = 0;
 uint8_t heldBeatPulse = 0;  // bass-hit pulse is frozen while audio isn't the active source
+
+// Phase 15 Lumina FX fixture.
+fx::State fxState = {};
+fx::Output fxOut = {};
+uint32_t fxSeenRxMs = 0;
+uint8_t fxPulse = 0;          // backup hit counter from FX Intensity edges (no audio)
+uint32_t lastAudioMs = 0;     // last time the line input had signal
+constexpr uint32_t kAudioSilentMs = 2000;
 
 // Phase 15: when SoundSwitch last showed light, and its colour then (for HYBRID).
 uint32_t lastSeenRxMs = 0;
@@ -123,8 +147,8 @@ uint32_t lastCellFlashMs = 0;
 uint32_t cellFlashUntilMs = 0;
 uint32_t cellFlashes = 0;
 
-bool apply_cell_strobe(const layout::Layout &l, uint8_t n, uint32_t nowMs) {
-  if (!l.strobe || !control.strobeEnabled) return false;
+bool apply_cell_strobe(uint8_t n, uint32_t nowMs) {
+  if (!control.strobeEnabled) return false;
   uint8_t hz = 0;
   for (uint8_t c = 0; c < n; c++) {
     const uint8_t h = layout::strobe_hz(cellStrobe[c], control.strobeHz);
@@ -159,10 +183,19 @@ const char *control_fixture_name() {
 void load_control_settings() {
   Preferences store;
   ControlRecord r = {};
-  bool ok = false;
+  ControlRecordV3 r3 = {};
+  bool ok = false, v3 = false;
   if (store.begin(kNamespace, true)) {
-    ok = store.getBytes(kKey, &r, sizeof(r)) == sizeof(r) && r.magic == kMagic && (r.version == 1 || r.version == kVersion) &&
-         r.crc32 == record_crc(r) && r.source <= (uint8_t)router::Source::Hybrid;
+    const size_t len = store.getBytesLength(kKey);
+    if (len == sizeof(ControlRecordV3) && store.getBytes(kKey, &r3, sizeof(r3)) == sizeof(r3) && r3.base.magic == kMagic &&
+        r3.base.version == 3 && r3.crc32 == record_crc_v3(r3)) {
+      r = r3.base;
+      ok = v3 = true;
+    } else if (len == sizeof(ControlRecord)) {
+      ok = store.getBytes(kKey, &r, sizeof(r)) == sizeof(r) && r.magic == kMagic && (r.version == 1 || r.version == 2) &&
+           r.crc32 == record_crc(r);
+    }
+    ok = ok && r.source <= (uint8_t)router::Source::Hybrid;
     store.end();
   }
   if (ok) {
@@ -174,6 +207,12 @@ void load_control_settings() {
     control.kickFlash = r.version >= 2 ? r.kickFlash : 0;
     const bool known = r.fixture <= MAX_CELLS || layout::preset(layout::preset_id(r.fixture)) != nullptr;
     control.fixture = (r.version >= 2 && known) ? r.fixture : 0;
+    if (v3) {
+      control.fxEnabled = (r3.fxFlags & 1) != 0;
+      control.fxHit = (uint8_t)((r3.fxFlags >> 1) & 3);
+      control.beamStrength = r3.beamStrength;
+      control.beamSpread = r3.beamSpread < 1 || r3.beamSpread > 8 ? 3 : r3.beamSpread;
+    }
   }
   control.strobeEnabled = false;  // never restored: strobe is always off at boot
   Serial.printf("Control: source=%s fallback=%s strobe off (cap %u/s) standalone=%u brightnessCap=%u/255 fixture=%s (code %u) (%s)\n",
@@ -183,7 +222,8 @@ void load_control_settings() {
 }
 
 bool save_control_settings() {
-  ControlRecord r = {};
+  ControlRecordV3 r3 = {};
+  ControlRecord &r = r3.base;
   r.magic = kMagic;
   r.version = kVersion;
   r.source = (uint8_t)control.source;
@@ -193,10 +233,13 @@ bool save_control_settings() {
   r.brightnessCap = clamp_cap(control.brightnessCap);
   r.kickFlash = control.kickFlash;
   r.fixture = control.fixture;
-  r.crc32 = record_crc(r);
+  r3.fxFlags = (uint8_t)((control.fxEnabled ? 1 : 0) | ((control.fxHit & 3) << 1));
+  r3.beamStrength = control.beamStrength;
+  r3.beamSpread = control.beamSpread;
+  r3.crc32 = record_crc_v3(r3);
   Preferences store;
   if (!store.begin(kNamespace, false)) return false;
-  bool ok = store.putBytes(kKey, &r, sizeof(r)) == sizeof(r);
+  bool ok = store.putBytes(kKey, &r3, sizeof(r3)) == sizeof(r3);
   store.end();
   return ok;
 }
@@ -227,11 +270,32 @@ void control_apply(AudioLedPacket &p, uint32_t nowMs) {
     // Phase 15: a cell fixture or named layout. The receiver draws the cells (CELLS_MODE) along each strand.
     const uint8_t n = decode_cells(l, dmx, length);
     if (n) {
-      cellStrobing = apply_cell_strobe(l, n, nowMs);
+      // Lumina FX fixture: 5 channels right after the layout. Its Strobe strobes every cell.
+      fxOut = fx::Output{};
+      if (control.fxEnabled) {
+        fx::Input in;
+        const uint16_t fxAddress = control.address + layout::total_channels(l);
+        if (fx::read(dmx, length, fxAddress, in)) {
+          const bool newFrame = lastRxMs != fxSeenRxMs;
+          fxSeenRxMs = lastRxMs;
+          fxOut = fx::step(fxState, in, newFrame, {control.beamStrength, control.beamSpread}, nowMs);
+          if (fxOut.hit) fxPulse++;
+          if (fxOut.strobe >= 10)
+            for (uint8_t c = 0; c < n; c++) if (cellStrobe[c] < fxOut.strobe) cellStrobe[c] = fxOut.strobe;
+        }
+      }
+      cellStrobing = apply_cell_strobe(n, nowMs);
+      // In CELLS_MODE the strand fields carry the FX cues to the receiver (see render_cells):
+      // speed = beam position, sensitivity = beam level, twinkle = sparkle, strobe = kick effect.
+      const uint8_t hitStyle = (control.fxEnabled && fxOut.pulsing && !(cellStrobing && control.fxHit == 3)) ? control.fxHit : 0;
       for (uint8_t s = 0; s < MAX_STRANDS; s++) {
         p.strand[s].mode = CELLS_MODE;
         p.strand[s].brightness = 255;                    // intensity is in the cell colours; the rig cap still applies
         p.strand[s].density = l.hardEdges ? 255 : 0;     // hard-edged blocks or smooth blending
+        p.strand[s].speed = fxOut.beamPos;
+        p.strand[s].sensitivity = fxOut.beamLevel;
+        p.strand[s].twinkle = fxOut.sparkle;
+        p.strand[s].strobe = hitStyle;
       }
       queue_cell_frame(cellRgb, n);
       cellsActive = true;
@@ -258,7 +322,10 @@ void control_apply(AudioLedPacket &p, uint32_t nowMs) {
   if (d.standaloneLevels) router::apply_standalone(p, control.standaloneLevel);
 
   // Bass hits drive the lights when audio is the active source, and add Kick Flash over SoundSwitch cells.
+  if (p.volume > 8) lastAudioMs = nowMs ? nowMs : 1;
   if (d.active == router::Source::Audio || d.active == router::Source::Hybrid || cellsActive) {
+    // With no line input, SoundSwitch's FX Intensity edges stand in for the kicks.
+    if (cellsActive && control.fxEnabled && (lastAudioMs == 0 || nowMs - lastAudioMs > kAudioSilentMs)) p.beatPulse = fxPulse;
     heldBeatPulse = p.beatPulse;
   } else {
     p.beatPulse = heldBeatPulse;
@@ -308,6 +375,15 @@ void append_control_json(String &s, uint32_t nowMs) {
   s += ",\"cellFrames\":" + String(cellFrames);
   s += ",\"cellPacketsSent\":" + String(cell_packets_sent);
   s += ",\"cellFlashes\":" + String(cellFlashes);
+  s += ",\"fxEnabled\":" + String(control.fxEnabled ? 1 : 0) + ",\"fxHit\":" + String(control.fxHit);
+  s += ",\"beamStrength\":" + String(control.beamStrength) + ",\"beamSpread\":" + String(control.beamSpread);
+  {
+    layout::Layout fl;
+    s += ",\"fxAddress\":" + String(current_layout(fl) ? control.address + layout::total_channels(fl) : 0);
+  }
+  s += ",\"fxLive\":{\"beam\":" + String(fxOut.beamLevel) + ",\"pos\":" + String(fxOut.beamPos) +
+       ",\"moving\":" + String(fxOut.moving ? 1 : 0) + ",\"pulsing\":" + String(fxOut.pulsing ? 1 : 0) +
+       ",\"sparkle\":" + String(fxOut.sparkle) + ",\"edges\":" + String(fxState.edges) + "}";
   s += ",\"litAgeMs\":" + String(lastLitMs ? nowMs - lastLitMs : 0xFFFFFFFFUL);
   s += ",\"hybridHoldMs\":" + String(router::kDefaultHybridHoldMs);
   if (haveSswColour) s += ",\"sswHue\":" + String(sswHue) + ",\"sswSat\":" + String(sswSat);

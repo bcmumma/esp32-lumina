@@ -299,6 +299,14 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
       <div class="sl"><label for="fixSel">Layout</label><select id="fixSel"></select><span></span></div>
       <div class="sl" id="cellRow"><label for="cellCount">Cells</label><input type="number" id="cellCount" min="1" max="150"><span></span></div>
       <div class="fixplan" id="fixPlan"></div>
+      <div class="switch"><div><b>Lumina FX fixture</b><p class="note" id="fxNote">5 channels after the layout: Intensity, Strobe, Pan, Tilt, UV.</p></div>
+        <button class="tog calm" id="fxTog" aria-pressed="false" aria-label="Lumina FX fixture"></button></div>
+      <div id="fxRows" class="inner" style="margin:0">
+        <div class="sl"><label>Kick effect</label><div class="seg small" id="fxHitSeg"><button data-h="1">Ripple</button><button data-h="2">Glitter</button><button data-h="3">Pump</button><button data-h="0">None</button></div><span></span></div>
+        <div class="sl"><label for="beam">Beam</label><input type="range" id="beam" min="0" max="255"><output class="num" id="o_beam"></output></div>
+        <div class="sl"><label for="spread">Beam reach</label><input type="range" id="spread" min="1" max="8"><output class="num" id="o_spread"></output></div>
+        <p class="note num" id="fxLive"></p>
+      </div>
       <p class="note">Each layout matches a SoundSwitch venue named <b>Lnn</b> plus its name (e.g. <i>L03 10x3 RGB</i>). Pick the layout here, select the same venue in SoundSwitch, and re-run AutoScript.</p>
     </div>
   </details>
@@ -698,6 +706,19 @@ function renderFixture() {
   const cellsOnStrip = ctl.fixtureCells || 0;
   if (cellsOnStrip && leds) plan += `<div>On ${leds} LEDs: ${cellsOnStrip} cells, about ${(leds / cellsOnStrip).toFixed(1)} LEDs each.</div>`;
   $("fixPlan").innerHTML = plan;
+  const fxOn = !!ctl.fxEnabled, cellsOn = (ctl.fixtureCells || 0) > 0;
+  $("fxTog").setAttribute("aria-pressed", String(fxOn));
+  $("fxRows").hidden = !fxOn;
+  $("fxNote").textContent = cellsOn
+    ? `Patch it at address ${ctl.fxAddress}, right after the layout: Intensity, Strobe, Pan, Tilt, UV.`
+    : "Pick a cell layout first; the FX fixture goes right after it.";
+  pressed($("fxHitSeg"), "h", ctl.fxHit);
+  if (document.activeElement !== $("beam")) { $("beam").value = ctl.beamStrength; $("o_beam").textContent = pct(ctl.beamStrength); }
+  if (document.activeElement !== $("spread")) { $("spread").value = ctl.beamSpread; $("o_spread").textContent = "×" + ctl.beamSpread; }
+  const f = ctl.fxLive || {};
+  $("fxLive").textContent = fxOn && cellsOn
+    ? `Now: ${f.moving ? "moving" : "still"} · beam ${pct(f.beam || 0)} · ${f.pulsing ? "busy (kick effects on)" : "steady"}${f.sparkle ? " · UV sparkle" : ""}`
+    : "";
 }
 
 // ---------- actions ----------
@@ -792,6 +813,12 @@ function wire() {
     const v = e.target.value;
     control(v === "lumina16" ? "fixture=lumina16" : v === "plain" ? "cells=" + (+$("cellCount").value || 30) : "fixture=" + v);
   };
+  $("fxTog").onclick = () => control("fx=" + (ctl && ctl.fxEnabled ? 0 : 1));
+  $("fxHitSeg").onclick = (e) => { const b = e.target.closest("button"); if (b) control("fxHit=" + b.dataset.h); };
+  $("beam").oninput = (e) => { $("o_beam").textContent = pct(+e.target.value); };
+  $("beam").onchange = (e) => control("beam=" + e.target.value);
+  $("spread").oninput = (e) => { $("o_spread").textContent = "×" + e.target.value; };
+  $("spread").onchange = (e) => control("spread=" + e.target.value);
   $("cellCount").onchange = (e) => control("cells=" + Math.max(1, Math.min(150, +e.target.value || 30)));
   $("standalone").oninput = (e) => { $("o_standalone").textContent = e.target.value; };
   $("standalone").onchange = (e) => control("standalone=" + e.target.value);

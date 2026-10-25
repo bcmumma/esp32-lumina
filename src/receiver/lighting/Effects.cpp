@@ -28,6 +28,13 @@ static Rgb strand_color(const AudioLedPacket &p, const StrandSettings &st, uint8
   return hsv_to_rgb(st.hue + p.globalHue + offset, st.saturation, value);
 }
 
+// Phase 15: effects were tuned on 150-LED strands. Counts and speeds that are "per strand"
+// scale by length so a 900-LED strand looks the same; 150 or fewer are unchanged.
+static constexpr uint16_t TUNED_STRAND_LEDS = 150;
+static uint16_t len_scale(uint16_t n, uint16_t v) {
+  return n <= TUNED_STRAND_LEDS ? v : (uint16_t)(((uint32_t)v * n + TUNED_STRAND_LEDS / 2) / TUNED_STRAND_LEDS);
+}
+
 static uint8_t scaled_audio(uint8_t v, uint8_t sensitivity) {
   uint16_t x = ((uint16_t)v * (uint16_t)(sensitivity + 32)) / 160;
   return x > 255 ? 255 : (uint8_t)x;
@@ -114,8 +121,9 @@ void render_twinkle(uint8_t s, const AudioLedPacket &p, const StrandSettings &st
 
   uint8_t chance = map(st.twinkle, 0, 255, 1, 18);
   if (newBeat) chance = min<uint8_t>(40, chance + 18);
+  const uint16_t spawns = len_scale(n, chance);
 
-  for (uint8_t k = 0; k < chance; k++) {
+  for (uint16_t k = 0; k < spawns; k++) {
     uint16_t idx = random(n);
     uint8_t v = random(80, 255);
     add_pixel(s, idx, strand_color(p, st, random(0, 80), scale8_video(v, combined_brightness(p, st))));
@@ -309,8 +317,9 @@ void render_glitter_kick(uint8_t s, const AudioLedPacket &p, const StrandSetting
 
   uint8_t sparkles = st.density / 28;
   if (newBeat) sparkles += 16;
+  const uint16_t spawns = len_scale(n, sparkles);
 
-  for (uint8_t k = 0; k < sparkles; k++) {
+  for (uint16_t k = 0; k < spawns; k++) {
     add_pixel(s, random(n), strand_color(p, st, random(0, 180), combined_brightness(p, st)));
   }
 }
@@ -720,19 +729,20 @@ void render_kick_ripple(uint8_t s, const AudioLedPacket &p, const StrandSettings
   }
   uint8_t b = combined_brightness(p, st);
   uint16_t half = (n + 1U) / 2U;
-  uint8_t step = (uint8_t)(1U + st.speed / 64U);
-  uint8_t width = (uint8_t)(1U + st.density / 64U);
+  uint16_t step = len_scale(n, (uint16_t)(1U + st.speed / 64U));
+  const uint16_t baseWidth = (uint16_t)(1U + st.density / 64U);
+  uint16_t width = len_scale(n, baseWidth);
   int centerL = (int)((n - 1U) / 2U);
   int centerR = (int)(n / 2U);
   for (uint8_t k = 0; k < 4; k++) {
     if (rt[s].ring[k] == 0) continue;
     uint16_t r = rt[s].ring[k] - 1U;
     if (r >= half + width) { rt[s].ring[k] = 0; continue; }
-    for (uint8_t w = 0; w < width; w++) {
+    for (uint16_t w = 0; w < width; w++) {
       if (r < w) break;
       uint16_t rr = r - w;
       if (rr >= half) continue;
-      Rgb c = strand_color(p, st, rt[s].ringHue[k], scale8_video(b, (uint8_t)(255U - w * 50U)));
+      Rgb c = strand_color(p, st, rt[s].ringHue[k], scale8_video(b, (uint8_t)(255U - ((uint32_t)w * 50U * baseWidth) / width)));
       if (centerL - (int)rr >= 0) set_pixel(s, (uint16_t)(centerL - rr), c);
       if (centerR + (int)rr < n) set_pixel(s, (uint16_t)(centerR + rr), c);
     }
@@ -828,16 +838,86 @@ void apply_kick_flash(uint8_t s, const AudioLedPacket &p) {
 // Phase 15: SoundSwitch cells. The S3 picks this mode while a cell fixture drives the
 // strip; each LED takes its colour from the cell frame, blended between cell centres
 // (density >= 128 gives hard-edged cells). Reverse direction flips the strand.
+// The strand fields carry the Lumina FX cues from the S3 on top:
+//   speed = beam position, sensitivity = beam level (0 = none), twinkle = UV sparkle,
+//   strobe = kick effect on each hit (0 none, 1 ripple, 2 glitter, 3 pump flash through the strobe gate).
 cells::Frame cellSnapshot = {};
 
-void render_cells(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
+void render_cells(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat) {
   uint16_t n = count_for(s);
   if (n == 0) return;
   const uint8_t level = combined_brightness(p, st);
   const bool smooth = st.density < 128;
+  const bool rev = st.direction == 1;
   for (uint16_t i = 0; i < n; i++) {
     uint8_t r, g, b;
-    cells::sample(cellSnapshot, st.direction == 1 ? (uint16_t)(n - 1U - i) : i, n, smooth, r, g, b);
+    cells::sample(cellSnapshot, rev ? (uint16_t)(n - 1U - i) : i, n, smooth, r, g, b);
     set_pixel(s, i, {scale8_video(r, level), scale8_video(g, level), scale8_video(b, level)});
+  }
+  const uint8_t gb = p.globalBrightness;  // overlays respect the rig brightness cap
+
+  // Beam: a soft white spot where SoundSwitch's Pan/Tilt point.
+  if (st.sensitivity) {
+    const uint16_t pos = (uint16_t)(((uint32_t)st.speed * (n - 1U)) / 255U);
+    const uint16_t centre = rev ? (uint16_t)(n - 1U - pos) : pos;
+    const uint16_t half = max<uint16_t>(2, n / 24);
+    const uint8_t top = scale8_video(gb, st.sensitivity);
+    for (int32_t d = -(int32_t)half; d <= (int32_t)half; d++) {
+      const int32_t i = (int32_t)centre + d;
+      if (i < 0 || i >= (int32_t)n) continue;
+      const uint8_t v = scale8_video(top, (uint8_t)(255 - (abs(d) * 255) / (half + 1)));
+      add_pixel(s, (uint16_t)i, {v, v, v});
+    }
+  }
+
+  // UV sparkle burst.
+  if (st.twinkle) {
+    const uint16_t count = len_scale(n, (uint16_t)(1U + st.twinkle / 16U));
+    for (uint16_t k = 0; k < count; k++) {
+      const uint8_t v = scale8_video(gb, (uint8_t)random(120, 256));
+      add_pixel(s, (uint16_t)random(n), {v, v, v});
+    }
+  }
+
+  // Kick effect on each hit, only while the S3 says the section is busy.
+  const uint32_t now = millis();
+  if (st.strobe == 1) {  // ripple: white rings from the centre (not a flash)
+    if (newBeat) {
+      const uint8_t slot = rt[s].phase & 3U;
+      rt[s].ring[slot] = 1;
+      rt[s].phase++;
+    }
+    const uint16_t half = (n + 1U) / 2U, step = len_scale(n, 3), width = len_scale(n, 2);
+    const int cl = (int)((n - 1U) / 2U), cr = (int)(n / 2U);
+    for (uint8_t k = 0; k < 4; k++) {
+      if (rt[s].ring[k] == 0) continue;
+      const uint16_t r = rt[s].ring[k] - 1U;
+      if (r >= half + width) { rt[s].ring[k] = 0; continue; }
+      for (uint16_t w = 0; w < width && w <= r; w++) {
+        const uint16_t rr = r - w;
+        if (rr >= half) continue;
+        const uint8_t v = scale8_video(gb, (uint8_t)(255U - (w * 200U) / width));
+        if (cl - (int)rr >= 0) add_pixel(s, (uint16_t)(cl - rr), {v, v, v});
+        if (cr + (int)rr < (int)n) add_pixel(s, (uint16_t)(cr + rr), {v, v, v});
+      }
+      rt[s].ring[k] += step;
+    }
+  } else if (st.strobe == 2) {  // glitter: a burst of white sparkles that thins out
+    if (newBeat) rt[s].sparkle = 255;
+    if (rt[s].sparkle > 8) {
+      const uint16_t count = len_scale(n, (uint16_t)(rt[s].sparkle / 12U));
+      for (uint16_t k = 0; k < count; k++) {
+        const uint8_t v = scale8_video(gb, (uint8_t)random(150, 256));
+        add_pixel(s, (uint16_t)random(n), {v, v, v});
+      }
+      rt[s].sparkle = scale8(rt[s].sparkle, 200);
+    }
+  } else if (st.strobe == 3) {  // pump: a whole-strand white flash, through the strobe gate
+    if (newBeat && flash_allowed(s, p, now)) rt[s].flash = 255;
+    if (rt[s].flash > 8) {
+      const uint8_t v = scale8_video(gb, scale8(rt[s].flash, 160));
+      for (uint16_t i = 0; i < n; i++) add_pixel(s, i, {v, v, v});
+      rt[s].flash = scale8(rt[s].flash, 170);
+    }
   }
 }

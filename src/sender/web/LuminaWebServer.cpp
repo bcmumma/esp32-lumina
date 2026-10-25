@@ -416,6 +416,7 @@ static void handle_artnet() {
 //   &kickFlash=0..255 (rig-wide white flash on bass hits, saved; 0 = off)
 //   &cells=0..150 (SoundSwitch fixture: 0 = LUMINA-16, N = N plain RGB cells; saved)
 //   &fixture=lumina16|<layout id> (named layouts, see /api/fixtures; saved)
+//   &fx=0|1 &fxHit=0..3 (none/ripple/glitter/pump) &beam=0..255 &spread=1..8 (Lumina FX fixture; saved)
 //   (?artnet=1|0 = source artnet|audio)
 static void handle_control() {
   bool persist = false;
@@ -456,6 +457,10 @@ static void handle_control() {
     control.fixture = (uint8_t)clamp_int(server.arg("cells").toInt(), 0, MAX_CELLS);
     persist = true;
   }
+  if (server.hasArg("fx")) { control.fxEnabled = server.arg("fx").toInt() != 0; persist = true; }
+  if (server.hasArg("fxHit")) { control.fxHit = (uint8_t)clamp_int(server.arg("fxHit").toInt(), 0, 3); persist = true; }
+  if (server.hasArg("beam")) { control.beamStrength = (uint8_t)clamp_int(server.arg("beam").toInt(), 0, 255); persist = true; }
+  if (server.hasArg("spread")) { control.beamSpread = (uint8_t)clamp_int(server.arg("spread").toInt(), 1, 8); persist = true; }
   if (server.hasArg("kickFlash")) {
     control.kickFlash = (uint8_t)clamp_int(server.arg("kickFlash").toInt(), 0, 255);
     persist = true;

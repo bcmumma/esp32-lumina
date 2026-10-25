@@ -54,6 +54,9 @@ Scope (owner, 2026-10-17): make SoundSwitch's auto program look good with a mult
 - [ ] Wiring plan for 900 LEDs and three 90 W supplies in `docs/HARDWARE.md` *(Claude proposes; owner wires)*
 - [ ] Parity at 150 LEDs; strobe gate unchanged *(Claude)*
 - [x] Named SoundSwitch layouts L01–L20 (splits, hard blocks, per-fixture Dimmer and Strobe, mirrored, 60-cell): `lib/FixtureLayout` (7 tests), Setup → SoundSwitch fixture → Layout shows the build plan. Bench: L13 strobe off 0 flashes, on (cap 10, wanted ~7/s) 6.9/s, channel 0 → 0 *(Claude)*
+- [x] Probe of SoundSwitch functions (owner + Claude, 2026-10-23/25): AutoScript drives only Intensity, RGB, Tilt/Pan, Strobe and UV; everything else stays idle. FX Intensity pulses lock to the tempo (½, 1, 2 beats at 175 BPM) *(`artnet_record.py`)*
+- [x] Lumina FX fixture (5 ch after the layout: Intensity, Strobe, Pan, Tilt, UV): beam from Pan/Tilt in movement sections, kick effects (Ripple, Glitter, Pump) in busy sections, UV sparkle, FX Strobe gated; FX Intensity edges replace kicks when there is no audio. `lib/FxLayer` 6/6. Bench (fake 175 BPM frames, SoundSwitch closed): movement 8/8 beam, busy 8/8 kicks, 14 hits (14.6 expected) → 14 receiver hits, UV sparkle fades in 0.7 s, strobe off 0 / on 6.9/s (cap 10) *(Claude)*
+- [ ] Stage C: owner watches L11 + Lumina FX on a scripted track (Auto) and judges beam, kicks, drop; tune *(owner)*
 - [ ] Owner look check: SoundSwitch cells, Hybrid, Audio *(owner)*
 
 ## Open questions

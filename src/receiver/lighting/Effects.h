@@ -56,7 +56,7 @@ void render_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings &st)
 void render_drop_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat);
 // SoundSwitch cells (CELLS_MODE); main.cpp copies the received frame into cellSnapshot each frame.
 extern cells::Frame cellSnapshot;
-void render_cells(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
+void render_cells(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat);
 // Kick Flash overlay: update once per frame, then apply after each strand's mode.
 void update_kick_flash(const AudioLedPacket &p, bool newBeat);
 void apply_kick_flash(uint8_t s, const AudioLedPacket &p);

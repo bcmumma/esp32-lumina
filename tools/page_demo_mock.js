@@ -17,7 +17,8 @@
   };
   const ctl = { source: "auto", active: "audio", reason: "auto: no fresh art-net, fallback", autoFallback: "audio", timeoutMs: 1000,
     standaloneLevel: 128, switches: 7, artnetAgeMs: 84641, applyingArtnet: false, appliedPackets: 46847, address: 1,
-    brightnessCap: 255, brightnessCapMin: 8, brightnessCapMax: 255, strobeEnabled: false, strobeHz: 3, strobeMaxHz: 15, kickFlash: 0, fixture: 153, fixtureName: "10x3 RGB", fixtureCells: 30, fixtureChannels: 90, cellFrames: 0, cellPacketsSent: 0, cellFlashes: 0, hybridHoldMs: 10000 };
+    brightnessCap: 255, brightnessCapMin: 8, brightnessCapMax: 255, strobeEnabled: false, strobeHz: 3, strobeMaxHz: 15, kickFlash: 0, fixture: 153, fixtureName: "10x3 RGB", fixtureCells: 30, fixtureChannels: 90, cellFrames: 0, cellPacketsSent: 0, cellFlashes: 0, hybridHoldMs: 10000, fxEnabled: 1, fxHit: 1, beamStrength: 255, beamSpread: 3, fxAddress: 97,
+    fxLive: { beam: 230, pos: 140, moving: 1, pulsing: 1, sparkle: 0, edges: 0 } };
   const L = (id, name, mode, fixtures, cells, dimmer, strobe, mirror, hard) => {
     const per = (dimmer ? 1 : 0) + 3 * cells + (strobe ? 1 : 0);
     return { id, name, mode, fixtures, cells, perFixture: per, total: per * fixtures, stripCells: fixtures * cells * (mirror ? 2 : 1),
@@ -61,6 +62,10 @@
       if (f === "lumina16") { ctl.fixture = 0; ctl.fixtureCells = 0; }
       else if (p) { ctl.fixture = 150 + p.id; ctl.fixtureCells = p.stripCells; }
     }
+    if (q.has("fx")) ctl.fxEnabled = +q.get("fx");
+    if (q.has("fxHit")) ctl.fxHit = +q.get("fxHit");
+    if (q.has("beam")) ctl.beamStrength = +q.get("beam");
+    if (q.has("spread")) ctl.beamSpread = +q.get("spread");
     if (q.has("kickFlash")) ctl.kickFlash = Math.max(0, Math.min(255, +q.get("kickFlash")));
     if (q.has("strobe")) ctl.strobeEnabled = q.get("strobe") !== "0";
     if (q.has("cap")) ctl.brightnessCap = Math.max(8, Math.min(255, +q.get("cap")));
