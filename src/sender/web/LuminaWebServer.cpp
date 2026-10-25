@@ -10,6 +10,8 @@
 #include "../lighting/ControlRouter.h"
 #include "FixtureLayout.h"
 #include "../util/Clamp.h"
+#include <Preferences.h>
+#include <stdlib.h>
 
 WebServer server(80);
 
@@ -483,7 +485,47 @@ static void handle_control() {
   server.send(200, "application/json", s);
 }
 
+// Show-screen buttons the owner hid in Setup (Phase 15). Page-only preference, saved on the S3 so
+// every phone and PC shows the same buttons. Bit n of uiHiddenModes = LED mode n; bit k of
+// uiHiddenKicks = kick look k.
+static uint64_t uiHiddenModes = 0;
+static uint8_t uiHiddenKicks = 0;
+
+static void load_ui_prefs() {
+  Preferences store;
+  if (!store.begin("lumina_ui", true)) return;
+  uiHiddenModes = store.getULong64("modes", 0);
+  uiHiddenKicks = store.getUChar("kicks", 0);
+  store.end();
+}
+
+//   /api/ui[?hideModes=<decimal bit mask>&hideKicks=0..255]
+static void handle_ui() {
+  bool changed = false;
+  if (server.hasArg("hideModes")) {
+    uiHiddenModes = strtoull(server.arg("hideModes").c_str(), nullptr, 10) & ((1ULL << (LED_MODE_MAX + 1)) - 1);
+    changed = true;
+  }
+  if (server.hasArg("hideKicks")) {
+    uiHiddenKicks = (uint8_t)clamp_int(server.arg("hideKicks").toInt(), 0, 255);
+    changed = true;
+  }
+  if (changed) {
+    Preferences store;
+    if (store.begin("lumina_ui", false)) {
+      store.putULong64("modes", uiHiddenModes);
+      store.putUChar("kicks", uiHiddenKicks);
+      store.end();
+    }
+  }
+  char out[96];
+  snprintf(out, sizeof(out), "{\"hideModes\":%llu,\"hideKicks\":%u}", (unsigned long long)uiHiddenModes, uiHiddenKicks);
+  no_cache();
+  server.send(200, "application/json", out);
+}
+
 void setup_web_server() {
+  load_ui_prefs();
   server.on("/", handle_root);
   server.on("/api/state", handle_state);
   server.on("/api/live", handle_live);
@@ -497,6 +539,7 @@ void setup_web_server() {
     no_cache();
     server.send(200, "application/json", s);
   });
+  server.on("/api/ui", handle_ui);
   server.on("/api/setTuning", handle_set_tuning);
   server.on("/api/setLed", handle_set_led);
   server.on("/api/save", handle_save);

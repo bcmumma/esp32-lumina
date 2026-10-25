@@ -32,6 +32,7 @@
     L(14, "6x5 Dim Strobe", "5 Cell Dim Strobe", 6, 5, 1, 1), L(15, "Mirror 15x1 RGB", "1 Cell", 15, 1, 0, 0, 1),
     L(16, "Mirror 5x3 RGB", "3 Cell", 5, 3, 0, 0, 1), L(17, "Mirror 5x3 Dim Strobe", "3 Cell Dim Strobe", 5, 3, 1, 1, 1),
     L(18, "Fine 60x1 RGB", "1 Cell", 60, 1), L(19, "Fine 30x2 RGB", "2 Cell", 30, 2), L(20, "Fine 15x4 RGB", "4 Cell", 15, 4)];
+  const UI = { hideModes: 0, hideKicks: 0 };
   const t0 = performance.now();
   let pulse = 0, lastKick = -1;
 
@@ -97,6 +98,10 @@
       case "/api/live": body = live(); break;
       case "/api/control": body = applyControl(q); break;
       case "/api/fixtures": body = FIXTURES; break;
+      case "/api/ui":
+        if (q.has("hideModes")) UI.hideModes = +q.get("hideModes");
+        if (q.has("hideKicks")) UI.hideKicks = +q.get("hideKicks");
+        body = UI; break;
       case "/api/setLed": body = applyLed(q); break;
       case "/api/setTuning": for (const [k, v] of q) state.cfg[k] = +v; body = { ok: true }; break;
       case "/api/save": body = { saved: true, activeStrands: state.led.activeStrands }; break;

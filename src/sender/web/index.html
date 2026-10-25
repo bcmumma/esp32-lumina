@@ -156,6 +156,9 @@ details > .inner { display: grid; gap: 10px; margin-top: 10px; }
 .fixplan { background: var(--panel-2); border-radius: 8px; padding: 10px 12px; font-size: 13px; display: grid; gap: 4px; }
 .fixplan b { color: var(--accent); font-weight: 600; }
 .fixplan .num { word-break: break-word; }
+.picks { display: flex; flex-wrap: wrap; gap: 6px; }
+.picks button { border: 1px solid var(--line); background: none; color: var(--muted); padding: 6px 10px; border-radius: 999px; font: 600 12px var(--display); letter-spacing: .03em; }
+.picks button[aria-pressed="true"] { background: var(--panel-2); color: var(--fg); border-color: var(--fg); }
 .strands { display: grid; gap: 8px; }
 .strandrow { display: grid; grid-template-columns: auto 1fr 1fr; gap: 8px; align-items: center; background: var(--panel-2); border-radius: 8px; padding: 8px 10px; }
 .strandrow .name { font: 600 14px var(--display); }
@@ -311,6 +314,16 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
         <p class="note num" id="fxLive"></p>
       </div>
       <p class="note">Each layout matches a SoundSwitch venue named <b>Lnn</b> plus its name (e.g. <i>L03 10x3 RGB</i>). Pick the layout here, select the same venue in SoundSwitch, and re-run AutoScript.</p>
+    </div>
+  </details>
+
+  <details class="sec"><summary>Show screen buttons</summary>
+    <div class="inner">
+      <p class="note">Tap to hide or show a button on the Show screen. Lit = shown. Saved on Lumina, so every phone sees the same.</p>
+      <div id="uiModes" class="inner" style="margin:0"></div>
+      <h2 style="margin-top:6px">Kick looks</h2>
+      <div class="picks" id="uiKicks"></div>
+      <div class="row"><button class="btn" id="uiShowAll">Show everything</button></div>
     </div>
   </details>
 
@@ -507,15 +520,38 @@ function toast(msg, err) {
 }
 
 // ---------- build static UI ----------
+// Buttons hidden in Setup → Show screen buttons (bit masks kept on the S3; plain maths, ids go past 32).
+let ui = { hideModes: 0, hideKicks: 0 };
+const bitOn = (mask, i) => Math.floor(mask / 2 ** i) % 2 === 1;
+const bitFlip = (mask, i) => bitOn(mask, i) ? mask - 2 ** i : mask + 2 ** i;
+const modeShown = (id) => !bitOn(ui.hideModes, id);
+const kickShown = (id) => !bitOn(ui.hideKicks, id);
+const visibleGenres = () => GENRES.filter(g => g[2].some(modeShown));
+async function loadUi() { try { ui = await call("/api/ui"); } catch (e) {} applyUi(); }
+function saveUi() { call(`/api/ui?hideModes=${ui.hideModes}&hideKicks=${ui.hideKicks}`).catch(() => toast("Couldn't save the button choice", true)); applyUi(); }
+function applyUi() {
+  buildGenres();
+  if (!visibleGenres().some(g => g[0] === genre) && visibleGenres().length) genre = visibleGenres()[0][0];
+  if (led) renderModes();
+  $("kickLooks").innerHTML = "";
+  renderLooks();
+  $("uiModes").innerHTML = GENRES.map(([gid, gname, ids]) =>
+    `<div><div class="note" style="margin-bottom:4px">${gname}</div><div class="picks">` +
+    ids.map(id => `<button data-m="${id}" aria-pressed="${modeShown(id)}">${MODES[id][0]}</button>`).join("") + "</div></div>").join("");
+  $("uiKicks").innerHTML = KICK_LOOKS.filter(k => k[0] !== 0).map(([id, name]) =>
+    `<button data-k="${id}" aria-pressed="${kickShown(id)}">${name}</button>`).join("");
+}
+
 function buildGenres() {
-  $("genres").innerHTML = GENRES.map(([id, name]) =>
+  $("genres").innerHTML = visibleGenres().map(([id, name]) =>
     `<button data-g="${id}"><span class="gdot" style="background:var(--g-${id})"></span>${name}</button>`).join("");
   $("genres").onclick = (e) => { const b = e.target.closest("button"); if (b) { genre = b.dataset.g; renderModes(); } };
 }
 function renderModes() {
   pressed($("genres"), "g", genre);
   const cur = led ? first().mode : -1;
-  const list = GENRES.find(g => g[0] === genre)[2];
+  const g = GENRES.find(x => x[0] === genre);
+  const list = g ? g[2].filter(modeShown) : [];
   $("modes").innerHTML = list.map(id => {
     const [name, desc, tags] = MODES[id];
     const t = (tags.includes("k") ? `<span class="tag kick">Kick</span>` : "") + (tags.includes("s") ? `<span class="tag strobe">Strobe</span>` : "");
@@ -564,7 +600,7 @@ function renderAll() {
 }
 function renderLook() {
   const st = first();
-  const owner = GENRES.find(g => g[2].includes(st.mode));
+  const owner = visibleGenres().find(g => g[2].includes(st.mode) && modeShown(st.mode));
   if (owner && !renderLook.userPicked) genre = owner[0];
   renderModes();
   for (const b of $("swatches").children) {
@@ -734,7 +770,7 @@ function renderLooks() {
   $("ssPanel").hidden = !show;
   if (!show) return;
   if (!$("kickLooks").children.length) {
-    $("kickLooks").innerHTML = KICK_LOOKS.map(([id, name, desc, gated]) =>
+    $("kickLooks").innerHTML = KICK_LOOKS.filter(([id]) => id === 0 || kickShown(id) || id === ctl.fxHit).map(([id, name, desc, gated]) =>
       `<button class="mode" data-k="${id}"><b>${name}</b><span>${desc}</span>${gated ? '<div class="tags"><span class="tag strobe">Strobe</span></div>' : ""}</button>`).join("");
   }
   for (const b of $("kickLooks").children) b.setAttribute("aria-pressed", String(+b.dataset.k === ctl.fxHit));
@@ -839,6 +875,9 @@ function wire() {
     control(v === "lumina16" ? "fixture=lumina16" : v === "plain" ? "cells=" + (+$("cellCount").value || 30) : "fixture=" + v);
   };
   $("fxTog").onclick = () => control("fx=" + (ctl && ctl.fxEnabled ? 0 : 1));
+  $("uiModes").onclick = (e) => { const b = e.target.closest("button"); if (b) { ui.hideModes = bitFlip(ui.hideModes, +b.dataset.m); saveUi(); } };
+  $("uiKicks").onclick = (e) => { const b = e.target.closest("button"); if (b) { ui.hideKicks = bitFlip(ui.hideKicks, +b.dataset.k); saveUi(); } };
+  $("uiShowAll").onclick = () => { ui.hideModes = 0; ui.hideKicks = 0; saveUi(); };
   $("kickLooks").onclick = (e) => { const b = e.target.closest("button"); if (b) control("fxHit=" + b.dataset.k); };
   $("swBeam").onclick = () => control("fxBeam=" + (ctl.beamOn ? 0 : 1));
   $("swSparkle").onclick = () => control("fxSparkle=" + (ctl.sparkleOn ? 0 : 1));
@@ -892,6 +931,7 @@ async function pollLive() {
 buildGenres(); buildSwatches(); buildSetup(); wire();
 try { if (localStorage.getItem("lumina.screen") === "setup") showScreen("setup"); } catch (e) {}
 loadFixtures();
+loadUi();
 control("");
 setInterval(() => { if (!document.hidden) control(""); }, 2000);
 loadState().catch(() => toast("Couldn't load settings from Lumina", true)).finally(pollLive);
