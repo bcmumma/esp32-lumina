@@ -62,8 +62,8 @@ Scope (owner, 2026-10-17): make SoundSwitch's auto program look good with a mult
 - [x] Setup → Show screen buttons: hide any mode or kick look; saved on the S3 (verified across a reboot) *(Claude)*
 - [ ] Owner: two strands of 450 (strand 1 pin 33, strand 2 pin 25; Max LEDs/strand 450), Split on, L2 or L3 venue: strand 1 shows the first half of the fixtures, strand 2 the second, beam crosses over *(owner)*
 - [x] Two room receivers, one S3 (owner, 2026-10-25: same show, own wiring; each room shows the whole SoundSwitch pattern): room 1 (`receiver`) drives strands 1–2, room 2 (`receiver_room2`) drives strands 3–4 on its own first two outputs (`lib/RoomMap`, 4 tests). Verified on the WROOM: the room-2 build drove strand 3's settings (Mid VU, 222 LEDs, pin 33) and the room-1 build strands 1–2 *(Claude)*
-- [ ] Owner: build the room-2 receiver (same wiring as room 1), plug it in, and tell Claude its COM port; Claude flashes `receiver_room2`. On the page set Active strands to 3 or 4 and strands 3–4 to room 2's pins (e.g. 33 and 25) and counts *(owner)*
-- [ ] Owner: strand 1 flicker (2026-10-25, 222 LEDs in Solid): check WS2815 BI at the first LED (tie to GND), the joint at LED 150 (DI and BI), common ground, 330 Ω on the data line, 12 V injection at strip 2 *(owner)*
+- [x] Room 2 receiver built and running (owner + Claude, 2026-10-25): `receiver_room2` flashed; saved setup is 3 active strands, strand 1 = 450 LEDs (room 1, GPIO 33), strand 3 = 450 LEDs (room 2, GPIO 26), strands 2 and 4 off, each room on its own supply. Both receivers locked on channel 6, 28 packets/s, 0 lost; owner: "it's all good"
+- [x] Strand 1 flicker (2026-10-25): fixed by the owner by shortening the data wire, which is why room 2 got its own receiver
 - [ ] Owner: look check of the new kick looks with SoundSwitch playing *(owner)*
 - [ ] Bench audio path: the S3 read silence while the PC played kick audio (2026-10-25); check the Modi/Magni is on and is Windows' default output *(owner)*
 - [ ] Owner look check: SoundSwitch cells, Hybrid, Audio *(owner)*
