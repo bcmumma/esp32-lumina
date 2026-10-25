@@ -40,6 +40,7 @@ A distributed smart-lighting platform:
 ## Commands
 - PowerShell on the Windows PC.
 - Build: `pio run -e <env>`. Upload: `pio run -e <env> -t upload --upload-port COM<n>`.
+- Second room's receiver: `pio run -e receiver_room2 -t upload --upload-port COM<n>` (drives strands 3–4).
 - Unit tests (on the S3): `pio test -e sender_test --upload-port COM<n> --test-port COM<n>`, then re-upload the `sender` env.
 - Capture serial with a time-limited, non-interactive capture, not the interactive monitor. My serial monitor must be closed while you upload or capture.
 - Test bench (`tools/testbench/`, run with the gitignored `.venv`): `serial_capture.py <secs> COM<a> [COM<b>]`, `tone_sweep.py COM<a> [COM<b>]`, `webcam_frame.py`, `strand_colors.py --host <ip>`, `artnet_listen.py` (Art-Net monitor; answers ArtPoll), `artnet_send.py --to <ip>` (test pattern; repeat `--to`; `--lumina16 v1,v2,...` for fixed fixture values), `artnet_compare.py --s3 <ip>` (S3 vs PC frame comparison), `soak.py --s3 <ip> --rx-port COM<n> [--ping <ip>] --minutes 30` (network soak). S3 Art-Net diagnostics: `/api/artnet`. Control source and strobe: `/api/control?source=auto|artnet|audio|standalone&fallback=audio|standalone&standalone=0..255&strobe=0|1&strobeHz=1..8&cap=8..255`. Strobe enable is live-only; the other settings (including the brightness cap, 255 = none) are saved. Frames and logs go in gitignored `captures/`.

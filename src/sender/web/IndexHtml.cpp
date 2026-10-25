@@ -249,6 +249,7 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
     <div class="seg small" id="targetSeg" aria-label="Apply to">
       <button data-t="all">All</button><button data-t="0">1</button><button data-t="1">2</button><button data-t="2">3</button><button data-t="3">4</button>
     </div>
+    <p class="note" style="margin:-4px 0 0">Strands 1–2 are Room 1, 3–4 are Room 2.</p>
     <div class="genres" id="genres"></div>
     <div class="modes" id="modes"></div>
     <button class="offbtn" id="offBtn" aria-pressed="false" onclick="pickMode(0)">Turn off</button>
@@ -337,6 +338,7 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
       <div class="sl"><label>Active strands</label><div class="seg small" id="activeSeg"><button data-n="1">1</button><button data-n="2">2</button><button data-n="3">3</button><button data-n="4">4</button></div><span></span></div>
       <div class="strands" id="strandRows"></div>
       <div class="sl"><label for="maxLeds">Max LEDs/strand</label><input type="number" id="maxLeds" min="1" max="1000"><span></span></div>
+      <p class="note">Room 1's receiver drives strands 1–2; room 2's receiver (the <code>receiver_room2</code> build) drives strands 3–4 on its own first two outputs, so set strands 3–4 to the pins wired in room 2 (e.g. 33 and 25). Set Active strands to 3 or 4 to light room 2.</p>
       <p class="note">Pin, count, and type changes make the receiver reconfigure. Proven pins: 33, 25, 26, 27.</p>
     </div>
   </details>
@@ -580,7 +582,7 @@ function buildSetup() {
     `<div class="hm"><span>${n}</span><div class="t"><div class="f" id="h_${n}"></div></div><span class="num" id="hn_${n}">0</span></div>`).join("");
   let rows = "";
   for (let s = 0; s < MAX_STRANDS; s++) {
-    rows += `<div class="strandrow"><span class="name">Strand ${s + 1}</span>
+    rows += `<div class="strandrow"><span class="name">Strand ${s + 1} <span class="note">· Room ${s < 2 ? 1 : 2}</span></span>
       <label class="field">GPIO<input type="number" id="pin${s}" min="0" max="48"></label>
       <label class="field">LEDs<input type="number" id="cnt${s}" min="0" max="1000"></label>
       <select id="type${s}" aria-label="Strand ${s + 1} LED type">${LED_TYPES.map((t, i) => `<option value="${i}">${t}</option>`).join("")}</select>

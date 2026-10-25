@@ -113,6 +113,15 @@ The web UI can override the source manually. Diagnostics show the active source.
 - Prefer Art-Net direct to the WROOM. Don't relay pixel frames through the S3 over ESP-NOW unless testing proves it works.
 - Receiver priority: pixel Art-Net when active, otherwise ESP-NOW intelligent mode after a timeout.
 
+## Two Room Receivers (Phase 15)
+
+- The S3 broadcasts one ESP-NOW stream (state packets and cell frames). Any number of receivers on the channel hear it.
+- `lib/RoomMap` rewrites each packet as one room sees it:
+  - the `receiver` build (room 1) keeps strand slots 1–2;
+  - the `receiver_room2` build moves slots 3–4 to its local outputs 1–2, and its spare outputs stay off;
+  - `activeStrands` counts only that room's slots, and a room with none is dark.
+- **Same show, own wiring:** each room uses the per-strand pin, count, and type from Setup. Each room renders SoundSwitch cells over its own strands (Split works within the room) and keeps its own strobe gate.
+
 ## Firmware Modules (v3, since Phase 9)
 
 One PlatformIO project (`platformio.ini`): the `sender` env builds `src/sender/`, and the `receiver` env builds `src/receiver/`. Both include `lib/LuminaProtocol/LuminaProtocol.h`, the single definition of the 107-byte ESP-NOW packet (version 12), which `static_assert` guards. Byte 105, `senderChannel`, carries the sender's Wi-Fi channel so the receiver can lock straight to it.

@@ -15,6 +15,13 @@
 #include "lighting/Renderer.h"
 #include "lighting/Effects.h"
 #include "network/EspNowReceiver.h"
+#include "RoomMap.h"
+
+// Which room this receiver lights (Phase 15): 1 = the S3's strands 1-2, 2 = strands 3-4.
+// Set by the build: `receiver` is room 1, `receiver_room2` is room 2.
+#ifndef LUMINA_ROOM
+#define LUMINA_ROOM 1
+#endif
 
 // v3 layout: setup() and the frame loop live here; each subsystem has its own module.
 
@@ -48,6 +55,7 @@ void setup() {
 
   Serial.println();
   Serial.println("Lumina v3 receiver: four strands, rave/electronic effects (PlatformIO build of v2/v22)");
+  Serial.printf("Room %u receiver: drives the sender's strands %u-%u\n", LUMINA_ROOM, LUMINA_ROOM * 2 - 1, LUMINA_ROOM * 2);
   Serial.print("Expected packet size: ");
   Serial.println(sizeof(AudioLedPacket));
   Serial.println("Default data pins: Strand 1=GPIO33, Strand 2=GPIO25, Strand 3=GPIO26, Strand 4=GPIO27.");
@@ -81,6 +89,7 @@ void loop() {
   bad = badPackets;
   if (havePacket && generation != seenGeneration) {
     currentPacket = latestPacket;
+    room::view(currentPacket, LUMINA_ROOM);  // this room's two strands become local strands 1-2
     newPacket = true;
   }
   portEXIT_CRITICAL(&packetMux);
@@ -166,7 +175,8 @@ void loop() {
     if (haveCurrentPacket) {
       const AudioLedPacket &p = currentPacket;
       Serial.printf(
-        "rx good=%lu bad=%lu lost=%lu seq=%u age=%lums ch=%u locked=%u fps=%lu flashes=%lu cells=%u/%lu render=%luus show=%luus vol=%3u bass=%3u mid=%3u treb=%3u beat=%3u pulse=%3u conf=%3u bpm=%3u gB=%3u modes=[%u,%u,%u,%u] br=[%u,%u,%u,%u] en=[%u,%u,%u,%u] pins=[%u,%u,%u,%u] counts=[%u,%u,%u,%u] cmap=%u rgbScale=[%u,%u,%u] gamma10=%u\n",
+        "room=%u rx good=%lu bad=%lu lost=%lu seq=%u age=%lums ch=%u locked=%u fps=%lu flashes=%lu cells=%u/%lu render=%luus show=%luus vol=%3u bass=%3u mid=%3u treb=%3u beat=%3u pulse=%3u conf=%3u bpm=%3u gB=%3u modes=[%u,%u,%u,%u] br=[%u,%u,%u,%u] en=[%u,%u,%u,%u] pins=[%u,%u,%u,%u] counts=[%u,%u,%u,%u] cmap=%u rgbScale=[%u,%u,%u] gamma10=%u\n",
+        (unsigned)LUMINA_ROOM,
         (unsigned long)good,
         (unsigned long)bad,
         (unsigned long)lostPackets,
