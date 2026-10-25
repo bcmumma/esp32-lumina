@@ -26,7 +26,11 @@ struct ControlState {
   uint8_t brightnessCap;        // saved; RIG_BRIGHTNESS_CAP_MIN..MAX, caps globalBrightness in every source
   // Lumina FX fixture (Phase 15): 5 channels right after the cell layout. All saved.
   bool fxEnabled;
-  uint8_t fxHit;                // kick effect in busy sections: 0 none, 1 ripple, 2 glitter, 3 pump flash (gated)
+  uint8_t fxHit;                // kick look: 0 off, 1 ripple, 2 glitter, 3 pump*, 4 shatter, 5 comet, 6 duck*, 7 ping-pong* (* gated)
+  bool beamOn;                  // FX looks that can be switched on the Show screen
+  bool sparkleOn;
+  bool fxStrobeOn;
+  bool kicksAlways;             // false = kick looks only in busy sections
   uint8_t beamStrength;         // 0..255
   uint8_t beamSpread;           // 1..8
 };

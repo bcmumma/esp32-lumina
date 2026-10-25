@@ -56,7 +56,10 @@ Scope (owner, 2026-10-17): make SoundSwitch's auto program look good with a mult
 - [x] Named SoundSwitch layouts L01–L20 (splits, hard blocks, per-fixture Dimmer and Strobe, mirrored, 60-cell): `lib/FixtureLayout` (7 tests), Setup → SoundSwitch fixture → Layout shows the build plan. Bench: L13 strobe off 0 flashes, on (cap 10, wanted ~7/s) 6.9/s, channel 0 → 0 *(Claude)*
 - [x] Probe of SoundSwitch functions (owner + Claude, 2026-10-23/25): AutoScript drives only Intensity, RGB, Tilt/Pan, Strobe and UV; everything else stays idle. FX Intensity pulses lock to the tempo (½, 1, 2 beats at 175 BPM) *(`artnet_record.py`)*
 - [x] Lumina FX fixture (5 ch after the layout: Intensity, Strobe, Pan, Tilt, UV): beam from Pan/Tilt in movement sections, kick effects (Ripple, Glitter, Pump) in busy sections, UV sparkle, FX Strobe gated; FX Intensity edges replace kicks when there is no audio. `lib/FxLayer` 6/6. Bench (fake 175 BPM frames, SoundSwitch closed): movement 8/8 beam, busy 8/8 kicks, 14 hits (14.6 expected) → 14 receiver hits, UV sparkle fades in 0.7 s, strobe off 0 / on 6.9/s (cap 10) *(Claude)*
-- [ ] Stage C: owner watches L11 + Lumina FX on a scripted track (Auto) and judges beam, kicks, drop; tune *(owner)*
+- [x] Stage C (owner, 2026-10-25): "the hybrid works amazingly".
+- [x] Show-screen "SoundSwitch looks" panel: switches for Beam, UV sparkle, FX Strobe, Kicks always (saved), and 7 kick looks: Ripple, Glitter, Shatter, Comet, Pump\*, Duck\*, Ping-Pong\* (\* through the strobe gate). Bench: gated looks 11 flashes/4 s with Strobe on (cap 10) and 0 with it off; the rest never use the gate; each switch verified; Kicks always off 0 / on 2 hits outside busy sections *(Claude)*
+- [ ] Owner: look check of the new kick looks with SoundSwitch playing *(owner)*
+- [ ] Bench audio path: the S3 read silence while the PC played kick audio (2026-10-25); check the Modi/Magni is on and is Windows' default output *(owner)*
 - [ ] Owner look check: SoundSwitch cells, Hybrid, Audio *(owner)*
 
 ## Open questions

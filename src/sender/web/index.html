@@ -268,6 +268,15 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
     </details>
   </section>
 
+  <section class="panel" id="ssPanel" hidden>
+    <div class="row" style="justify-content:space-between"><h2>SoundSwitch looks</h2><span class="note" id="ssNow"></span></div>
+    <div class="modes" id="kickLooks"></div>
+    <div class="switch"><span>Beam (follows SoundSwitch's movement)</span><button class="tog calm" id="swBeam" aria-label="Beam"></button></div>
+    <div class="switch"><span>UV sparkle bursts</span><button class="tog calm" id="swSparkle" aria-label="UV sparkle"></button></div>
+    <div class="switch"><span>FX Strobe (needs Strobe on)</span><button class="tog calm" id="swFxStrobe" aria-label="FX strobe"></button></div>
+    <div class="switch"><span>Kick looks on every kick (off = busy sections only)</span><button class="tog calm" id="swAlways" aria-label="Kicks always"></button></div>
+  </section>
+
   <section class="panel">
     <div class="switch"><div><h2>Strobe</h2><p class="note" id="strobeNote">Off. Flash modes stay dark until you turn it on.</p></div>
       <button class="tog" id="strobeTog" aria-pressed="false" aria-label="Strobe" onclick="toggleStrobe()"></button></div>
@@ -297,7 +306,6 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
       <div class="switch"><div><b>Lumina FX fixture</b><p class="note" id="fxNote">5 channels after the layout: Intensity, Strobe, Pan, Tilt, UV.</p></div>
         <button class="tog calm" id="fxTog" aria-pressed="false" aria-label="Lumina FX fixture"></button></div>
       <div id="fxRows" class="inner" style="margin:0">
-        <div class="sl"><label>Kick effect</label><div class="seg small" id="fxHitSeg"><button data-h="1">Ripple</button><button data-h="2">Glitter</button><button data-h="3">Pump</button><button data-h="0">None</button></div><span></span></div>
         <div class="sl"><label for="beam">Beam</label><input type="range" id="beam" min="0" max="255"><output class="num" id="o_beam"></output></div>
         <div class="sl"><label for="spread">Beam reach</label><input type="range" id="spread" min="1" max="8"><output class="num" id="o_spread"></output></div>
         <p class="note num" id="fxLive"></p>
@@ -629,6 +637,7 @@ function renderControl(c) {
   $("strobeHz").value = c.strobeHz; $("o_strobeHz").textContent = c.strobeHz;
   renderCapLine();
   renderPower();
+  renderLooks();
 }
 function renderLive(j) {
   const bars = { mBass: j.bass, mMid: j.mid, mTreble: j.treble, mLeft: j.left, mRight: j.right };
@@ -707,13 +716,34 @@ function renderFixture() {
   $("fxNote").textContent = cellsOn
     ? `Patch it at address ${ctl.fxAddress}, right after the layout: Intensity, Strobe, Pan, Tilt, UV.`
     : "Pick a cell layout first; the FX fixture goes right after it.";
-  pressed($("fxHitSeg"), "h", ctl.fxHit);
+  renderLooks();
   if (document.activeElement !== $("beam")) { $("beam").value = ctl.beamStrength; $("o_beam").textContent = pct(ctl.beamStrength); }
   if (document.activeElement !== $("spread")) { $("spread").value = ctl.beamSpread; $("o_spread").textContent = "×" + ctl.beamSpread; }
   const f = ctl.fxLive || {};
   $("fxLive").textContent = fxOn && cellsOn
     ? `Now: ${f.moving ? "moving" : "still"} · beam ${pct(f.beam || 0)} · ${f.pulsing ? "busy (kick effects on)" : "steady"}${f.sparkle ? " · UV sparkle" : ""}`
     : "";
+}
+
+const KICK_LOOKS = [[1, "Ripple", "White rings burst from the centre.", 0], [2, "Glitter", "A burst of white sparkles that thins out.", 0],
+  [4, "Shatter", "Random white shards light up and fade.", 0], [5, "Comet", "A comet shoots along the strip, alternating ends.", 0],
+  [3, "Pump", "The whole strip flashes white.", 1], [6, "Duck", "The colours dip dark and swell back, sidechain style.", 1],
+  [7, "Ping-Pong", "Alternate halves flash, left then right.", 1], [0, "Off", "No kick look.", 0]];
+function renderLooks() {
+  const show = ctl && ctl.fxEnabled && (ctl.fixtureCells || 0) > 0;
+  $("ssPanel").hidden = !show;
+  if (!show) return;
+  if (!$("kickLooks").children.length) {
+    $("kickLooks").innerHTML = KICK_LOOKS.map(([id, name, desc, gated]) =>
+      `<button class="mode" data-k="${id}"><b>${name}</b><span>${desc}</span>${gated ? '<div class="tags"><span class="tag strobe">Strobe</span></div>' : ""}</button>`).join("");
+  }
+  for (const b of $("kickLooks").children) b.setAttribute("aria-pressed", String(+b.dataset.k === ctl.fxHit));
+  $("swBeam").setAttribute("aria-pressed", String(!!ctl.beamOn));
+  $("swSparkle").setAttribute("aria-pressed", String(!!ctl.sparkleOn));
+  $("swFxStrobe").setAttribute("aria-pressed", String(!!ctl.fxStrobeOn));
+  $("swAlways").setAttribute("aria-pressed", String(!!ctl.kicksAlways));
+  const f = ctl.fxLive || {};
+  $("ssNow").textContent = ctl.active === "artnet" ? `${f.moving ? "moving" : "still"} · ${f.pulsing ? "busy" : "steady"}` : "SoundSwitch not driving";
 }
 
 // ---------- actions ----------
@@ -809,7 +839,11 @@ function wire() {
     control(v === "lumina16" ? "fixture=lumina16" : v === "plain" ? "cells=" + (+$("cellCount").value || 30) : "fixture=" + v);
   };
   $("fxTog").onclick = () => control("fx=" + (ctl && ctl.fxEnabled ? 0 : 1));
-  $("fxHitSeg").onclick = (e) => { const b = e.target.closest("button"); if (b) control("fxHit=" + b.dataset.h); };
+  $("kickLooks").onclick = (e) => { const b = e.target.closest("button"); if (b) control("fxHit=" + b.dataset.k); };
+  $("swBeam").onclick = () => control("fxBeam=" + (ctl.beamOn ? 0 : 1));
+  $("swSparkle").onclick = () => control("fxSparkle=" + (ctl.sparkleOn ? 0 : 1));
+  $("swFxStrobe").onclick = () => control("fxStrobe=" + (ctl.fxStrobeOn ? 0 : 1));
+  $("swAlways").onclick = () => control("fxAlways=" + (ctl.kicksAlways ? 0 : 1));
   $("beam").oninput = (e) => { $("o_beam").textContent = pct(+e.target.value); };
   $("beam").onchange = (e) => control("beam=" + e.target.value);
   $("spread").oninput = (e) => { $("o_spread").textContent = "×" + e.target.value; };

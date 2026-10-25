@@ -17,7 +17,7 @@
   };
   const ctl = { source: "auto", active: "audio", reason: "auto: no fresh art-net, fallback", autoFallback: "audio", timeoutMs: 1000,
     standaloneLevel: 128, switches: 7, artnetAgeMs: 84641, applyingArtnet: false, appliedPackets: 46847, address: 1,
-    brightnessCap: 255, brightnessCapMin: 8, brightnessCapMax: 255, strobeEnabled: false, strobeHz: 3, strobeMaxHz: 15, kickFlash: 0, fixture: 153, fixtureName: "10x3 RGB", fixtureCells: 30, fixtureChannels: 90, cellFrames: 0, cellPacketsSent: 0, cellFlashes: 0, hybridHoldMs: 10000, fxEnabled: 1, fxHit: 1, beamStrength: 255, beamSpread: 3, fxAddress: 97,
+    brightnessCap: 255, brightnessCapMin: 8, brightnessCapMax: 255, strobeEnabled: false, strobeHz: 3, strobeMaxHz: 15, kickFlash: 0, fixture: 153, fixtureName: "10x3 RGB", fixtureCells: 30, fixtureChannels: 90, cellFrames: 0, cellPacketsSent: 0, cellFlashes: 0, hybridHoldMs: 10000, fxEnabled: 1, fxHit: 1, beamOn: 1, sparkleOn: 1, fxStrobeOn: 1, kicksAlways: 0, beamStrength: 255, beamSpread: 3, fxAddress: 97,
     fxLive: { beam: 230, pos: 140, moving: 1, pulsing: 1, sparkle: 0, edges: 0 } };
   const L = (id, name, mode, fixtures, cells, dimmer, strobe, mirror, hard) => {
     const per = (dimmer ? 1 : 0) + 3 * cells + (strobe ? 1 : 0);
@@ -64,12 +64,16 @@
     }
     if (q.has("fx")) ctl.fxEnabled = +q.get("fx");
     if (q.has("fxHit")) ctl.fxHit = +q.get("fxHit");
+    if (q.has("fxBeam")) ctl.beamOn = +q.get("fxBeam");
+    if (q.has("fxSparkle")) ctl.sparkleOn = +q.get("fxSparkle");
+    if (q.has("fxStrobe")) ctl.fxStrobeOn = +q.get("fxStrobe");
+    if (q.has("fxAlways")) ctl.kicksAlways = +q.get("fxAlways");
     if (q.has("beam")) ctl.beamStrength = +q.get("beam");
     if (q.has("spread")) ctl.beamSpread = +q.get("spread");
     if (q.has("kickFlash")) ctl.kickFlash = Math.max(0, Math.min(255, +q.get("kickFlash")));
     if (q.has("strobe")) ctl.strobeEnabled = q.get("strobe") !== "0";
     if (q.has("cap")) ctl.brightnessCap = Math.max(8, Math.min(255, +q.get("cap")));
-    ctl.active = ctl.source === "auto" ? ctl.autoFallback : ctl.source;
+    ctl.active = ctl.source === "auto" ? "artnet" : ctl.source;
     ctl.reason = ctl.source === "auto" ? "auto: no fresh art-net, fallback" : ctl.source === "artnet" ? "artnet: no frame yet" : "selected";
     ctl.artnetAgeMs = 84641 + Math.round(performance.now() - t0);
     return ctl;

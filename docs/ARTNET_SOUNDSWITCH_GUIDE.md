@@ -432,3 +432,28 @@ Make each venue in Edit Mode:
 ### 6.4 What to report
 
 For each venue, report one house track and one techno track: does it chase, does it look good, and what would you change? Claude measures the cells (spread and motion) and grabs webcam frames.
+
+### 6.5 The Lumina FX fixture and kick looks
+
+A 5-channel `Lumina FX` fixture (one cell: **Intensity, Strobe, Pan, Tilt, UV**), patched right after the cell layout, gives Lumina SoundSwitch's sections and movement. Turn it on in **Setup → SoundSwitch fixture → Lumina FX fixture**; the page shows its address (97 after L11).
+
+The **Show** screen then has a **SoundSwitch looks** panel:
+
+- **Kick look:** what happens on each kick.
+  - **Ripple:** rings burst from the centre.
+  - **Glitter:** a burst of sparkles.
+  - **Shatter:** random shards light up.
+  - **Comet:** a comet shoots along the strip, alternating ends.
+  - **Pump\*:** the whole strip flashes white.
+  - **Duck\*:** the colours dip dark and swell back, sidechain style.
+  - **Ping-Pong\*:** alternate halves flash.
+  - **Off.**
+
+  \* goes through the strobe gate: only with Strobe on, never faster than the max flashes/s.
+- **Beam:** a white spot that follows SoundSwitch's Pan/Tilt sweeps.
+- **UV sparkle:** a sparkle burst when SoundSwitch hits UV.
+- **FX Strobe:** the FX fixture's Strobe flashes every cell (needs Strobe on).
+- **Kicks always:** off means kick looks only in busy sections (SoundSwitch's Intensity pulsing); on means every kick.
+
+**Where the kicks come from:** with music on the line input, Lumina's own kick detector times them. With no audio, SoundSwitch's FX Intensity pulses stand in.
+

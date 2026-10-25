@@ -11,7 +11,7 @@
 #include "../network/ArtNetReceiver.h"
 
 ControlState control = {router::Source::Auto, router::Source::Audio, router::kDefaultStandaloneLevel, STROBE_DEFAULT_HZ,
-                        false, 1, 0, 0, RIG_BRIGHTNESS_CAP_MAX, false, 1, 255, 3};
+                        false, 1, 0, 0, RIG_BRIGHTNESS_CAP_MAX, false, 1, true, true, true, false, 255, 3};
 
 namespace {
 
@@ -38,7 +38,8 @@ struct ControlRecord {
 // (sizeof(ControlRecord)) still loads and gets FX defaults.
 struct ControlRecordV3 {
   ControlRecord base;  // base.crc32 unused in v3
-  uint8_t fxFlags;     // bit 0 FX on, bits 1-2 hit effect
+  uint8_t fxFlags;     // bit 0 FX on, bits 1-3 kick look, bit 4 beam OFF, bit 5 sparkle OFF, bit 6 FX strobe OFF,
+                       // bit 7 kicks always ("OFF" bits so older v3 records keep every look on)
   uint8_t beamStrength;
   uint8_t beamSpread;
   uint8_t reserved;
@@ -209,7 +210,11 @@ void load_control_settings() {
     control.fixture = (r.version >= 2 && known) ? r.fixture : 0;
     if (v3) {
       control.fxEnabled = (r3.fxFlags & 1) != 0;
-      control.fxHit = (uint8_t)((r3.fxFlags >> 1) & 3);
+      control.fxHit = (uint8_t)((r3.fxFlags >> 1) & 7);
+      control.beamOn = (r3.fxFlags & 0x10) == 0;
+      control.sparkleOn = (r3.fxFlags & 0x20) == 0;
+      control.fxStrobeOn = (r3.fxFlags & 0x40) == 0;
+      control.kicksAlways = (r3.fxFlags & 0x80) != 0;
       control.beamStrength = r3.beamStrength;
       control.beamSpread = r3.beamSpread < 1 || r3.beamSpread > 8 ? 3 : r3.beamSpread;
     }
@@ -233,7 +238,8 @@ bool save_control_settings() {
   r.brightnessCap = clamp_cap(control.brightnessCap);
   r.kickFlash = control.kickFlash;
   r.fixture = control.fixture;
-  r3.fxFlags = (uint8_t)((control.fxEnabled ? 1 : 0) | ((control.fxHit & 3) << 1));
+  r3.fxFlags = (uint8_t)((control.fxEnabled ? 1 : 0) | ((control.fxHit & 7) << 1) | (control.beamOn ? 0 : 0x10) |
+                         (control.sparkleOn ? 0 : 0x20) | (control.fxStrobeOn ? 0 : 0x40) | (control.kicksAlways ? 0x80 : 0));
   r3.beamStrength = control.beamStrength;
   r3.beamSpread = control.beamSpread;
   r3.crc32 = record_crc_v3(r3);
@@ -280,14 +286,19 @@ void control_apply(AudioLedPacket &p, uint32_t nowMs) {
           fxSeenRxMs = lastRxMs;
           fxOut = fx::step(fxState, in, newFrame, {control.beamStrength, control.beamSpread}, nowMs);
           if (fxOut.hit) fxPulse++;
-          if (fxOut.strobe >= 10)
+          if (!control.beamOn) fxOut.beamLevel = 0;
+          if (!control.sparkleOn) fxOut.sparkle = 0;
+          if (control.fxStrobeOn && fxOut.strobe >= 10)
             for (uint8_t c = 0; c < n; c++) if (cellStrobe[c] < fxOut.strobe) cellStrobe[c] = fxOut.strobe;
         }
       }
       cellStrobing = apply_cell_strobe(n, nowMs);
       // In CELLS_MODE the strand fields carry the FX cues to the receiver (see render_cells):
       // speed = beam position, sensitivity = beam level, twinkle = sparkle, strobe = kick effect.
-      const uint8_t hitStyle = (control.fxEnabled && fxOut.pulsing && !(cellStrobing && control.fxHit == 3)) ? control.fxHit : 0;
+      // Gated looks (pump, duck, ping-pong) pause while FX/fixture Strobe flashes, so the two can't add up.
+      const bool gatedLook = control.fxHit == 3 || control.fxHit == 6 || control.fxHit == 7;
+      const bool kicksNow = control.fxEnabled && (control.kicksAlways || fxOut.pulsing);
+      const uint8_t hitStyle = (kicksNow && !(cellStrobing && gatedLook)) ? control.fxHit : 0;
       for (uint8_t s = 0; s < MAX_STRANDS; s++) {
         p.strand[s].mode = CELLS_MODE;
         p.strand[s].brightness = 255;                    // intensity is in the cell colours; the rig cap still applies
@@ -376,6 +387,8 @@ void append_control_json(String &s, uint32_t nowMs) {
   s += ",\"cellPacketsSent\":" + String(cell_packets_sent);
   s += ",\"cellFlashes\":" + String(cellFlashes);
   s += ",\"fxEnabled\":" + String(control.fxEnabled ? 1 : 0) + ",\"fxHit\":" + String(control.fxHit);
+  s += ",\"beamOn\":" + String(control.beamOn ? 1 : 0) + ",\"sparkleOn\":" + String(control.sparkleOn ? 1 : 0);
+  s += ",\"fxStrobeOn\":" + String(control.fxStrobeOn ? 1 : 0) + ",\"kicksAlways\":" + String(control.kicksAlways ? 1 : 0);
   s += ",\"beamStrength\":" + String(control.beamStrength) + ",\"beamSpread\":" + String(control.beamSpread);
   {
     layout::Layout fl;

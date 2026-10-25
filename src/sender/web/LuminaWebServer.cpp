@@ -416,7 +416,8 @@ static void handle_artnet() {
 //   &kickFlash=0..255 (rig-wide white flash on bass hits, saved; 0 = off)
 //   &cells=0..150 (SoundSwitch fixture: 0 = LUMINA-16, N = N plain RGB cells; saved)
 //   &fixture=lumina16|<layout id> (named layouts, see /api/fixtures; saved)
-//   &fx=0|1 &fxHit=0..3 (none/ripple/glitter/pump) &beam=0..255 &spread=1..8 (Lumina FX fixture; saved)
+//   &fx=0|1 &fxHit=0..7 (off/ripple/glitter/pump/shatter/comet/duck/ping-pong) &beam=0..255 &spread=1..8
+//   &fxBeam=0|1 &fxSparkle=0|1 &fxStrobe=0|1 &fxAlways=0|1 (Lumina FX fixture looks; all saved)
 //   (?artnet=1|0 = source artnet|audio)
 static void handle_control() {
   bool persist = false;
@@ -458,7 +459,11 @@ static void handle_control() {
     persist = true;
   }
   if (server.hasArg("fx")) { control.fxEnabled = server.arg("fx").toInt() != 0; persist = true; }
-  if (server.hasArg("fxHit")) { control.fxHit = (uint8_t)clamp_int(server.arg("fxHit").toInt(), 0, 3); persist = true; }
+  if (server.hasArg("fxHit")) { control.fxHit = (uint8_t)clamp_int(server.arg("fxHit").toInt(), 0, 7); persist = true; }
+  if (server.hasArg("fxBeam")) { control.beamOn = server.arg("fxBeam").toInt() != 0; persist = true; }
+  if (server.hasArg("fxSparkle")) { control.sparkleOn = server.arg("fxSparkle").toInt() != 0; persist = true; }
+  if (server.hasArg("fxStrobe")) { control.fxStrobeOn = server.arg("fxStrobe").toInt() != 0; persist = true; }
+  if (server.hasArg("fxAlways")) { control.kicksAlways = server.arg("fxAlways").toInt() != 0; persist = true; }
   if (server.hasArg("beam")) { control.beamStrength = (uint8_t)clamp_int(server.arg("beam").toInt(), 0, 255); persist = true; }
   if (server.hasArg("spread")) { control.beamSpread = (uint8_t)clamp_int(server.arg("spread").toInt(), 1, 8); persist = true; }
   if (server.hasArg("kickFlash")) {

@@ -840,15 +840,22 @@ void apply_kick_flash(uint8_t s, const AudioLedPacket &p) {
 // (density >= 128 gives hard-edged cells). Reverse direction flips the strand.
 // The strand fields carry the Lumina FX cues from the S3 on top:
 //   speed = beam position, sensitivity = beam level (0 = none), twinkle = UV sparkle,
-//   strobe = kick effect on each hit (0 none, 1 ripple, 2 glitter, 3 pump flash through the strobe gate).
+//   strobe = kick look on each hit: 0 none, 1 ripple, 2 glitter, 3 pump*, 4 shatter, 5 comet, 6 duck*,
+//            7 ping-pong* (* = through the rig strobe gate: only with Strobe on, never past the max rate).
 cells::Frame cellSnapshot = {};
 
 void render_cells(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat) {
   uint16_t n = count_for(s);
   if (n == 0) return;
-  const uint8_t level = combined_brightness(p, st);
+  uint8_t level = combined_brightness(p, st);
   const bool smooth = st.density < 128;
   const bool rev = st.direction == 1;
+  const uint32_t now = millis();
+  if (st.strobe == 6) {  // duck: the colours dip on the kick and swell back (sidechain feel)
+    if (newBeat && flash_allowed(s, p, now)) rt[s].flash = 255;
+    level = scale8_video(level, (uint8_t)(255U - scale8(rt[s].flash, 225)));
+    rt[s].flash = scale8(rt[s].flash, 215);
+  }
   for (uint16_t i = 0; i < n; i++) {
     uint8_t r, g, b;
     cells::sample(cellSnapshot, rev ? (uint16_t)(n - 1U - i) : i, n, smooth, r, g, b);
@@ -879,8 +886,7 @@ void render_cells(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, 
     }
   }
 
-  // Kick effect on each hit, only while the S3 says the section is busy.
-  const uint32_t now = millis();
+  // Kick look on each hit (the S3 decides whether kicks are on right now).
   if (st.strobe == 1) {  // ripple: white rings from the centre (not a flash)
     if (newBeat) {
       const uint8_t slot = rt[s].phase & 3U;
@@ -918,6 +924,49 @@ void render_cells(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, 
       const uint8_t v = scale8_video(gb, scale8(rt[s].flash, 160));
       for (uint16_t i = 0; i < n; i++) add_pixel(s, i, {v, v, v});
       rt[s].flash = scale8(rt[s].flash, 170);
+    }
+  } else if (st.strobe == 4) {  // shatter: a few random white shards that fade (partial, not a flash)
+    if (newBeat) {
+      rt[s].aux = (uint16_t)random(1, 65535);
+      rt[s].sparkle = 255;
+    }
+    if (rt[s].sparkle > 8) {
+      uint32_t x = rt[s].aux;  // same shard positions every frame until the next kick
+      const uint16_t len = len_scale(n, 4);
+      const uint8_t v = scale8_video(gb, rt[s].sparkle);
+      for (uint8_t k = 0; k < 4; k++) {
+        x = x * 1103515245UL + 12345UL;
+        const uint16_t start = (uint16_t)((x >> 8) % (n > len ? n - len : 1));
+        for (uint16_t i = 0; i < len && start + i < n; i++) add_pixel(s, start + i, {v, v, v});
+      }
+      rt[s].sparkle = scale8(rt[s].sparkle, 190);
+    }
+  } else if (st.strobe == 5) {  // comet: a white comet across the strip, alternating direction each kick
+    const uint16_t tail = len_scale(n, 14), step = len_scale(n, 7);
+    if (newBeat) {
+      rt[s].pos = 1;  // 0 = no comet
+      rt[s].phase ^= 1;
+    }
+    if (rt[s].pos) {
+      const uint16_t head = rt[s].pos - 1U;
+      for (uint16_t k = 0; k < tail && k <= head; k++) {
+        const uint16_t i = head - k;
+        if (i >= n) continue;
+        const uint8_t v = scale8_video(gb, (uint8_t)(255U - (k * 240U) / tail));
+        add_pixel(s, (rt[s].phase & 1) ? (uint16_t)(n - 1U - i) : i, {v, v, v});
+      }
+      rt[s].pos = head >= n + tail ? 0 : (uint16_t)(rt[s].pos + step);  // run until the tail has left the strip
+    }
+  } else if (st.strobe == 7) {  // ping-pong: alternate halves flash, through the strobe gate
+    if (newBeat && flash_allowed(s, p, now)) {
+      rt[s].flash = 255;
+      rt[s].phase ^= 1;
+    }
+    if (rt[s].flash > 8) {
+      const uint8_t v = scale8_video(gb, rt[s].flash);
+      const uint16_t half = n / 2U, from = (rt[s].phase & 1) ? half : 0, to = (rt[s].phase & 1) ? n : half;
+      for (uint16_t i = from; i < to; i++) add_pixel(s, i, {v, v, v});
+      rt[s].flash = scale8(rt[s].flash, 150);
     }
   }
 }
