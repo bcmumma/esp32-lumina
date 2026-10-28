@@ -23,15 +23,15 @@
 | Long LED data wires caused random single-pixel flicker on strand 1 (2026-10-25; Solid look, so not an effect) | Glitchy pixels | Fixed by a short data run; long distances get their own room receiver (`receiver_room2`) instead of a long data wire |
 | The WROOM receivers sometimes drop off USB (COM port gone) while they keep running (2026-10-22, 10-25, 10-27) | Uploads and serial checks need a replug | Replug; consider powered USB or a shorter cable. The firmware keeps running on its own supply |
 | Bench test tones from the PC did not reach the PCM1808 (2026-10-25, 10-27); the S3 still reads its live noise floor (raw 1–4) | Can't verify audio levels from the bench | Make the Modi/Magni the Windows default output (Voicemeeter is installed and may have taken over) |
-| No brightness cap by default (owner, 2026-10-16). The strips are rated 9 W/m: 4 × 150 LEDs at full white is about 15 A, against about 6 A continuous from the 90 W supply | Supply overload or hot wiring once strands 2–4 are connected | Before connecting them: fuses and injection, and a bigger supply or the cap at about 40% (Setup → Power & safety) |
 | AUTO treats any frame as fresh, including SoundSwitch's all-zero blackout frames, so the blackout quirk keeps the rig dark on ARTNET instead of falling back to audio (by design, 2026-10-15) | Dark rig while SoundSwitch is stuck | Pick **Audio** on the controller page, or fix it in SoundSwitch. An option to treat N seconds of all-zero frames as absent would be a separate change |
 | A sleeping Mac stops all Art-Net (frames and ArtPoll). Run 1 had a 160 s outage (owner confirmed sleep) | Total loss of SoundSwitch control | Live: Mac awake (Lock Screen → display off Never; prevent sleep). Phase 13 falls back to audio on timeout |
 | Strip power, fusing, and level shifting are undocumented | Safety and reliability | Inspect before calling the build product-ready |
 | Post-antenna-fix latency was never measured | No baseline for Phase 11 | Measure in Phase 11 |
-| Receiver app uses 71% of its 1.25 MB partition (`esp32dev` default 4 MB layout) | Room for growth is limited | Consider a larger app partition before Phase 12 features |
+| Receiver app uses 78% of its 1.25 MB OTA slot (`esp32dev` default 4 MB layout, two app slots; Phase 16) | About 280 KB left for receiver features while wireless updates work | A `min_spiffs` table gives two 1.9 MB slots, but changing partitions needs one USB flash |
 
 ## Resolved
 
+- Supply overload with no brightness cap: measured 2026-10-28, each room's 90 W supply draws 3.7 A max at full white (450 LEDs), inside its about 6 A budget. One supply per room, no cap
 - Wrong-channel lock: fixed 2026-10-12 by `senderChannel` in the packet (receiver locked to 6 on every boot; it had locked 4, then 5 or 6 by survey)
 - Serial `pps=0` / API pps spikes: fixed 2026-10-12. `update_packet_rate()` runs once a second from `loop()`; serial and API both read about 28
 - Stale `v20.1` / `V22` banners: now `Lumina v3 sender` / `Lumina v3 receiver` (2026-10-12)

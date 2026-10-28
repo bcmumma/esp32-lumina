@@ -134,11 +134,8 @@ The serial ports go in `CLAUDE.local.md`.
 - **Short data runs.** A long data wire caused random single-pixel flicker on 2026-10-25; the fix was a short run. That's why each area gets its own receiver next to its strip.
 - **Each room has its own 12 V supply.** Tie its ground to that room's receiver GND near the strip's input.
 - **At the strip input:** a 330 Ω resistor in series with the data line, and WS2815 **BI tied to GND** at the first LED.
-- **Power warning (proposal; wiring is the owner's):** 450 LEDs at the strips' 9 W/m rating is about **11 A at full white**. One 90 W supply handles about 6 A continuous. With the brightness cap at 100%, a room on one 90 W supply can be overloaded by white-heavy looks. Per room, either:
-  - add a second supply and inject power at the second roll (keep the +12 V sections separate, grounds common); or
-  - set **Setup → Power & safety → Brightness cap** to about **50%**.
-
-  Fuse each 12 V feed at 5 A.
+- **Power (measured by the owner, 2026-10-28):** each room's supply draws **3.7 A max at full white** (450 LEDs), well under the 9 W/m rating's 11 A estimate and inside one 90 W supply's about 6 A continuous budget. One supply per room, no brightness cap. If a room grows past 450 LEDs, measure again; add a second supply with injection or set Setup → Power & safety → Brightness cap if it nears 6 A.
+- **Fusing (proposal; wiring is the owner's):** a 5 A fuse on each 12 V feed, at the supply.
 - **USB:** the WROOMs' COM numbers follow the USB socket. Each board's log says `room=1` or `room=2`.
 - **Updates over Wi-Fi (Phase 16):** with the Phase 16 firmware, receivers update with `tools/ota_update.py --room N`; they stay mounted. USB is only for recovery (a bad image, or firmware older than Phase 16). Each room's status (online, frame rate, loss, signal) is on the controller page.
 
