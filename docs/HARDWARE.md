@@ -140,4 +140,5 @@ The serial ports go in `CLAUDE.local.md`.
 
   Fuse each 12 V feed at 5 A.
 - **USB:** the WROOMs' COM numbers follow the USB socket. Each board's log says `room=1` or `room=2`.
+- **Updates over Wi-Fi (Phase 16):** with the Phase 16 firmware, receivers update with `tools/ota_update.py --room N`; they stay mounted. USB is only for recovery (a bad image, or firmware older than Phase 16). Each room's status (online, frame rate, loss, signal) is on the controller page.
 

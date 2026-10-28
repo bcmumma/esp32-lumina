@@ -122,6 +122,14 @@ The web UI can override the source manually. Diagnostics show the active source.
   - `activeStrands` counts only that room's slots, and a room with none is dark.
 - **Same show, own wiring:** each room uses the per-strand pin, count, and type from Setup. Each room renders SoundSwitch cells over its own strands (Split works within the room) and keeps its own strobe gate.
 
+## Receiver Heartbeat and Wireless Updates (Phase 16)
+
+- **Heartbeat:** each receiver broadcasts a 34-byte `HeartbeatPacket` (magic `0xA17F`) once a second: room, packets good / lost / bad, frame rate, LED counts, channel, RSSI of the S3, update state, and its Wi-Fi address while updating. Receivers ignore each other's.
+- **Lost** counts sequence gaps as packets arrive (radio loss). The receiver's main loop can also skip a packet that a newer one replaced before it was read; the serial log shows those as `skipped`, and they are not loss.
+- **S3:** `lib/Heartbeat` keeps one `RoomStatus` per room: online until 5 s of silence, loss between heartbeats, and restarts (uptime going backwards). `/api/control` reports it under `rooms`; the Show screen shows each room online or offline, and Diagnostics shows signal, uptime, and restarts.
+- **Update mode:** `/api/control?update=N` (or Setup → Receiver updates) makes the S3 send an 8-byte `CommandPacket` (magic `0xA180`) ten times. That room's receiver joins the home Wi-Fi with the S3's credentials and serves Arduino's `HTTPUpdateServer` at `/update` (basic auth, user `lumina`, `LUMINA_OTA_PASSWORD` from the gitignored `secrets.h`). It keeps drawing the show and restarts after 10 minutes if nothing is uploaded.
+- The upload must send `Origin: http://<receiver>`; Arduino-ESP32 3.x rejects it otherwise (CSRF check). `tools/ota_update.py` does this. The receiver image is 78% of the 1.25 MB OTA slot (default partition table).
+
 ## Firmware Modules (v3, since Phase 9)
 
 One PlatformIO project (`platformio.ini`): the `sender` env builds `src/sender/`, and the `receiver` env builds `src/receiver/`. Both include `lib/LuminaProtocol/LuminaProtocol.h`, the single definition of the 107-byte ESP-NOW packet (version 12), which `static_assert` guards. Byte 105, `senderChannel`, carries the sender's Wi-Fi channel so the receiver can lock straight to it.
