@@ -9,10 +9,10 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are done; the ROAD
 | Track | Phase | Status | Authorization |
 |---|---|---|---|
 | DJ (Mac + PC capture) | Complete (Phases 4–6) | Done | n/a |
-| Firmware | 16: to be defined by the owner (proposal below) | Not started | Not authorized |
+| Firmware | 16: Show hardening (receiver heartbeat, soak, per-room power) | In progress | Authorized 2026-10-27 for Phase 16 |
 
 - Authorize a phase with `/start-milestone Phase <N>` in Claude Code. Until then, everything is read-only.
-- **Branch:** `main` holds v2 unchanged. `develop-v23` = `a7f2c67` (Phases 7–14). Phase 15 is on `feature/cells` (15 commits ahead).
+- **Branch:** `main` holds v2 unchanged. `develop-v23` = `6b3d860` (Phases 7–15, fast-forwarded 2026-10-27, owner OK). Phase 16 is on `feature/show-hardening`.
 - **Last verified commit:** `d930bb9` on `feature/cells` (Phase 15, closed 2026-10-27).
 - **Boards:**
   - **S3:** Phase 15 sender.
@@ -32,23 +32,23 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are done; the ROAD
 - **Strobe:** off at boot, 15/s ceiling, one gate per room.
 - **Phases done:** 0–15.
 
-## Next step
+## Phase 16 checklist (show hardening)
 
-1. **Owner:** decide on merging `feature/cells` into `develop-v23` (fast-forward), and pick Phase 16. Proposal: **show hardening**:
-   - firmware updates over Wi-Fi for both receivers, so they no longer need USB;
-   - a receiver heartbeat on the page (room 1 and room 2 online, packet loss);
-   - power per room: a second supply or a brightness cap (see `docs/HARDWARE.md`);
-   - a full-show soak.
+Scope (owner, 2026-10-27): receiver heartbeat, a full-show soak, and per-room power. Receiver updates over the air are skipped for now (USB stays).
 
-   v3 is now a candidate to replace v2 on `main` once the power items are done. That merge is the owner's call.
-2. **Owner, power (before white-heavy looks at full brightness):**
-   - [ ] Each room's 450 LEDs can draw about 11 A at full white; one 90 W supply gives about 6 A. Add a second supply or injection per room, or set the brightness cap to about 50%.
-   - [ ] Fuse each 12 V feed at 5 A.
-   - [ ] One measured current at full white, to confirm the 9 W/m rating.
-3. **Owner, when convenient:**
-   - [ ] Bench audio: make the Modi/Magni the Windows default output (Voicemeeter may have taken over), so Claude can run tone tests again.
-   - [ ] Look check of the Halloween looks and the newer kick looks.
-   - [ ] AP security mode (slow first join); SoundSwitch blackout quirks.
+- [x] Branch `feature/show-hardening` off `develop-v23` (fast-forwarded to Phase 15) *(owner OK)*
+- [ ] Heartbeat packet (protocol only): receivers send a small status packet back to the S3 about once a second (room, packets received and lost, frame rate, LED counts, uptime); unit tests *(Claude)*
+- [ ] S3 tracks each room and the page shows "Room 1/2 online · loss %", offline after about 5 s of silence *(Claude)*
+- [ ] Owner: with both rooms on, the page shows both online; unplug one receiver's power and it shows offline within about 5 s *(owner)*
+- [ ] Soak: 60 minutes of the full show (SoundSwitch + FX, Auto), both rooms. Pass: both online throughout, loss under about 2%, no restarts, S3 memory steady *(Claude; owner runs SoundSwitch)*
+- [ ] Power per room: a second supply with injection, or the brightness cap at about 50%, and a 5 A fuse on each 12 V feed (`docs/HARDWARE.md`) *(owner)*
+- [ ] Parity checks and docs *(Claude)*
+
+## Owner, when convenient
+
+- [ ] Bench audio: make the Modi/Magni the Windows default output (Voicemeeter may have taken over), so Claude can run tone tests again.
+- [ ] One measured current at full white, to confirm the 9 W/m rating.
+- [ ] Look check of the Halloween looks and the newer kick looks.
 
 ## Open questions
 
