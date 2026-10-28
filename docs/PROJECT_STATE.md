@@ -34,11 +34,14 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are done; the ROAD
 
 ## Phase 16 checklist (show hardening)
 
-Scope (owner, 2026-10-27): receiver heartbeat, a full-show soak, and per-room power. Receiver updates over the air are skipped for now (USB stays).
+Scope (owner, 2026-10-27): receiver heartbeat, receiver firmware updates over Wi-Fi (added by the owner the same day), a full-show soak, and per-room power.
 
 - [x] Branch `feature/show-hardening` off `develop-v23` (fast-forwarded to Phase 15) *(owner OK)*
-- [ ] Heartbeat packet (protocol only): receivers send a small status packet back to the S3 about once a second (room, packets received and lost, frame rate, LED counts, uptime); unit tests *(Claude)*
-- [ ] S3 tracks each room and the page shows "Room 1/2 online · loss %", offline after about 5 s of silence *(Claude)*
+- [x] Heartbeat packet (protocol only, `c8ce9eb`): receivers send a small status packet back to the S3 about once a second (room, packets received and lost, frame rate, LED counts, uptime); unit tests *(Claude)*
+- [x] S3 tracks each room and the page shows "Room 1/2 online · loss %", offline after about 5 s of silence (`e56d473`, heartbeat tests 6/6) *(Claude)*
+- [x] Wireless updates: Setup > Receiver updates (or `/api/control?update=N`) puts a room on the home Wi-Fi for 10 min with an HTTP update server (password in the gitignored secrets.h); `tools/ota_update.py --room N` builds, uploads and confirms (`e56d473`) *(Claude)*
+- [ ] Owner: plug both receivers in over USB **one last time** so Claude can flash the Phase 16 firmware; after that, updates go over Wi-Fi *(owner)*
+- [ ] Wireless update test: update each room with `tools/ota_update.py` and see it check in again *(Claude)*
 - [ ] Owner: with both rooms on, the page shows both online; unplug one receiver's power and it shows offline within about 5 s *(owner)*
 - [ ] Soak: 60 minutes of the full show (SoundSwitch + FX, Auto), both rooms. Pass: both online throughout, loss under about 2%, no restarts, S3 memory steady *(Claude; owner runs SoundSwitch)*
 - [ ] Power per room: a second supply with injection, or the brightness cap at about 50%, and a 5 A fuse on each 12 V feed (`docs/HARDWARE.md`) *(owner)*
