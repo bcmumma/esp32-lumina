@@ -1,6 +1,6 @@
 # Project State
 
-_Last updated: 2026-10-27_
+_Last updated: 2026-10-28_
 
 ## Current
 
@@ -23,13 +23,13 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are done; the ROAD
 
 ## What works
 
-- **Firmware:** v3 with v2 parity; 72/72 on-device unit tests; sender and both receiver builds compile without warnings.
+- **Firmware:** v3 with v2 parity; 78/78 on-device unit tests; sender and both receiver builds compile without warnings.
 - **SoundSwitch:**
   - six layouts L1–L6, each with a 5-channel Lumina FX fixture;
   - the Auto chain SoundSwitch → Hybrid → Audio;
   - the FX fixture drives a beam, kick looks, UV sparkle, and a gated FX strobe.
 - **Looks:** genres House, Techno, Drum & Bass, Acid, General, Chill, Halloween, Meters; 7 kick looks; Setup can hide buttons.
-- **Two rooms from one S3:** the same show in both, each with its own wiring.
+- **Two rooms from one S3:** the same show in both, each with its own wiring. Each room reports online, frame rate, and loss on the page, and updates over Wi-Fi.
 - **Strobe:** off at boot, 15/s ceiling, one gate per room.
 - **Phases done:** 0–15.
 
@@ -45,9 +45,10 @@ Scope (owner, 2026-10-27): receiver heartbeat, receiver firmware updates over Wi
 - [x] Wireless update test: both rooms updated twice with `tools/ota_update.py` and checked in again about 4 s after the upload. The upload needs an `Origin` header (Arduino-ESP32 3.x CSRF check) *(Claude)*
 - [x] Loss counts radio loss only: gaps are now counted as packets arrive, so packets the loop skips at 900 LEDs and 30 fps no longer count. Room 1 went from 3.4% to 0 lost in 3,400 packets; room 2 also 0 *(Claude)*
 - [ ] Owner: with both rooms on, the page shows both online; unplug one receiver's power and it shows offline within about 5 s *(owner)*
-- [ ] Soak: 60 minutes of the full show (SoundSwitch + FX, Auto), both rooms. Pass: both online throughout, loss under about 2%, no restarts, S3 memory steady *(Claude; owner runs SoundSwitch)*
+- [x] Soak, bench (2026-10-27, `tools/testbench/show_soak.py --minutes 60`): synthetic L1 + FX show in Auto, a 15 s stop every 10 min. Both rooms online in all 720 samples, no restarts; radio loss room 1 0.02% (19/100,613), room 2 0.01% (8/100,594); room 1 29–30 fps (900 LEDs), room 2 62 fps; S3 no restart, free heap 213,116 → 213,096 B; the chain ran Art-Net → Hybrid → Audio and back each stop. PASS *(Claude)*
+- [ ] Optional: the same check with real SoundSwitch playing for an hour (Claude watches the rooms; `show_soak.py` sends its own frames, so it can't run alongside) *(owner runs SoundSwitch)*
 - [ ] Power per room: a second supply with injection, or the brightness cap at about 50%, and a 5 A fuse on each 12 V feed (`docs/HARDWARE.md`) *(owner)*
-- [ ] Parity checks and docs *(Claude)*
+- [x] Parity and docs (2026-10-28): all builds and the test suites warning-free; 78/78 on-device tests; sender re-uploaded: saved config loaded (cfgB), static IP, channel 6, page 200, Standalone / L1 / brightness 106 kept, strobe off at boot (ceiling 15/s), pins 33/25/26/27 in order, both rooms online. ARCHITECTURE, HARDWARE, CLAUDE.md cover heartbeat and wireless updates *(Claude)*
 
 ## Owner, when convenient
 
