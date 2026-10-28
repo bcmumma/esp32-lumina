@@ -57,6 +57,13 @@ void render_drop_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings
 // SoundSwitch cells (CELLS_MODE); main.cpp copies the received frame into cellSnapshot each frame.
 extern cells::Frame cellSnapshot;
 void render_cells(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat);
+// Halloween (no audio): 40-45.
+void render_candle_flicker(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
+void render_witchs_brew(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
+void render_ghost_drift(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
+void render_pumpkin_patch(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
+void render_blood_drip(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
+void render_graveyard_fog(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
 // Kick Flash overlay: update once per frame, then apply after each strand's mode.
 void update_kick_flash(const AudioLedPacket &p, bool newBeat);
 void apply_kick_flash(uint8_t s, const AudioLedPacket &p);

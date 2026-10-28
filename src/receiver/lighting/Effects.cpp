@@ -53,6 +53,7 @@ static uint8_t scaled_audio(uint8_t v, uint8_t sensitivity) {
 //   Phase 14: 32 Stereo VU, 33 Kick Pump, 34 Kick Ripple, 35 Break Chopper, 36 Acid Squelch,
 //   37 Strobe, 38 Drop Strobe; plus the rig-wide Kick Flash overlay
 //   39 SoundSwitch cells (Phase 15, set by the S3, not listed on the page)
+//   40 Candle Flicker, 41 Witch's Brew, 42 Ghost Drift, 43 Pumpkin Patch, 44 Blood Drip, 45 Graveyard Fog (Halloween)
 // Internal/legacy modes 0-14 remain available for VU tuning and compatibility.
 // ============================================================
 void render_off(uint8_t s) {
@@ -976,5 +977,122 @@ void render_cells(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, 
       for (uint16_t i = from; i < to; i++) add_pixel(s, i, {v, v, v});
       rt[s].flash = scale8(rt[s].flash, 150);
     }
+  }
+}
+
+// ============================================================
+// Halloween (owner, 2026-10-27): casual themed looks with no audio response and fixed
+// colours. Speed sets the pace. Nothing here flashes.
+// ============================================================
+static uint8_t hw[MAX_STRANDS][160];  // per-segment state (candle level, bubble life)
+
+static uint16_t hw_segments(uint16_t n, uint16_t seg) { return (uint16_t)min<uint32_t>(160U, (n + seg - 1U) / seg); }
+
+// Rows of warm orange candles, each flickering on its own like a jack-o-lantern.
+void render_candle_flicker(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
+  uint16_t n = count_for(s);
+  if (n == 0) return;
+  const uint8_t b = combined_brightness(p, st);
+  const uint16_t seg = max<uint16_t>(3, len_scale(n, 6)), segs = hw_segments(n, seg);
+  const int16_t jitter = (int16_t)(12 + st.speed / 6);
+  for (uint16_t k = 0; k < segs; k++) {
+    int16_t v = hw[s][k] ? hw[s][k] : 200;
+    v += (int16_t)random(-jitter, jitter + 1);
+    if (random(0, 120) == 0) v = 70;  // a draught: one candle gutters for a moment
+    v = constrain(v, 70, 255);
+    hw[s][k] = (uint8_t)v;
+    const Rgb c = hsv_to_rgb((uint8_t)(10 + (v - 70) / 12), 255, scale8_video(b, (uint8_t)v));  // dimmer = redder
+    for (uint16_t i = k * seg; i < (k + 1U) * seg && i < n; i++) set_pixel(s, i, c);
+  }
+}
+
+// A dark cauldron glow with green and purple bubbles that swell and pop.
+void render_witchs_brew(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
+  uint16_t n = count_for(s);
+  if (n == 0) return;
+  const uint8_t b = combined_brightness(p, st);
+  const uint16_t seg = max<uint16_t>(3, len_scale(n, 5)), segs = hw_segments(n, seg);
+  const uint8_t chance = (uint8_t)(140U - st.speed / 2U);  // faster = more bubbles
+  for (uint16_t k = 0; k < segs; k++) {
+    uint8_t &life = hw[s][k];
+    if (life == 0 && random(0, chance) == 0) life = 255;
+    const uint8_t step = (uint8_t)(3U + st.speed / 40U);
+    life = life > step ? (uint8_t)(life - step) : 0;
+    const uint8_t swell = life > 128 ? (uint8_t)((255 - life) * 2) : (uint8_t)(life * 2);  // rise, then pop
+    const uint8_t hue = (k % 3U == 0) ? 200 : 86;  // purple or green
+    const Rgb base = hsv_to_rgb(hue, 255, scale8_video(b, 18));
+    const Rgb bubble = hsv_to_rgb(hue, 230, scale8_video(b, swell));
+    for (uint16_t i = k * seg; i < (k + 1U) * seg && i < n; i++) set_pixel(s, i, life ? bubble : base);
+  }
+}
+
+// Pale blue-white ghosts drifting along a dark strip, fading in and out.
+void render_ghost_drift(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
+  uint16_t n = count_for(s);
+  if (n == 0) return;
+  clear_strand(s);
+  const uint8_t b = combined_brightness(p, st);
+  const uint32_t t = millis();
+  const uint16_t width = max<uint16_t>(3, len_scale(n, 9));
+  for (uint8_t g = 0; g < 3; g++) {
+    const uint32_t travel = (t * (8U + st.speed / 8U + g * 3U)) / 1000U;
+    const uint16_t centre = (uint16_t)((travel + (uint32_t)g * n / 3U) % n);
+    const uint8_t fade = triwave8((uint8_t)(t / (28U + g * 9U) + g * 85U));
+    for (int32_t d = -(int32_t)width; d <= (int32_t)width; d++) {
+      const uint8_t v = scale8_video(scale8_video(b, fade), (uint8_t)(255 - (abs(d) * 255) / (width + 1)));
+      add_pixel(s, wrap_index((int32_t)centre + d, n), hsv_to_rgb(150, 70, v));
+    }
+  }
+}
+
+// Orange pumpkins with green stems, gently breathing.
+void render_pumpkin_patch(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
+  uint16_t n = count_for(s);
+  if (n == 0) return;
+  const uint8_t b = combined_brightness(p, st);
+  const uint16_t size = max<uint16_t>(4, len_scale(n, 8));  // pumpkin + stem + gap
+  const uint8_t breath = (uint8_t)(150U + triwave8((uint8_t)(millis() / (40U - st.speed / 8U))) * 105U / 255U);
+  for (uint16_t i = 0; i < n; i++) {
+    const uint16_t k = i % size;
+    if (k < size - 2U) set_pixel(s, i, hsv_to_rgb(20, 255, scale8_video(b, breath)));  // pumpkin
+    else if (k == size - 2U) set_pixel(s, i, hsv_to_rgb(86, 255, scale8_video(b, 120)));  // stem
+    else set_pixel(s, i, {0, 0, 0});
+  }
+}
+
+// Deep red drops gather at the start of the strip, then run down it with a trail.
+void render_blood_drip(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
+  uint16_t n = count_for(s);
+  if (n == 0) return;
+  const uint8_t b = combined_brightness(p, st);
+  fade_strand(s, 30);
+  for (uint16_t i = 0; i < min<uint16_t>(n, len_scale(n, 3)); i++) set_pixel(s, i, hsv_to_rgb(0, 255, scale8_video(b, 90)));  // the pool
+  if (random(0, 90 - st.speed / 4) == 0) {  // a new drop
+    for (uint8_t k = 0; k < 4; k++) if (rt[s].ring[k] == 0) { rt[s].ring[k] = 1; rt[s].ringHue[k] = 0; break; }
+  }
+  for (uint8_t k = 0; k < 4; k++) {
+    if (rt[s].ring[k] == 0) continue;
+    const uint16_t pos = rt[s].ring[k] - 1U;
+    if (pos >= n) { rt[s].ring[k] = 0; continue; }
+    add_pixel(s, pos, hsv_to_rgb(0, 255, b));
+    rt[s].ringHue[k] = (uint8_t)min<uint16_t>(255, rt[s].ringHue[k] + 1U);  // drops speed up as they run
+    rt[s].ring[k] += (uint16_t)(1U + len_scale(n, (uint16_t)(rt[s].ringHue[k] / 24U)));
+  }
+}
+
+// Slow purple and green fog rolling along the strip.
+void render_graveyard_fog(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
+  uint16_t n = count_for(s);
+  if (n == 0) return;
+  const uint8_t b = combined_brightness(p, st);
+  const uint32_t t = millis();
+  const uint16_t ta = (uint16_t)(t / max<uint16_t>(20, 90U - st.speed / 4U)), tb = (uint16_t)(t / max<uint16_t>(26, 130U - st.speed / 4U));
+  const uint8_t span = (uint8_t)max<uint16_t>(1, 255U * 3U / max<uint16_t>(1, n));  // about 3 fog banks per strip
+  for (uint16_t i = 0; i < n; i++) {
+    const uint8_t a = triwave8((uint8_t)(i * span + ta));
+    const uint8_t c = triwave8((uint8_t)(i * span * 2U - tb));
+    const Rgb purple = hsv_to_rgb(200, 220, scale8_video(b, scale8(a, a)));
+    const Rgb green = hsv_to_rgb(86, 200, scale8_video(b, scale8(c, c) / 2U));
+    set_pixel(s, i, add_color(purple, green));
   }
 }

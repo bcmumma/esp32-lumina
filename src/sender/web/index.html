@@ -26,6 +26,7 @@
   --g-acid: #c8f03c;
   --g-general: #ecebf3;
   --g-chill: #7ee0b0;
+  --g-halloween: #ff7a1a;
   --g-meters: #9298ab;
   --display: "Bahnschrift", "DIN Alternate", "Barlow Condensed", "Roboto Condensed", system-ui, sans-serif;
   --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -423,6 +424,12 @@ const MODES = {
   35: ["Break Chopper", "Kicks slam blocks into random slots; hats spark.", "k"],
   36: ["Acid Squelch", "A resonant peak glides with the mids, like a 303 sweep.", ""],
   37: ["Strobe", "Classic strobe at your max flash rate.", "s"],
+  40: ["Candle Flicker", "Rows of orange candles flickering like jack-o'-lanterns.", ""],
+  41: ["Witch's Brew", "Green and purple bubbles swell and pop.", ""],
+  42: ["Ghost Drift", "Pale ghosts drift along the dark, fading in and out.", ""],
+  43: ["Pumpkin Patch", "Orange pumpkins with green stems, gently breathing.", ""],
+  44: ["Blood Drip", "Red drops gather, then run down the strip.", ""],
+  45: ["Graveyard Fog", "Slow purple and green fog rolling past.", ""],
   38: ["Drop Strobe", "Dark in quiet parts, kick flashes, flat-out strobe on drops.", "ks"],
   3:  ["Bass Comet", "Legacy mode.", ""],
   8:  ["Void Scanner", "Legacy mode.", ""],
@@ -435,6 +442,7 @@ const GENRES = [
   ["acid", "Acid", [36, 22, 31]],
   ["general", "General", [37, 38, 9, 1, 4, 5]],
   ["chill", "Chill", [15, 16, 17]],
+  ["halloween", "Halloween", [40, 41, 42, 43, 44, 45]],
   ["meters", "Meters", [32, 6, 11, 12, 13, 10]],
 ];
 // Starting values applied when a mode is picked: speed, density, sensitivity, strobe (decay), twinkle.
@@ -446,6 +454,7 @@ const DEFAULTS = {
   30: [205, 88, 158, 180, 0], 31: [120, 82, 165, 195, 92],
   32: [0, 0, 128, 150, 0], 33: [0, 0, 160, 170, 0], 34: [150, 90, 0, 170, 0], 35: [0, 100, 160, 160, 120],
   36: [120, 60, 170, 0, 160], 37: [0, 0, 0, 0, 0], 38: [0, 0, 160, 0, 0],
+  40: [120, 0, 0, 0, 0], 41: [120, 0, 0, 0, 0], 42: [80, 0, 0, 0, 0], 43: [100, 0, 0, 0, 0], 44: [100, 0, 0, 0, 0], 45: [90, 0, 0, 0, 0],
   6: [0, 0, 128, 150, 0], 11: [0, 0, 128, 150, 0], 12: [0, 0, 128, 150, 0], 13: [0, 0, 128, 150, 0],
 };
 const DEFAULT_FIELDS = ["speed", "density", "sensitivity", "strobe", "twinkle"];
