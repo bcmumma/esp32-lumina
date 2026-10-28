@@ -41,7 +41,12 @@ static void reset_channel_survey();
 // Phase 15: SoundSwitch cell frames arrive as a second packet type (CellPacket).
 cells::Frame cellFrame = {};
 volatile uint32_t lastCellMs = 0;
-volatile int8_t lastSenderRssi = 0;  // RSSI of the last good packet from the S3 (Phase 16 heartbeat)
+volatile int8_t lastSenderRssi = 0;
+// Phase 16: packets that never arrived, counted as they arrive (sequence gaps in the radio callback).
+// The loop can also skip a packet that a newer one replaced before it was read; that is not loss.
+volatile uint32_t radioLost = 0;
+static uint16_t lastRxSequence = 0;
+static bool haveRxSequence = false;  // RSSI of the last good packet from the S3 (Phase 16 heartbeat)
 static const uint8_t HEARTBEAT_BROADCAST[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 static void copy_packet_from_callback(const uint8_t *mac, const uint8_t *data, int len, int rssi) {
@@ -81,6 +86,12 @@ static void copy_packet_from_callback(const uint8_t *mac, const uint8_t *data, i
   }
 
   lastSenderRssi = (int8_t)(rssi < -127 ? -127 : (rssi > 0 ? 0 : rssi));
+  if (haveRxSequence) {
+    const uint16_t missing = (uint16_t)(p.sequence - (uint16_t)(lastRxSequence + 1));
+    if (missing > 0 && missing < 500) radioLost = radioLost + missing;  // a bigger jump is an S3 restart
+  }
+  lastRxSequence = p.sequence;
+  haveRxSequence = true;
   portENTER_CRITICAL(&packetMux);
   latestPacket = p;
   memcpy(latestMac, mac, 6);

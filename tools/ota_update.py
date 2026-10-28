@@ -46,6 +46,9 @@ def upload(ip, firmware, password):
     req = urllib.request.Request(f"http://{ip}/update", data=body, method="POST")
     req.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
     req.add_header("Authorization", "Basic " + base64.b64encode(f"lumina:{password}".encode()).decode())
+    # Arduino-ESP32 3.x HTTPUpdateServer rejects uploads whose Origin isn't http://<Host> (CSRF check);
+    # a browser form sends it automatically, so send the same.
+    req.add_header("Origin", f"http://{ip}")
     with urllib.request.urlopen(req, timeout=120) as r:
         return r.status, r.read().decode(errors="replace").strip()
 

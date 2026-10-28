@@ -15,7 +15,8 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–15 are done; the ROAD
 - **Branch:** `main` holds v2 unchanged. `develop-v23` = `6b3d860` (Phases 7–15, fast-forwarded 2026-10-27, owner OK). Phase 16 is on `feature/show-hardening`.
 - **Last verified commit:** `d930bb9` on `feature/cells` (Phase 15, closed 2026-10-27).
 - **Boards:**
-  - **S3:** Phase 15 sender.
+  - **S3:** Phase 16 sender.
+  - **Receivers:** Phase 16 firmware; update over Wi-Fi with `tools/ota_update.py --room N`.
   - **Room 1** (`receiver`): strand 1, GPIO 33.
   - **Room 2** (`receiver_room2`): strand 3, GPIO 26.
   - **Saved:** 3 active strands, Standalone source, green look, layout L1, strobe off at boot.
@@ -40,8 +41,9 @@ Scope (owner, 2026-10-27): receiver heartbeat, receiver firmware updates over Wi
 - [x] Heartbeat packet (protocol only, `c8ce9eb`): receivers send a small status packet back to the S3 about once a second (room, packets received and lost, frame rate, LED counts, uptime); unit tests *(Claude)*
 - [x] S3 tracks each room and the page shows "Room 1/2 online · loss %", offline after about 5 s of silence (`e56d473`, heartbeat tests 6/6) *(Claude)*
 - [x] Wireless updates: Setup > Receiver updates (or `/api/control?update=N`) puts a room on the home Wi-Fi for 10 min with an HTTP update server (password in the gitignored secrets.h); `tools/ota_update.py --room N` builds, uploads and confirms (`e56d473`) *(Claude)*
-- [ ] Owner: plug both receivers in over USB **one last time** so Claude can flash the Phase 16 firmware; after that, updates go over Wi-Fi *(owner)*
-- [ ] Wireless update test: update each room with `tools/ota_update.py` and see it check in again *(Claude)*
+- [x] Owner: plugged both receivers in over USB one last time; Claude flashed the Phase 16 firmware (2026-10-27) *(owner)*
+- [x] Wireless update test: both rooms updated twice with `tools/ota_update.py` and checked in again about 4 s after the upload. The upload needs an `Origin` header (Arduino-ESP32 3.x CSRF check) *(Claude)*
+- [x] Loss counts radio loss only: gaps are now counted as packets arrive, so packets the loop skips at 900 LEDs and 30 fps no longer count. Room 1 went from 3.4% to 0 lost in 3,400 packets; room 2 also 0 *(Claude)*
 - [ ] Owner: with both rooms on, the page shows both online; unplug one receiver's power and it shows offline within about 5 s *(owner)*
 - [ ] Soak: 60 minutes of the full show (SoundSwitch + FX, Auto), both rooms. Pass: both online throughout, loss under about 2%, no restarts, S3 memory steady *(Claude; owner runs SoundSwitch)*
 - [ ] Power per room: a second supply with injection, or the brightness cap at about 50%, and a 5 A fuse on each 12 V feed (`docs/HARDWARE.md`) *(owner)*

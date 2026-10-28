@@ -180,7 +180,7 @@ void loop() {
     h.room = LUMINA_ROOM;
     h.uptimeMs = now;
     h.good = goodPackets;
-    h.lost = lostPackets;
+    h.lost = radioLost;  // true radio loss, not packets the loop skipped
     h.bad = badPackets;
     h.fps = (uint16_t)renderFps;
     h.count[0] = count_for(0);
@@ -198,11 +198,12 @@ void loop() {
     if (haveCurrentPacket) {
       const AudioLedPacket &p = currentPacket;
       Serial.printf(
-        "room=%u rx good=%lu bad=%lu lost=%lu seq=%u age=%lums ch=%u locked=%u fps=%lu flashes=%lu cells=%u/%lu render=%luus show=%luus vol=%3u bass=%3u mid=%3u treb=%3u beat=%3u pulse=%3u conf=%3u bpm=%3u gB=%3u modes=[%u,%u,%u,%u] br=[%u,%u,%u,%u] en=[%u,%u,%u,%u] pins=[%u,%u,%u,%u] counts=[%u,%u,%u,%u] cmap=%u rgbScale=[%u,%u,%u] gamma10=%u\n",
+        "room=%u rx good=%lu bad=%lu lost=%lu skipped=%lu seq=%u age=%lums ch=%u locked=%u fps=%lu flashes=%lu cells=%u/%lu render=%luus show=%luus vol=%3u bass=%3u mid=%3u treb=%3u beat=%3u pulse=%3u conf=%3u bpm=%3u gB=%3u modes=[%u,%u,%u,%u] br=[%u,%u,%u,%u] en=[%u,%u,%u,%u] pins=[%u,%u,%u,%u] counts=[%u,%u,%u,%u] cmap=%u rgbScale=[%u,%u,%u] gamma10=%u\n",
         (unsigned)LUMINA_ROOM,
         (unsigned long)good,
         (unsigned long)bad,
-        (unsigned long)lostPackets,
+        (unsigned long)radioLost,
+        (unsigned long)(lostPackets > radioLost ? lostPackets - radioLost : 0),
         p.sequence,
         (unsigned long)(now - lastPacketMs),
         (unsigned int)currentWifiChannel,

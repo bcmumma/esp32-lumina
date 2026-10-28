@@ -43,4 +43,5 @@ void setup_wifi_espnow();
 // Phase 16: tell the S3 this room is alive (broadcast on the locked channel).
 void send_heartbeat(const HeartbeatPacket &h);
 extern volatile int8_t lastSenderRssi;
+extern volatile uint32_t radioLost;  // state packets that never arrived
 void maintain_channel_discovery(uint32_t now);
