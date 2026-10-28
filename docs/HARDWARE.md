@@ -123,3 +123,21 @@ The serial ports go in `CLAUDE.local.md`.
 - Firmware on the board: `Lumina LED Receiver V22`, which matches the committed `lumina_receiver_v2.ino`. It expects a 107-byte packet. It scans channels 1–11, then locks to the sender (it locked on channel 6).
 - Saved config: 4 strands, pins 33/25/26/27, 150 LEDs each, `WS2815/WS2812 RGB 800k`, `rgbScale=[128,255,126]`.
 - Baseline (15 s capture with the S3 sending): `fps=41` and `show=23566us`. Writing 4 × 150 LEDs one strand after another takes about 23.6 ms, which caps the frame rate near 42 fps. Receive loss was 8 out of 290 (about 3%), with `bad=0`.
+
+## Two-Room Rig (Phase 15, 2026-10-27)
+
+| Room | Receiver build | Strand | Data pin | LEDs |
+|---|---|---|---|---|
+| 1 | `receiver` | 1 (strand 2 optional, GPIO 25) | GPIO 33 | about 450 |
+| 2 | `receiver_room2` | 3 (strand 4 optional, GPIO 27) | GPIO 26 | about 450 |
+
+- **Short data runs.** A long data wire caused random single-pixel flicker on 2026-10-25; the fix was a short run. That's why each area gets its own receiver next to its strip.
+- **Each room has its own 12 V supply.** Tie its ground to that room's receiver GND near the strip's input.
+- **At the strip input:** a 330 Ω resistor in series with the data line, and WS2815 **BI tied to GND** at the first LED.
+- **Power warning (proposal; wiring is the owner's):** 450 LEDs at the strips' 9 W/m rating is about **11 A at full white**. One 90 W supply handles about 6 A continuous. With the brightness cap at 100%, a room on one 90 W supply can be overloaded by white-heavy looks. Per room, either:
+  - add a second supply and inject power at the second roll (keep the +12 V sections separate, grounds common); or
+  - set **Setup → Power & safety → Brightness cap** to about **50%**.
+
+  Fuse each 12 V feed at 5 A.
+- **USB:** the WROOMs' COM numbers follow the USB socket. Each board's log says `room=1` or `room=2`.
+
