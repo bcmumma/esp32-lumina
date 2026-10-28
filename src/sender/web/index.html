@@ -160,6 +160,8 @@ details > .inner { display: grid; gap: 10px; margin-top: 10px; }
 .picks { display: flex; flex-wrap: wrap; gap: 6px; }
 .picks button { border: 1px solid var(--line); background: none; color: var(--muted); padding: 6px 10px; border-radius: 999px; font: 600 12px var(--display); letter-spacing: .03em; }
 .picks button[aria-pressed="true"] { background: var(--panel-2); color: var(--fg); border-color: var(--fg); }
+.rooms { display: flex; flex-wrap: wrap; gap: 8px; }
+.rooms span { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 4px 10px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); }
 .strands { display: grid; gap: 8px; }
 .strandrow { display: grid; grid-template-columns: auto 1fr 1fr; gap: 8px; align-items: center; background: var(--panel-2); border-radius: 8px; padding: 8px 10px; }
 .strandrow .name { font: 600 14px var(--display); }
@@ -238,6 +240,7 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
       <button data-src="standalone">Standalone</button>
     </div>
     <p class="note" id="srcNote"></p>
+    <div class="rooms" id="roomsLine"></div>
   </section>
 
   <section class="panel">
@@ -362,6 +365,13 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
       <div id="tuneSliders" class="inner" style="margin:0"></div>
       <div class="row"><button class="btn" onclick="call('/api/resetAgc').then(()=>toast('Levels re-learned'))">Re-learn levels</button>
         <button class="btn" onclick="cleanBaseline()">Load clean baseline</button></div>
+    </div>
+  </details>
+
+  <details class="sec" id="updSec"><summary>Receiver updates</summary>
+    <div class="inner">
+      <p class="note">Puts a room receiver on the home Wi-Fi for 10 minutes so the PC can send it new firmware (Claude runs <code>tools/ota_update.py</code>). The lights keep running meanwhile.</p>
+      <div id="updRows" class="inner" style="margin:0"></div>
     </div>
   </details>
 
@@ -686,6 +696,21 @@ function renderControl(c) {
   renderCapLine();
   renderPower();
   renderLooks();
+  renderRooms(c.rooms || []);
+}
+function renderUpdates(rooms) {
+  $("updRows").innerHTML = [1, 2].map(n => {
+    const r = rooms.find(x => x.room === n) || {};
+    const state = !r.seen ? "not seen yet" : !r.online ? "offline" : r.updating ? (r.ip ? `ready at ${r.ip}` : "joining Wi-Fi…") : "online";
+    return `<div class="switch"><span>Room ${n}: ${state}</span><button class="btn" data-u="${n}" ${r.online ? "" : "disabled"}>Update room ${n}</button></div>`;
+  }).join("");
+}
+function renderRooms(rooms) {
+  renderUpdates(rooms);
+  $("roomsLine").innerHTML = rooms.filter(r => r.seen).map(r => r.online
+    ? `<span><span class="dot ok"></span>Room ${r.room} online · ${(r.lossPermille / 10).toFixed(1)}% loss · ${r.fps} fps</span>`
+    : `<span><span class="dot bad"></span>Room ${r.room} offline (${Math.round(r.ageMs / 1000)} s)</span>`).join("")
+    || `<span class="note">No room receiver has checked in since Lumina started.</span>`;
 }
 function renderLive(j) {
   const bars = { mBass: j.bass, mMid: j.mid, mTreble: j.treble, mLeft: j.left, mRight: j.right };
@@ -709,6 +734,8 @@ function renderDiag(j) {
     ["Sent OK", j.cbOk], ["Send fails", j.cbFail], ["Queue errors", j.enqErr], ["Busy skips", j.busySkip],
     ["Free heap", j.freeHeap], ["Loop µs", j.loopUs], ["Analyze µs", j.analyzeUs], ["HTTP µs", j.httpUs]];
   if (ctl) items.push(["Source switches", ctl.switches], ["Art-Net frames used", ctl.appliedPackets], ["Cell packets sent", ctl.cellPacketsSent || 0]);
+  if (ctl && ctl.rooms) for (const r of ctl.rooms.filter(x => x.seen))
+    items.push([`Room ${r.room} signal`, `${r.rssi} dBm`], [`Room ${r.room} uptime`, `${Math.floor(r.uptimeS / 60)} min`], [`Room ${r.room} restarts`, r.restarts]);
   $("diag").innerHTML = items.map(([k, v]) => `<div>${k}<b>${v}</b></div>`).join("");
 }
 
@@ -881,6 +908,7 @@ function wire() {
     const v = e.target.value;
     control(v === "lumina16" ? "fixture=lumina16" : v === "plain" ? "cells=" + (+$("cellCount").value || 30) : "fixture=" + v);
   };
+  $("updRows").onclick = (e) => { const b = e.target.closest("button"); if (b) control("update=" + b.dataset.u).then(() => toast(`Room ${b.dataset.u} is joining Wi-Fi for updates`)); };
   $("splitTog").onclick = () => control("split=" + (ctl && ctl.splitStrands ? 0 : 1));
   $("uiModes").onclick = (e) => { const b = e.target.closest("button"); if (b) { ui.hideModes = bitFlip(ui.hideModes, +b.dataset.m); saveUi(); } };
   $("uiKicks").onclick = (e) => { const b = e.target.closest("button"); if (b) { ui.hideKicks = bitFlip(ui.hideKicks, +b.dataset.k); saveUi(); } };

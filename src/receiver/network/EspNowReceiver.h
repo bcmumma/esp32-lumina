@@ -40,4 +40,7 @@ extern cells::Frame cellFrame;
 extern volatile uint32_t lastCellMs;  // millis() of the last accepted cell packet, 0 = none
 
 void setup_wifi_espnow();
+// Phase 16: tell the S3 this room is alive (broadcast on the locked channel).
+void send_heartbeat(const HeartbeatPacket &h);
+extern volatile int8_t lastSenderRssi;
 void maintain_channel_discovery(uint32_t now);

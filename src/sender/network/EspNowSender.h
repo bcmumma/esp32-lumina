@@ -23,5 +23,9 @@ void setup_espnow();
 void maybe_send_espnow(AudioLedPacket &p);
 // Phase 15: cell colours to send right after the next state packet (total = 0 sends none).
 void queue_cell_frame(const uint8_t *rgb, uint8_t total);
+// Phase 16: JSON array of the two rooms' status from their heartbeats (/api/control "rooms").
+void append_rooms_json(String &s);
+// Phase 16: ask a room receiver (1 or 2) to join Wi-Fi and accept a firmware upload.
+void request_room_update(uint8_t room);
 extern uint32_t cell_packets_sent;
 void update_packet_rate(uint32_t now);

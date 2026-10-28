@@ -134,7 +134,7 @@ static inline uint16_t cell_packet_bytes(uint8_t count) { return (uint16_t)(CELL
 // second, over ESP-NOW broadcast (the only packet that travels receiver -> sender).
 // ------------------------------------------------------------
 static constexpr uint16_t HEARTBEAT_MAGIC = 0xA17F;
-static constexpr uint8_t HEARTBEAT_VERSION = 1;
+static constexpr uint8_t HEARTBEAT_VERSION = 2;  // v2 adds flags and the update-mode IP
 
 struct __attribute__((packed)) HeartbeatPacket {
   uint16_t magic;
@@ -148,9 +148,31 @@ struct __attribute__((packed)) HeartbeatPacket {
   uint16_t count[2];   // LEDs driven on the room's two outputs
   uint8_t channel;     // Wi-Fi channel it is locked to (0 = scanning)
   int8_t rssi;         // signal of the last packet from the S3, dBm
+  uint8_t flags;       // HEARTBEAT_FLAG_*
+  uint8_t reserved;
+  uint32_t ip;         // IPv4 while in update mode on Wi-Fi (0 = none)
 };
 
-static_assert(sizeof(HeartbeatPacket) == 28, "HeartbeatPacket layout changed");
+static_assert(sizeof(HeartbeatPacket) == 34, "HeartbeatPacket layout changed");
+
+static constexpr uint8_t HEARTBEAT_FLAG_UPDATING = 0x01;  // in update mode
+static constexpr uint8_t HEARTBEAT_FLAG_WIFI = 0x02;      // joined the home Wi-Fi (update server reachable)
+
+// Sender -> receiver commands (Phase 16). Broadcast; only the named room acts.
+static constexpr uint16_t COMMAND_MAGIC = 0xA180;
+static constexpr uint8_t COMMAND_VERSION = 1;
+static constexpr uint8_t COMMAND_UPDATE_MODE = 1;  // join Wi-Fi and accept a firmware upload
+
+struct __attribute__((packed)) CommandPacket {
+  uint16_t magic;
+  uint8_t version;
+  uint8_t room;      // 1 or 2
+  uint8_t command;   // COMMAND_*
+  uint8_t reserved;
+  uint16_t nonce;
+};
+
+static_assert(sizeof(CommandPacket) == 8, "CommandPacket layout changed");
 
 // ------------------------------------------------------------
 // Strobe safety (Phase 12, docs/DECISIONS.md). Carried in AudioLedPacket.flags:

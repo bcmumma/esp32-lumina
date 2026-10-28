@@ -6,6 +6,54 @@
 #include "WiFiManager.h"
 #include "../config/ConfigManager.h"
 #include "CellFrame.h"
+#include "Heartbeat.h"
+
+// Phase 16: the room receivers' heartbeats (the only packets the S3 receives over ESP-NOW).
+static portMUX_TYPE roomMux = portMUX_INITIALIZER_UNLOCKED;
+static heartbeat::RoomStatus roomStatus[heartbeat::kRooms];
+
+// Phase 16: an update-mode command for one room, repeated over the next few send slots.
+static uint8_t commandRoom = 0, commandRepeats = 0;
+static uint16_t commandNonce = 0;
+
+void request_room_update(uint8_t room) {
+  if (room < 1 || room > heartbeat::kRooms) return;
+  commandRoom = room;
+  commandNonce++;
+  commandRepeats = 10;  // about a third of a second of send slots; the receiver acts once
+}
+
+static void on_espnow_recv(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
+  (void)info;
+  const uint32_t now = millis();
+  portENTER_CRITICAL(&roomMux);
+  heartbeat::accept(roomStatus, data, len, now);
+  portEXIT_CRITICAL(&roomMux);
+}
+
+void append_rooms_json(String &s) {
+  heartbeat::RoomStatus copy[heartbeat::kRooms];
+  portENTER_CRITICAL(&roomMux);
+  memcpy(copy, roomStatus, sizeof(copy));
+  portEXIT_CRITICAL(&roomMux);
+  const uint32_t now = millis();
+  s += "[";
+  for (uint8_t i = 0; i < heartbeat::kRooms; i++) {
+    const heartbeat::RoomStatus &r = copy[i];
+    if (i) s += ",";
+    s += "{\"room\":" + String(i + 1) + ",\"seen\":" + String(r.seen ? 1 : 0) + ",\"online\":" + String(heartbeat::online(r, now) ? 1 : 0);
+    if (r.seen) {
+      s += ",\"ageMs\":" + String(now - r.lastMs) + ",\"lossPermille\":" + String(r.lossPermille) + ",\"fps\":" + String(r.last.fps);
+      s += ",\"count\":[" + String(r.last.count[0]) + "," + String(r.last.count[1]) + "],\"rssi\":" + String(r.last.rssi);
+      s += ",\"channel\":" + String(r.last.channel) + ",\"uptimeS\":" + String(r.last.uptimeMs / 1000UL);
+      s += ",\"good\":" + String(r.last.good) + ",\"lost\":" + String(r.last.lost) + ",\"restarts\":" + String(r.restarts);
+      s += ",\"updating\":" + String((r.last.flags & HEARTBEAT_FLAG_UPDATING) ? 1 : 0) + ",\"wifi\":" + String((r.last.flags & HEARTBEAT_FLAG_WIFI) ? 1 : 0);
+      if (r.last.ip) s += ",\"ip\":\"" + IPAddress(r.last.ip).toString() + "\"";
+    }
+    s += "}";
+  }
+  s += "]";
+}
 
 static uint8_t pendingCells[MAX_CELLS * 3];
 static uint8_t pendingCellCount = 0;
@@ -101,6 +149,10 @@ void maybe_send_espnow(AudioLedPacket &p) {
     sequence_num++;
     send_enqueue_ok++;
     forceEspNowSend = false;
+    if (commandRepeats) {  // Phase 16: update-mode command for one room
+      CommandPacket c = {COMMAND_MAGIC, COMMAND_VERSION, commandRoom, COMMAND_UPDATE_MODE, 0, commandNonce};
+      if (esp_now_send(BROADCAST_ADDR, (const uint8_t *)&c, sizeof(c)) == ESP_OK) commandRepeats--;
+    }
     if (pendingCellCount) {  // cell colours ride in the same slot, right behind the state packet
       CellPacket parts[2];
       uint16_t bytes[2];
@@ -124,6 +176,8 @@ void setup_espnow() {
   }
 
   esp_now_register_send_cb(on_espnow_sent);
+  heartbeat::reset(roomStatus);
+  esp_now_register_recv_cb(on_espnow_recv);  // Phase 16: room heartbeats
 
   esp_now_peer_info_t peer = {};
   memcpy(peer.peer_addr, BROADCAST_ADDR, 6);

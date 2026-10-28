@@ -1,4 +1,5 @@
 #include "EspNowReceiver.h"
+#include "UpdateMode.h"
 #include <WiFi.h>
 #include <esp_now.h>
 #include <esp_wifi.h>
@@ -40,8 +41,13 @@ static void reset_channel_survey();
 // Phase 15: SoundSwitch cell frames arrive as a second packet type (CellPacket).
 cells::Frame cellFrame = {};
 volatile uint32_t lastCellMs = 0;
+volatile int8_t lastSenderRssi = 0;  // RSSI of the last good packet from the S3 (Phase 16 heartbeat)
+static const uint8_t HEARTBEAT_BROADCAST[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 static void copy_packet_from_callback(const uint8_t *mac, const uint8_t *data, int len, int rssi) {
+  if (update_mode_handle_command(data, len)) return;  // Phase 16: S3 -> receiver commands
+  // The other room's heartbeat is broadcast too: not for us, and not an error.
+  if (len == sizeof(HeartbeatPacket) && (uint16_t)(data[0] | (data[1] << 8)) == HEARTBEAT_MAGIC) return;
   if (len != sizeof(AudioLedPacket) && len >= 2 && (uint16_t)(data[0] | (data[1] << 8)) == CELL_PACKET_MAGIC) {
     portENTER_CRITICAL(&packetMux);
     bool ok = cells::accept(cellFrame, data, len);
@@ -74,6 +80,7 @@ static void copy_packet_from_callback(const uint8_t *mac, const uint8_t *data, i
     }
   }
 
+  lastSenderRssi = (int8_t)(rssi < -127 ? -127 : (rssi > 0 ? 0 : rssi));
   portENTER_CRITICAL(&packetMux);
   latestPacket = p;
   memcpy(latestMac, mac, 6);
@@ -136,6 +143,18 @@ void setup_wifi_espnow() {
     Serial.println("ESP-NOW receive callback registration failed");
     while (true) delay(1000);
   }
+
+  // Phase 16: heartbeats go back to the S3 as broadcasts on the current channel.
+  esp_now_peer_info_t peer = {};
+  memcpy(peer.peer_addr, HEARTBEAT_BROADCAST, 6);
+  peer.channel = 0;  // whatever channel the radio is on
+  peer.encrypt = false;
+  esp_err_t err = esp_now_add_peer(&peer);
+  if (err != ESP_OK && err != ESP_ERR_ESPNOW_EXIST) Serial.printf("Heartbeat peer add failed: %d\n", (int)err);
+}
+
+void send_heartbeat(const HeartbeatPacket &h) {
+  esp_now_send(HEARTBEAT_BROADCAST, (const uint8_t *)&h, sizeof(h));
 }
 
 static void reset_channel_survey() {

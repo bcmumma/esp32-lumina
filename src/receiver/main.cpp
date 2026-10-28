@@ -16,6 +16,7 @@
 #include "lighting/Effects.h"
 #include "network/EspNowReceiver.h"
 #include "RoomMap.h"
+#include "network/UpdateMode.h"
 
 // Which room this receiver lights (Phase 15): 1 = the S3's strands 1-2, 2 = strands 3-4.
 // Set by the build: `receiver` is room 1, `receiver_room2` is room 2.
@@ -95,7 +96,8 @@ void loop() {
   portEXIT_CRITICAL(&packetMux);
 
   uint32_t now = millis();
-  maintain_channel_discovery(now);
+  update_mode_loop(now);  // Phase 16: wireless firmware update window, when the S3 asks
+  if (!update_mode_active()) maintain_channel_discovery(now);  // on Wi-Fi the router sets the channel
 
   if (wifiChannelLocked && lockedWifiChannel != lastPrintedLockedChannel) {
     lastPrintedLockedChannel = lockedWifiChannel;
@@ -167,6 +169,27 @@ void loop() {
     renderFps = renderedFrames;
     renderedFrames = 0;
     lastFpsMs = now;
+  }
+
+  static uint32_t lastHeartbeat = 0;
+  if (wifiChannelLocked && now - lastHeartbeat >= 1000) {  // Phase 16: tell the S3 this room is alive
+    lastHeartbeat = now;
+    HeartbeatPacket h = {};
+    h.magic = HEARTBEAT_MAGIC;
+    h.version = HEARTBEAT_VERSION;
+    h.room = LUMINA_ROOM;
+    h.uptimeMs = now;
+    h.good = goodPackets;
+    h.lost = lostPackets;
+    h.bad = badPackets;
+    h.fps = (uint16_t)renderFps;
+    h.count[0] = count_for(0);
+    h.count[1] = count_for(1);
+    h.channel = lockedWifiChannel;
+    h.rssi = lastSenderRssi;
+    h.flags = (uint8_t)((update_mode_active() ? HEARTBEAT_FLAG_UPDATING : 0) | (update_mode_wifi_connected() ? HEARTBEAT_FLAG_WIFI : 0));
+    h.ip = update_mode_ip();
+    send_heartbeat(h);
   }
 
   static uint32_t lastPrint = 0;

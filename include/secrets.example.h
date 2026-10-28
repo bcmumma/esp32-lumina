@@ -13,3 +13,6 @@
 #define LUMINA_SUBNET 255, 255, 255, 0
 #define LUMINA_DNS1 192, 168, 1, 1
 #define LUMINA_DNS2 1, 1, 1, 1
+
+// Receivers: password for wireless firmware updates (Phase 16). Pick your own.
+#define LUMINA_OTA_PASSWORD "change-me"

@@ -392,6 +392,8 @@ void append_control_json(String &s, uint32_t nowMs) {
   s += ",\"cellFrames\":" + String(cellFrames);
   s += ",\"cellPacketsSent\":" + String(cell_packets_sent);
   s += ",\"cellFlashes\":" + String(cellFlashes);
+  s += ",\"rooms\":";
+  append_rooms_json(s);
   {
     layout::Layout fl;
     s += ",\"fxEnabled\":" + String(current_layout(fl) && fl.fx ? 1 : 0);

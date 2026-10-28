@@ -421,6 +421,7 @@ static void handle_artnet() {
 //   &fx=0|1 &fxHit=0..7 (off/ripple/glitter/pump/shatter/comet/duck/ping-pong) &beam=0..255 &spread=1..8
 //   &fxBeam=0|1 &fxSparkle=0|1 &fxStrobe=0|1 &fxAlways=0|1 (Lumina FX fixture looks; all saved)
 //   &split=0|1 (cell layouts: split the cells across the active strands; saved)
+//   &update=1|2 (put that room's receiver into wireless update mode for 10 minutes)
 //   (?artnet=1|0 = source artnet|audio)
 static void handle_control() {
   bool persist = false;
@@ -466,6 +467,7 @@ static void handle_control() {
   if (server.hasArg("fxBeam")) { control.beamOn = server.arg("fxBeam").toInt() != 0; persist = true; }
   if (server.hasArg("fxSparkle")) { control.sparkleOn = server.arg("fxSparkle").toInt() != 0; persist = true; }
   if (server.hasArg("fxStrobe")) { control.fxStrobeOn = server.arg("fxStrobe").toInt() != 0; persist = true; }
+  if (server.hasArg("update")) request_room_update((uint8_t)clamp_int(server.arg("update").toInt(), 0, 2));  // not saved
   if (server.hasArg("split")) { control.splitStrands = server.arg("split").toInt() != 0; persist = true; }
   if (server.hasArg("fxAlways")) { control.kicksAlways = server.arg("fxAlways").toInt() != 0; persist = true; }
   if (server.hasArg("beam")) { control.beamStrength = (uint8_t)clamp_int(server.arg("beam").toInt(), 0, 255); persist = true; }

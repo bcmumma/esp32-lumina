@@ -17,7 +17,9 @@
   };
   const ctl = { source: "auto", active: "audio", reason: "auto: no fresh art-net, fallback", autoFallback: "audio", timeoutMs: 1000,
     standaloneLevel: 128, switches: 7, artnetAgeMs: 84641, applyingArtnet: false, appliedPackets: 46847, address: 1,
-    brightnessCap: 255, brightnessCapMin: 8, brightnessCapMax: 255, strobeEnabled: false, strobeHz: 3, strobeMaxHz: 15, kickFlash: 0, fixture: 203, fixtureName: "18x5 Dim + FX", fixtureCells: 90, fixtureChannels: 288, splitStrands: 1, cellFrames: 0, cellPacketsSent: 0, cellFlashes: 0, hybridHoldMs: 10000, fxEnabled: 1, fxHit: 1, beamOn: 1, sparkleOn: 1, fxStrobeOn: 1, kicksAlways: 0, beamStrength: 255, beamSpread: 3, fxAddress: 289,
+    brightnessCap: 255, brightnessCapMin: 8, brightnessCapMax: 255, strobeEnabled: false, strobeHz: 3, strobeMaxHz: 15, kickFlash: 0, fixture: 203, fixtureName: "18x5 Dim + FX", fixtureCells: 90, fixtureChannels: 288, splitStrands: 1, cellFrames: 0, cellPacketsSent: 0, cellFlashes: 0, hybridHoldMs: 10000,
+    rooms: [{ room: 1, seen: 1, online: 1, ageMs: 400, lossPermille: 4, fps: 61, count: [450, 0], rssi: -58, channel: 6, uptimeS: 5400, good: 160000, lost: 600, restarts: 0 },
+      { room: 2, seen: 1, online: 1, ageMs: 700, lossPermille: 11, fps: 62, count: [450, 0], rssi: -66, channel: 6, uptimeS: 5380, good: 159000, lost: 1700, restarts: 0 }], fxEnabled: 1, fxHit: 1, beamOn: 1, sparkleOn: 1, fxStrobeOn: 1, kicksAlways: 0, beamStrength: 255, beamSpread: 3, fxAddress: 289,
     fxLive: { beam: 230, pos: 140, moving: 1, pulsing: 1, sparkle: 0, edges: 0 } };
   const L = (id, name, mode, fixtures, cells, dimmer, strobe) => {
     const per = (dimmer ? 1 : 0) + 3 * cells + (strobe ? 1 : 0);
@@ -65,6 +67,7 @@
     if (q.has("fxStrobe")) ctl.fxStrobeOn = +q.get("fxStrobe");
     if (q.has("fxAlways")) ctl.kicksAlways = +q.get("fxAlways");
     if (q.has("split")) ctl.splitStrands = +q.get("split");
+    if (q.has("update")) { const r = ctl.rooms[+q.get("update") - 1]; if (r) { r.updating = 1; r.wifi = 1; r.ip = "192.0.2.21"; } }
     if (q.has("beam")) ctl.beamStrength = +q.get("beam");
     if (q.has("spread")) ctl.beamSpread = +q.get("spread");
     if (q.has("kickFlash")) ctl.kickFlash = Math.max(0, Math.min(255, +q.get("kickFlash")));

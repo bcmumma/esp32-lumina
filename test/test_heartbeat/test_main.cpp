@@ -21,7 +21,10 @@ static HeartbeatPacket hb(uint8_t room, uint32_t uptime, uint32_t good, uint32_t
   return h;
 }
 
-static void test_layout() { TEST_ASSERT_EQUAL_UINT(28, sizeof(HeartbeatPacket)); }
+static void test_layout() {
+  TEST_ASSERT_EQUAL_UINT(34, sizeof(HeartbeatPacket));
+  TEST_ASSERT_EQUAL_UINT(8, sizeof(CommandPacket));
+}
 
 static void test_accept_and_online() {
   heartbeat::RoomStatus rooms[2];
@@ -56,6 +59,17 @@ static void test_loss_between_heartbeats() {
   TEST_ASSERT_EQUAL_UINT16(66, rooms[0].lossPermille);  // 2 / 30 = 6.6%
 }
 
+static void test_update_flags_and_ip() {
+  heartbeat::RoomStatus rooms[2];
+  heartbeat::reset(rooms);
+  HeartbeatPacket h = hb(1, 1000, 10, 0);
+  h.flags = HEARTBEAT_FLAG_UPDATING | HEARTBEAT_FLAG_WIFI;
+  h.ip = 0x6F0200C0;  // 192.0.2.111 (documentation range) as stored by IPAddress, little-endian octets
+  heartbeat::accept(rooms, (const uint8_t *)&h, sizeof(h), 10);
+  TEST_ASSERT_EQUAL_HEX8(0x03, rooms[0].last.flags);
+  TEST_ASSERT_EQUAL_HEX32(0x6F0200C0, rooms[0].last.ip);
+}
+
 static void test_receiver_reboot() {
   heartbeat::RoomStatus rooms[2];
   heartbeat::reset(rooms);
@@ -74,6 +88,7 @@ void setup() {
   RUN_TEST(test_rejects_other_packets);
   RUN_TEST(test_loss_between_heartbeats);
   RUN_TEST(test_receiver_reboot);
+  RUN_TEST(test_update_flags_and_ip);
   UNITY_END();
 }
 
