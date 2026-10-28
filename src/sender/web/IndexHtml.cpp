@@ -454,8 +454,9 @@ const DEFAULTS = {
   6: [0, 0, 128, 150, 0], 11: [0, 0, 128, 150, 0], 12: [0, 0, 128, 150, 0], 13: [0, 0, 128, 150, 0],
 };
 const DEFAULT_FIELDS = ["speed", "density", "sensitivity", "strobe", "twinkle"];
+// Hues on the receiver's colour wheel (6 x 43 steps): red 0, yellow 43, green 86, cyan 128, blue 171, magenta 213.
 const COLOURS = [["Red", 0, 255, "#ff2b2b"], ["Orange", 22, 255, "#ff8c1a"], ["Yellow", 42, 255, "#ffd83d"],
-  ["Green", 96, 255, "#00d464"], ["Cyan", 128, 255, "#00d9ff"], ["Blue", 165, 255, "#2d74ff"],
+  ["Green", 86, 255, "#00e040"], ["Cyan", 128, 255, "#00d9ff"], ["Blue", 171, 255, "#2050ff"],
   ["Purple", 190, 255, "#9d4dff"], ["Pink", 222, 255, "#ff4db8"], ["White", 0, 0, "#ffffff"]];
 const LED_TYPES = ["WS2815 / WS2812 RGB 800 kHz (proven)", "WS2811 RGB 800 kHz", "WS2811 GRB 800 kHz", "WS2811 RGB 400 kHz",
   "SK6812 RGB (GRB)", "SK6812 RGBW (GRBW)", "SK6812 RGBW (RGBW)"];
