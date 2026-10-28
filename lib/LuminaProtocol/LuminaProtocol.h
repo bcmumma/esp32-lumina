@@ -130,6 +130,29 @@ static_assert(sizeof(CellPacket) <= 250, "CellPacket must fit in an ESP-NOW v1 p
 static inline uint16_t cell_packet_bytes(uint8_t count) { return (uint16_t)(CELL_HEADER_BYTES + count * 3U); }
 
 // ------------------------------------------------------------
+// Receiver heartbeat (Phase 16): each room receiver tells the S3 it is alive, about once a
+// second, over ESP-NOW broadcast (the only packet that travels receiver -> sender).
+// ------------------------------------------------------------
+static constexpr uint16_t HEARTBEAT_MAGIC = 0xA17F;
+static constexpr uint8_t HEARTBEAT_VERSION = 1;
+
+struct __attribute__((packed)) HeartbeatPacket {
+  uint16_t magic;
+  uint8_t version;
+  uint8_t room;        // 1 or 2
+  uint32_t uptimeMs;   // since the receiver booted
+  uint32_t good;       // state packets received since boot
+  uint32_t lost;       // state packets missed (sequence gaps) since boot
+  uint32_t bad;        // packets rejected since boot
+  uint16_t fps;        // frames rendered in the last second
+  uint16_t count[2];   // LEDs driven on the room's two outputs
+  uint8_t channel;     // Wi-Fi channel it is locked to (0 = scanning)
+  int8_t rssi;         // signal of the last packet from the S3, dBm
+};
+
+static_assert(sizeof(HeartbeatPacket) == 28, "HeartbeatPacket layout changed");
+
+// ------------------------------------------------------------
 // Strobe safety (Phase 12, docs/DECISIONS.md). Carried in AudioLedPacket.flags:
 //   bits 0-1: beat diagnostics (unchanged)
 //   bits 4-6: low 3 bits of (max flash rate - 1)
