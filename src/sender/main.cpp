@@ -39,6 +39,7 @@ void setup() {
   load_control_settings();
 
   setup_status_rgb();
+  status_rgb_set_enabled(control.statusLed);  // saved owner switch; dark by default
   setup_wifi();
   setup_espnow();
   setup_web_server();
@@ -79,6 +80,7 @@ void loop() {
 
   uint32_t now = millis();
   update_packet_rate(now);
+  web_autosave(now);
   static uint32_t last_print_ms = 0;
   if (now - last_print_ms > 1000) {
     last_print_ms = now;

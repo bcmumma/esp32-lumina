@@ -22,6 +22,14 @@ uint32_t maxHttpUs = 0;
 uint32_t httpRequestCount = 0;
 uint32_t lastLiveBytes = 0;
 
+// Autosave (DJ feedback, 2026-10-31): look and setup changes are saved a few seconds after the
+// last one, so nobody has to press Save. One write per burst of slider moves.
+static constexpr uint32_t kAutosaveMs = 3000;
+static uint32_t ledDirtyMs = 0;   // 0 = nothing unsaved
+static uint32_t feelDirtyMs = 0;
+static void mark_led_dirty() { ledDirtyMs = millis() | 1U; }
+static void save_feel();
+
 // // Web handlers
 // ============================================================
 static void no_cache() {
@@ -87,6 +95,7 @@ static void handle_set_tuning() {
 
   if (server.hasArg("shiftTo16")) cfg.shiftTo16 = clamp_int(server.arg("shiftTo16").toInt(), 12, 20);
 
+  if (server.args() > 0) mark_led_dirty();
   forceEspNowSend = true;
   no_cache();
   server.send(200, "application/json", "{\"ok\":true}");
@@ -122,7 +131,10 @@ static void handle_set_led() {
     snprintf(name, sizeof(name), "s%d_strobe", s); ledCfg.strand[s].strobe = get_u8_arg(name, ledCfg.strand[s].strobe, 0, 255);
     snprintf(name, sizeof(name), "s%d_twinkle", s); ledCfg.strand[s].twinkle = get_u8_arg(name, ledCfg.strand[s].twinkle, 0, 255);
     snprintf(name, sizeof(name), "s%d_direction", s); ledCfg.strand[s].direction = get_u8_arg(name, ledCfg.strand[s].direction, 0, 2);
-    ledCfg.strand[s].reserved8 = 0;
+    // DJ feedback: strobe colour (0 = white, else hue + 1) and colour mood (from == to = none).
+    snprintf(name, sizeof(name), "s%d_strobeColor", s); ledCfg.strand[s].strobeColor = get_u8_arg(name, ledCfg.strand[s].strobeColor, 0, 255);
+    snprintf(name, sizeof(name), "s%d_moodFrom", s); ledCfg.strand[s].moodFrom = get_u8_arg(name, ledCfg.strand[s].moodFrom, 0, 255);
+    snprintf(name, sizeof(name), "s%d_moodTo", s); ledCfg.strand[s].moodTo = get_u8_arg(name, ledCfg.strand[s].moodTo, 0, 255);
   }
 
   ledCfg.activeStrands = (uint8_t)clamp_int(ledCfg.activeStrands, 1, MAX_STRANDS);
@@ -131,6 +143,7 @@ static void handle_set_led() {
     if (ledCfg.strand[s].ledCount > ledCfg.maxLedsPerStrand) ledCfg.strand[s].ledCount = ledCfg.maxLedsPerStrand;
   }
 
+  if (server.args() > 0) mark_led_dirty();
   forceEspNowSend = true;
   no_cache();
   server.send(200, "application/json", "{\"ok\":true}");
@@ -154,10 +167,29 @@ static void handle_save() {
   server.send(saved ? 200 : 500, "application/json", out);
 }
 
+// Default audio tuning and looks. The wiring (active strands, pins, LED counts, types, which strands
+// are on) and the colour calibration are kept: with autosave, defaults are saved too, and a lost
+// LED count or pin would leave a room dark.
 static void handle_defaults() {
+  const LedConfig keep = ledCfg;
   set_default_config();
+  ledCfg.activeStrands = keep.activeStrands;
+  ledCfg.maxLedsPerStrand = keep.maxLedsPerStrand;
+  ledCfg.colorMap = keep.colorMap;
+  ledCfg.redScale = keep.redScale;
+  ledCfg.greenScale = keep.greenScale;
+  ledCfg.blueScale = keep.blueScale;
+  ledCfg.gamma10 = keep.gamma10;
+  for (int s = 0; s < MAX_STRANDS; s++) {
+    ledCfg.strand[s].enabled = keep.strand[s].enabled;
+    ledCfg.strand[s].pin = keep.strand[s].pin;
+    ledCfg.strand[s].ledType = keep.strand[s].ledType;
+    ledCfg.strand[s].ledCount = keep.strand[s].ledCount;
+  }
   reset_agc();
   reset_beat_state();
+  mark_led_dirty();
+  forceEspNowSend = true;
   no_cache();
   server.send(200, "application/json", "{\"defaults\":true}");
 }
@@ -235,6 +267,9 @@ static void append_led_json(String &s) {
     s += ",\"strobe\":" + String(st.strobe);
     s += ",\"twinkle\":" + String(st.twinkle);
     s += ",\"direction\":" + String(st.direction);
+    s += ",\"strobeColor\":" + String(st.strobeColor);
+    s += ",\"moodFrom\":" + String(st.moodFrom);
+    s += ",\"moodTo\":" + String(st.moodTo);
     s += "}";
   }
   s += "]}";
@@ -414,7 +449,10 @@ static void handle_artnet() {
 // Control source and safety (Phases 13-14). Saved: source, fallback, standalone, strobeHz, cap.
 // Live only: strobe (off at every boot), address.
 //   ?source=auto|artnet|hybrid|audio|standalone &fallback=audio|standalone &standalone=0..255
-//   &strobe=0|1 &strobeHz=1..8 &cap=8..255 (rig brightness cap, every source; 255 = none) &address=1..497
+//   &strobe=0|1 &strobeHz=1..15 &cap=8..255 (rig brightness cap, every source; 255 = none) &address=1..497
+//   &strobeSense=0..255 (strobe sensitivity: 255 = always, lower = flashes only in loud parts; saved)
+//   &cellGap=0..12 (spaced SoundSwitch cells: dark gap in 16ths of a cell, 0 = none; saved)
+//   &statusLed=0|1 (the S3's onboard RGB status light; saved, dark by default)
 //   &kickFlash=0..255 (rig-wide white flash on bass hits, saved; 0 = off)
 //   &cells=0..150 (SoundSwitch fixture: 0 = LUMINA-16, N = N plain RGB cells; saved)
 //   &fixture=lumina16|<layout id> (named layouts, see /api/fixtures; saved)
@@ -447,6 +485,19 @@ static void handle_control() {
     persist = true;
   }
   if (server.hasArg("strobe")) control.strobeEnabled = server.arg("strobe").toInt() != 0;
+  if (server.hasArg("strobeSense")) {  // 255 = always; lower = only the loud parts (saved)
+    control.strobeSense = (uint8_t)clamp_int(server.arg("strobeSense").toInt(), 0, 255);
+    persist = true;
+  }
+  if (server.hasArg("cellGap")) {  // spaced SoundSwitch cells: gap in 16ths of a cell, 0 = none (saved)
+    control.cellGap = (uint8_t)clamp_int(server.arg("cellGap").toInt(), 0, CELL_GAP_MAX);
+    persist = true;
+  }
+  if (server.hasArg("statusLed")) {  // the S3's onboard RGB status light (saved; dark by default)
+    control.statusLed = server.arg("statusLed").toInt() != 0;
+    status_rgb_set_enabled(control.statusLed);
+    persist = true;
+  }
   if (server.hasArg("address")) control.address = (uint16_t)clamp_int(server.arg("address").toInt(), 1, 512 - 15);
   if (server.hasArg("fixture")) {  // "lumina16", or a named layout id 1..N (/api/fixtures)
     const String f = server.arg("fixture");
@@ -489,21 +540,30 @@ static void handle_control() {
   server.send(200, "application/json", s);
 }
 
-// Show-screen buttons the owner hid in Setup (Phase 15). Page-only preference, saved on the S3 so
-// every phone and PC shows the same buttons. Bit n of uiHiddenModes = LED mode n; bit k of
-// uiHiddenKicks = kick look k.
+// Page preferences, saved on the S3 so every phone and PC shows the same (Phase 15, extended for
+// the DJs 2026-10-31). Bit n of uiHiddenModes = LED mode n; bit k of uiHiddenKicks = kick look k.
+// The Live page shows uiLiveModes (0 = empty slot) and the colour moods in uiLiveMoods (bit i =
+// mood i of the page's list); uiArchive shows the retired genres on the Advanced page.
 static uint64_t uiHiddenModes = 0;
 static uint8_t uiHiddenKicks = 0;
+static constexpr uint8_t kLiveSlots = 6;
+static uint8_t uiLiveModes[kLiveSlots] = {25, 28, 46, 47, 49, 51};  // Hyper Strobe, DnB Split, Hyper Scatter/Grid, Split Mirror/Strobe
+static uint16_t uiLiveMoods = 0xFFFF;
+static uint8_t uiArchive = 0;
 
 static void load_ui_prefs() {
   Preferences store;
   if (!store.begin("lumina_ui", true)) return;
   uiHiddenModes = store.getULong64("modes", 0);
   uiHiddenKicks = store.getUChar("kicks", 0);
+  if (store.getBytesLength("live") == kLiveSlots) store.getBytes("live", uiLiveModes, kLiveSlots);
+  uiLiveMoods = store.getUShort("moods", 0xFFFF);
+  uiArchive = store.getUChar("archive", 0);
   store.end();
+  for (uint8_t i = 0; i < kLiveSlots; i++) if (uiLiveModes[i] > LED_MODE_MAX) uiLiveModes[i] = 0;
 }
 
-//   /api/ui[?hideModes=<decimal bit mask>&hideKicks=0..255]
+//   /api/ui[?hideModes=<decimal bit mask>&hideKicks=0..255&liveModes=m1,..,m6&liveMoods=<mask>&archive=0|1]
 static void handle_ui() {
   bool changed = false;
   if (server.hasArg("hideModes")) {
@@ -514,22 +574,128 @@ static void handle_ui() {
     uiHiddenKicks = (uint8_t)clamp_int(server.arg("hideKicks").toInt(), 0, 255);
     changed = true;
   }
+  if (server.hasArg("liveModes")) {
+    const String v = server.arg("liveModes");
+    int from = 0;
+    for (uint8_t i = 0; i < kLiveSlots; i++) {
+      const int comma = v.indexOf(',', from);
+      const String part = comma < 0 ? v.substring(from) : v.substring(from, comma);
+      uiLiveModes[i] = part.length() ? (uint8_t)clamp_int(part.toInt(), 0, LED_MODE_MAX) : 0;
+      from = comma < 0 ? v.length() : comma + 1;
+    }
+    changed = true;
+  }
+  if (server.hasArg("liveMoods")) {
+    uiLiveMoods = (uint16_t)clamp_int(server.arg("liveMoods").toInt(), 0, 0xFFFF);
+    changed = true;
+  }
+  if (server.hasArg("archive")) {
+    uiArchive = server.arg("archive").toInt() != 0 ? 1 : 0;
+    changed = true;
+  }
   if (changed) {
     Preferences store;
     if (store.begin("lumina_ui", false)) {
       store.putULong64("modes", uiHiddenModes);
       store.putUChar("kicks", uiHiddenKicks);
+      store.putBytes("live", uiLiveModes, kLiveSlots);
+      store.putUShort("moods", uiLiveMoods);
+      store.putUChar("archive", uiArchive);
       store.end();
     }
   }
-  char out[96];
-  snprintf(out, sizeof(out), "{\"hideModes\":%llu,\"hideKicks\":%u}", (unsigned long long)uiHiddenModes, uiHiddenKicks);
+  char out[192];
+  snprintf(out, sizeof(out), "{\"hideModes\":%llu,\"hideKicks\":%u,\"liveModes\":[%u,%u,%u,%u,%u,%u],\"liveMoods\":%u,\"archive\":%u}",
+           (unsigned long long)uiHiddenModes, uiHiddenKicks, uiLiveModes[0], uiLiveModes[1], uiLiveModes[2], uiLiveModes[3],
+           uiLiveModes[4], uiLiveModes[5], uiLiveMoods, uiArchive);
   no_cache();
   server.send(200, "application/json", out);
 }
 
+// Per-mode slider memory (DJ feedback, 2026-10-31): the Feel sliders a DJ last used for each mode
+// (speed, density, audio response, decay, sparkle), so switching modes and back keeps them.
+// A mode nobody has touched has no entry; the page then uses its tuned starting values.
+static constexpr uint8_t kFeelFields = 5;
+static uint8_t feelValues[LED_MODE_MAX + 1][kFeelFields];
+static uint64_t feelTouched = 0;  // bit n = mode n has remembered values
+
+static void load_feel() {
+  Preferences store;
+  if (!store.begin("lumina_ui", true)) return;
+  if (store.getBytesLength("feel") == sizeof(feelValues)) {
+    store.getBytes("feel", feelValues, sizeof(feelValues));
+    feelTouched = store.getULong64("feelmask", 0) & ((1ULL << (LED_MODE_MAX + 1)) - 1);
+  }
+  store.end();
+}
+
+static void save_feel() {
+  Preferences store;
+  if (!store.begin("lumina_ui", false)) return;
+  store.putBytes("feel", feelValues, sizeof(feelValues));
+  store.putULong64("feelmask", feelTouched);
+  store.end();
+}
+
+//   /api/feel                         -> {"modes":{"25":[speed,density,sensitivity,decay,sparkle],...}}
+//   /api/feel?mode=N&v=a,b,c,d,e      remember mode N's sliders (saved a few seconds later)
+//   /api/feel?forget=N|all            back to the tuned starting values
+static void handle_feel() {
+  if (server.hasArg("mode") && server.hasArg("v")) {
+    const int mode = server.arg("mode").toInt();
+    if (mode >= 0 && mode <= LED_MODE_MAX) {
+      const String v = server.arg("v");
+      int from = 0;
+      for (uint8_t i = 0; i < kFeelFields; i++) {
+        const int comma = v.indexOf(',', from);
+        const String part = comma < 0 ? v.substring(from) : v.substring(from, comma);
+        feelValues[mode][i] = (uint8_t)clamp_int(part.toInt(), 0, 255);
+        from = comma < 0 ? v.length() : comma + 1;
+      }
+      feelTouched |= 1ULL << mode;
+      feelDirtyMs = millis() | 1U;
+    }
+  }
+  if (server.hasArg("forget")) {
+    const String f = server.arg("forget");
+    if (f == "all") feelTouched = 0;
+    else if (f.toInt() >= 0 && f.toInt() <= LED_MODE_MAX) feelTouched &= ~(1ULL << f.toInt());
+    feelDirtyMs = millis() | 1U;
+  }
+  String s;
+  s.reserve(1024);
+  s += "{\"modes\":{";
+  bool firstEntry = true;
+  for (uint8_t m = 0; m <= LED_MODE_MAX; m++) {
+    if (!(feelTouched & (1ULL << m))) continue;
+    if (!firstEntry) s += ",";
+    firstEntry = false;
+    s += "\"" + String(m) + "\":[";
+    for (uint8_t i = 0; i < kFeelFields; i++) {
+      if (i) s += ",";
+      s += String(feelValues[m][i]);
+    }
+    s += "]";
+  }
+  s += "}}";
+  no_cache();
+  server.send(200, "application/json", s);
+}
+
+void web_autosave(uint32_t nowMs) {
+  if (ledDirtyMs && nowMs - ledDirtyMs >= kAutosaveMs) {
+    ledDirtyMs = 0;
+    Serial.println(save_config() ? "Autosaved settings" : "WARNING: autosave failed (Preferences read-back)");
+  }
+  if (feelDirtyMs && nowMs - feelDirtyMs >= kAutosaveMs) {
+    feelDirtyMs = 0;
+    save_feel();
+  }
+}
+
 void setup_web_server() {
   load_ui_prefs();
+  load_feel();
   server.on("/", handle_root);
   server.on("/api/state", handle_state);
   server.on("/api/live", handle_live);
@@ -544,6 +710,7 @@ void setup_web_server() {
     server.send(200, "application/json", s);
   });
   server.on("/api/ui", handle_ui);
+  server.on("/api/feel", handle_feel);
   server.on("/api/setTuning", handle_set_tuning);
   server.on("/api/setLed", handle_set_led);
   server.on("/api/save", handle_save);

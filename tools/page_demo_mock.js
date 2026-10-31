@@ -8,7 +8,7 @@
       activeStrands: 4, maxLedsPerStrand: 300, globalBrightness: 255, globalHue: 0, colorMap: 0,
       redScale: 128, greenScale: 255, blueScale: 126, gamma10: 20,
       strand: pins.map((pin) => ({ enabled: 1, pin, ledType: 0, ledCount: 150, mode: 33, brightness: 255, hue: 0, saturation: 255,
-        speed: 0, density: 0, sensitivity: 160, strobe: 170, twinkle: 0, direction: 0 })),
+        speed: 0, density: 0, sensitivity: 160, strobe: 170, twinkle: 0, direction: 0, strobeColor: 0, moodFrom: 0, moodTo: 0 })),
     },
     cfg: { shiftTo16: 18, volumeGain: 0.55, bassGain: 0.9, midGain: 0.7, trebleGain: 1.85, lrGain: 1.15, volumeFloor: 317, bassFloor: 228,
       midFloor: 189, trebleFloor: 192, attack: 0.6, release: 0.08, peakDecay: 0.995, beatVolMin: 171, beatBassMin: 80, beatSensitivity: 1.75,
@@ -17,7 +17,7 @@
   };
   const ctl = { source: "auto", active: "audio", reason: "auto: no fresh art-net, fallback", autoFallback: "audio", timeoutMs: 1000,
     standaloneLevel: 128, switches: 7, artnetAgeMs: 84641, applyingArtnet: false, appliedPackets: 46847, address: 1,
-    brightnessCap: 255, brightnessCapMin: 8, brightnessCapMax: 255, strobeEnabled: false, strobeHz: 3, strobeMaxHz: 15, kickFlash: 0, fixture: 203, fixtureName: "18x5 Dim + FX", fixtureCells: 90, fixtureChannels: 288, splitStrands: 1, cellFrames: 0, cellPacketsSent: 0, cellFlashes: 0, hybridHoldMs: 10000,
+    brightnessCap: 255, brightnessCapMin: 8, brightnessCapMax: 255, strobeEnabled: false, strobeHz: 3, strobeMaxHz: 15, strobeSense: 255, strobeOpen: false, loudDb: -3, cellGap: 0, cellGapMax: 12, statusLed: 0, statusLedUsable: 0, kickFlash: 0, fixture: 203, fixtureName: "18x5 Dim + FX", fixtureCells: 90, fixtureChannels: 288, splitStrands: 1, cellFrames: 0, cellPacketsSent: 0, cellFlashes: 0, hybridHoldMs: 10000,
     rooms: [{ room: 1, seen: 1, online: 1, ageMs: 400, lossPermille: 4, fps: 61, count: [450, 0], rssi: -58, channel: 6, uptimeS: 5400, good: 160000, lost: 600, restarts: 0 },
       { room: 2, seen: 1, online: 1, ageMs: 700, lossPermille: 11, fps: 62, count: [450, 0], rssi: -66, channel: 6, uptimeS: 5380, good: 159000, lost: 1700, restarts: 0 }], fxEnabled: 1, fxHit: 1, beamOn: 1, sparkleOn: 1, fxStrobeOn: 1, kicksAlways: 0, beamStrength: 255, beamSpread: 3, fxAddress: 289,
     fxLive: { beam: 230, pos: 140, moving: 1, pulsing: 1, sparkle: 0, edges: 0 } };
@@ -29,7 +29,8 @@
   const FIXTURES = [L(1, "6x5 Dim + FX", "5 Cell Dim", 6, 5, 1, 0), L(2, "12x5 Dim + FX", "5 Cell Dim", 12, 5, 1, 0),
     L(3, "18x5 Dim + FX", "5 Cell Dim", 18, 5, 1, 0), L(4, "6x5 Dim Strobe + FX", "5 Cell Dim Strobe", 6, 5, 1, 1),
     L(5, "12x5 Dim Strobe + FX", "5 Cell Dim Strobe", 12, 5, 1, 1), L(6, "18x5 Dim Strobe + FX", "5 Cell Dim Strobe", 18, 5, 1, 1)];
-  const UI = { hideModes: 0, hideKicks: 0 };
+  const UI = { hideModes: 0, hideKicks: 0, liveModes: [25, 28, 46, 47, 49, 51], liveMoods: 65535, archive: 0 };
+  const FEEL = {};
   const t0 = performance.now();
   let pulse = 0, lastKick = -1;
 
@@ -72,6 +73,10 @@
     if (q.has("spread")) ctl.beamSpread = +q.get("spread");
     if (q.has("kickFlash")) ctl.kickFlash = Math.max(0, Math.min(255, +q.get("kickFlash")));
     if (q.has("strobe")) ctl.strobeEnabled = q.get("strobe") !== "0";
+    if (q.has("cellGap")) ctl.cellGap = Math.max(0, Math.min(12, +q.get("cellGap")));
+    if (q.has("statusLed")) ctl.statusLed = +q.get("statusLed");
+    if (q.has("strobeSense")) ctl.strobeSense = Math.max(0, Math.min(255, +q.get("strobeSense")));
+    ctl.strobeOpen = ctl.strobeEnabled && (ctl.strobeSense >= 255 || Math.random() < 0.6);
     if (q.has("cap")) ctl.brightnessCap = Math.max(8, Math.min(255, +q.get("cap")));
     ctl.active = ctl.source === "auto" ? "artnet" : ctl.source;
     ctl.reason = ctl.source === "auto" ? "auto: no fresh art-net, fallback" : ctl.source === "artnet" ? "artnet: no frame yet" : "selected";
@@ -100,7 +105,14 @@
       case "/api/ui":
         if (q.has("hideModes")) UI.hideModes = +q.get("hideModes");
         if (q.has("hideKicks")) UI.hideKicks = +q.get("hideKicks");
+        if (q.has("liveModes")) UI.liveModes = q.get("liveModes").split(",").map(Number);
+        if (q.has("liveMoods")) UI.liveMoods = +q.get("liveMoods");
+        if (q.has("archive")) UI.archive = +q.get("archive");
         body = UI; break;
+      case "/api/feel":
+        if (q.has("mode") && q.has("v")) FEEL[q.get("mode")] = q.get("v").split(",").map(Number);
+        if (q.has("forget")) delete FEEL[q.get("forget")];
+        body = { modes: FEEL }; break;
       case "/api/setLed": body = applyLed(q); break;
       case "/api/setTuning": for (const [k, v] of q) state.cfg[k] = +v; body = { ok: true }; break;
       case "/api/save": body = { saved: true, activeStrands: state.led.activeStrands }; break;

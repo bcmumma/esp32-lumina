@@ -159,19 +159,30 @@ The receiver has no config module because it persists nothing: its hardware and 
 
 ## Effects
 
-These are v2's intended effects. They were provided but never verified, so check them in the repo.
+The receiver renders every mode (`src/receiver/lighting/Effects.cpp`); mode IDs never renumber.
 
-- **Normal:** Solid Color, Aurora Drift, Starfield, Neon Scanner, Off.
-- **Rave:** Laser Sweep, Rave Chase, Bass Cannons, DnB Chopper, Acid Chase, Portal Pulse, Spectrum Sparks, Hyper Strobe, Cyber Tunnel, White Lightning, DnB Split, Rave Tiles, Pulse Train, Void Bloom.
-- Audio-reactive rave modes use continuous energy and band values, not a beat detector.
-- VU tools (Overall, Bass, Mid, Treble) live in Audio Tune.
-- The first `LUMINA-16` effects will be: Solid Color, Neon Scanner, Laser Sweep, Rave Chase, DnB Chopper, and White Lightning.
+- **Page genres (DJ feedback, 2026-10-31):** Club (Hyper Strobe and DnB Split, plus 46 Hyper Scatter, 47 Hyper Grid, 48 Hyper Mirror, 49 Split Mirror, 50 Split Blocks, 51 Split Strobe), General, Chill, Halloween. House, Techno, Drum & Bass, Acid and Meters are retired: the firmware keeps them, and Setup can show them again.
+- **Club modes** keep dark space between lit parts. The Hyper modes fire little bursts on energy spikes (Audio response sets how readily, Decay how long they glow) and bigger volleys on big hits. Bursts go through the rig strobe gate.
+- Audio-reactive modes use continuous energy and band values, plus the bass-hit pulse for kick modes. There is no tempo tracking.
+
+## DJ Controls (2026-10-31)
+
+- **Strobe colour and colour mood** use three strand bytes that were zero-filled reserves, so the packet stays 107 bytes at version 12. Zero reads as a white strobe and no mood, which is what older senders and saved configs hold:
+  - `strobeColor` (0 = white, else hue + 1) colours Kick Flash, Strobe, Drop Strobe, Kick Strobe, the Hyper bursts, White Lightning's white forks, and the SoundSwitch kick looks. Beam and UV sparkle stay white.
+  - `moodFrom` / `moodTo` (equal = none): `lib/Mood` folds every look colour, the Hybrid colour and the SoundSwitch cells into that hue range, with a 20 s drift taken from the S3's clock so both rooms match. Strobe colours and the Halloween looks are left alone.
+- **Strobe sensitivity** (`lib/StrobeAuto`, S3): with Strobe on, flashes run only while the music is loud. It compares the line-in level with a loud reference that rises in about 1.5 s and fades over about 2 minutes. 255 = Always (the old behaviour); 0..254 maps to -1..-12 dB below the reference, with 2 dB hysteresis and a 1.5 s hold, and silence closes it. It drives the packet's strobe-enabled bit, so the receivers need no change. Strobe stays off at boot and the max-rate cap still applies.
+- **Spaced cells (L11 / L1):** `cellGap` (saved, 0 = off, up to 12/16) goes to the receivers in density bits 0–3 of the cell strands, which older receivers ignore. Each SoundSwitch cell keeps its middle lit and goes dark toward both edges (`cells::in_gap`), drawn as solid blocks.
+- **Status light:** `statusLed` (saved, off by default) drives the S3's RGB LED when its pin is free. On this board it isn't (GPIO48 = PCM1808 DOUT), so `statusLedUsable` is 0 and the page explains it.
+- **Autosave:** `/api/setLed`, `/api/setTuning` and `/api/defaults` mark the config dirty; the loop saves 3 s after the last change. Load defaults keeps the wiring and the colour calibration.
+- **Per-mode sliders:** `/api/feel` keeps the speed, density, audio response, decay and sparkle the DJ last used for each mode (NVS `lumina_ui/feel`, outside the config blob, so its size check is untouched).
+- **Page preferences** (`/api/ui`): the six Live looks, the Live moods, hidden buttons, and the retired-genres switch.
 
 ## Web UI Layout
 
-1. Control All (default).
-2. Strand 1–4 pages.
-3. Audio Tune.
-4. Hardware/Setup.
+Three tabs, phone-first:
 
-Keep it phone-friendly.
+1. **Live** (default): brightness, the six chosen looks, colour moods, a big Strobe button, strobe colour and sensitivity. Everything applies to the whole rig.
+2. **Advanced:** source, every look, colour and mood, Feel sliders, SoundSwitch looks, the strobe settings. Panels the current source doesn't use are hidden; for example, SoundSwitch looks show only in Auto or SoundSwitch.
+3. **Setup:** power, Live page picks, the SoundSwitch fixture, buttons, strands, calibration, audio, receiver updates, diagnostics.
+
+Polls never move a slider the user is holding, and the page refreshes the look state every 5 s so other phones' changes appear.

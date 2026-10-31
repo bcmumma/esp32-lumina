@@ -26,8 +26,9 @@ void set_default_led_config() {
 
   // Fresh installs start in a dependable non-audio mode. Additional strands
   // remain disabled until their LED counts and enable states are configured.
-  ledCfg.strand[0] = {1, 9, 220, 165, 255, 0, 0, 0, 0, 0, 0, DEFAULT_LED_PINS[0], LED_TYPE_WS2815_WS2812_RGB_800, 0, DEFAULT_LED_COUNTS[0], 0};
-  ledCfg.strand[1] = {0, 15, 210, 190, 255, 48, 118, 0, 175, 24, 0, DEFAULT_LED_PINS[1], LED_TYPE_WS2815_WS2812_RGB_800, 0, DEFAULT_LED_COUNTS[1], 0};
-  ledCfg.strand[2] = {0, 16, 220, 165, 255, 62, 48, 0, 205, 170, 0, DEFAULT_LED_PINS[2], LED_TYPE_WS2815_WS2812_RGB_800, 0, DEFAULT_LED_COUNTS[2], 0};
-  ledCfg.strand[3] = {0, 17, 230, 200, 255, 118, 76, 0, 185, 8, 0, DEFAULT_LED_PINS[3], LED_TYPE_WS2815_WS2812_RGB_800, 0, DEFAULT_LED_COUNTS[3], 0};
+  // Last fields: strobeColor (0 = white), ledCount, moodFrom, moodTo (equal = no mood).
+  ledCfg.strand[0] = {1, 9, 220, 165, 255, 0, 0, 0, 0, 0, 0, DEFAULT_LED_PINS[0], LED_TYPE_WS2815_WS2812_RGB_800, 0, DEFAULT_LED_COUNTS[0], 0, 0};
+  ledCfg.strand[1] = {0, 15, 210, 190, 255, 48, 118, 0, 175, 24, 0, DEFAULT_LED_PINS[1], LED_TYPE_WS2815_WS2812_RGB_800, 0, DEFAULT_LED_COUNTS[1], 0, 0};
+  ledCfg.strand[2] = {0, 16, 220, 165, 255, 62, 48, 0, 205, 170, 0, DEFAULT_LED_PINS[2], LED_TYPE_WS2815_WS2812_RGB_800, 0, DEFAULT_LED_COUNTS[2], 0, 0};
+  ledCfg.strand[3] = {0, 17, 230, 200, 255, 118, 76, 0, 185, 8, 0, DEFAULT_LED_PINS[3], LED_TYPE_WS2815_WS2812_RGB_800, 0, DEFAULT_LED_COUNTS[3], 0, 0};
 }

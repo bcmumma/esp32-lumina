@@ -22,7 +22,11 @@
     - 0 clips;
     - silence read -55 dBFS peak and -67 dBFS RMS.
   - So a full-scale 0 dBFS track would peak around -13 dBFS at the ADC: about 13 dB of headroom and no clipping. This holds only if the knob and the Windows volume stay where they are.
-- **Unknown:** the exact S3 dev board model and the onboard RGB LED pin. If the onboard RGB is on GPIO48, it conflicts with PCM1808 DOUT, so the status LED must stay disabled.
+- **Unknown:** the exact S3 dev board model (CH343 USB serial, a big RGB LED, a red power LED and a green activity LED).
+- **Onboard RGB LED (tested 2026-10-31):** it is on **GPIO48**, the PCM1808 DOUT line. Writes to GPIO38 never reached it, and it changes colour by itself because the audio data line drives it. The owner saw it white, then red. Lumina can't switch it off while DOUT is on GPIO48. **Options (wiring is the owner's):**
+  - **Move PCM1808 OUT from GPIO48 to GPIO38** (free, on the same header). Claude then changes `PIN_DIN` to 38, the Advanced → Status light switch controls the LED, and the audio levels need one re-check.
+  - Or open the board's RGB solder jumper, if it has one (on the back, near the LED).
+  - Or cover the LED.
 
 ## Receiver: ESP32-WROOM + Four Strands
 
@@ -109,7 +113,7 @@ The serial ports go in `CLAUDE.local.md`.
 - Flash: 16 MB, quad (4 data lines), 3.3 V.
 - PSRAM: 8 MB embedded (AP_3v3).
 - USB-serial: WCH CH343 (VID:PID `1A86:55D3`). Windows already has its driver.
-- Onboard RGB: GPIO48, per the v20.1 boot log. This confirms the conflict with PCM1808 DOUT, so the status LED stays disabled.
+- Onboard RGB: GPIO48, per the v20.1 boot log and confirmed by test on 2026-10-31 (see above): it shares the PCM1808 DOUT line.
 - Firmware on the board: the boot banner says `Lumina v20.1`, but the committed v22 sender prints that same stale banner (`lumina_sender_v2.ino` line 3507), so the board is probably running v22. `AudioLedPacket` size is 107, and the dual-slot CRC config loads slot `cfgA`.
 - Module: **ESP32-S3-WROOM-1 N16R8** (owner read the shield label, 2026-10-12). Espressif's ESP32-S3-WROOM-1 datasheet ordering table lists the N16R8 as 16 MB quad flash with 8 MB **octal** PSRAM. PlatformIO therefore needs `qio_opi` memory (flash QIO, PSRAM OPI). With octal PSRAM, GPIO35–37 are used internally and aren't free.
 - **UNVERIFIED:** the dev board carrying the module. The PlatformIO board ID gets chosen in the S3 test project.

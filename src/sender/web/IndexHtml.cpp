@@ -25,6 +25,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
   --accent-ink: #1b1305;
   --live: #4fd1c5;
   --warn: #ff5a5f;
+  --g-club: #ff5ad1;
   --g-house: #ffb03a;
   --g-techno: #5ab0ff;
   --g-dnb: #ff5ad1;
@@ -44,7 +45,7 @@ body {
   background: var(--bg); color: var(--fg); font: 15px/1.45 var(--body);
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 0 96px;
+  padding-block: 0 48px;
   -webkit-tap-highlight-color: transparent;
 }
 .wrap { max-width: 760px; margin: 0 auto; display: grid; gap: 14px; }
@@ -64,7 +65,7 @@ button { cursor: pointer; }
   background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
-.top-in { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
+.top-in { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .brand { font: 700 18px/1 var(--display); letter-spacing: .28em; }
 .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); font-size: 12px; white-space: nowrap; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
@@ -72,6 +73,8 @@ button { cursor: pointer; }
 .dot.bad { background: var(--warn); }
 .kick { width: 12px; height: 12px; border-radius: 50%; background: var(--panel-2); border: 1px solid var(--line); transition: background .25s, box-shadow .25s; }
 .kick.on { background: var(--accent); box-shadow: 0 0 14px var(--accent); transition: none; }
+.savechip { font-size: 12px; color: var(--muted); transition: opacity .4s; }
+.savechip.hide { opacity: 0; }
 .spacer { flex: 1; }
 .tabs { display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
 .tabs button { border: 0; background: none; padding: 6px 12px; border-radius: 999px; font: 600 13px var(--display); letter-spacing: .06em; color: var(--muted); }
@@ -94,8 +97,8 @@ button { cursor: pointer; }
 .mcol:nth-child(3) .mfill { background: var(--g-techno); }
 .mlabel { font: 600 11px var(--display); letter-spacing: .08em; color: var(--muted); }
 .master { display: grid; gap: 6px; min-width: 128px; }
-.master .big { font: 600 28px/1 var(--display); }
-.capline { font-size: 12px; color: var(--muted); }
+.big { font: 600 28px/1 var(--display); }
+.capline { font-size: 12px; color: var(--muted); margin: 0; }
 
 /* Segmented controls */
 .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 3px; gap: 3px; }
@@ -110,7 +113,7 @@ button { cursor: pointer; }
 .genres button[aria-pressed="true"] { color: var(--fg); border-color: var(--fg); }
 .gdot { width: 8px; height: 8px; border-radius: 50%; }
 .modes { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
-.mode { text-align: left; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 11px; display: grid; gap: 4px; min-width: 0; }
+.mode { text-align: left; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 11px; display: grid; gap: 4px; min-width: 0; align-content: start; }
 .mode b { font: 600 15px/1.2 var(--display); letter-spacing: .02em; }
 .mode span { font-size: 12px; color: var(--muted); line-height: 1.35; }
 .mode[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
@@ -122,13 +125,27 @@ button { cursor: pointer; }
 .offbtn { justify-self: start; border: 1px solid var(--line); background: none; padding: 7px 14px; border-radius: 8px; color: var(--muted); }
 .offbtn[aria-pressed="true"] { color: var(--fg); border-color: var(--fg); }
 
+/* Live page: big targets for a dark booth */
+.livemodes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.livemodes .mode { min-height: 76px; padding: 12px; }
+.livemodes .mode b { font-size: 18px; }
+.bigstrobe { width: 100%; min-height: 64px; border-radius: 12px; border: 2px solid var(--line); background: var(--panel-2); font: 700 20px var(--display); letter-spacing: .14em; color: var(--muted); }
+.bigstrobe[aria-pressed="true"] { background: var(--warn); border-color: var(--warn); color: #fff; box-shadow: 0 0 24px color-mix(in srgb, var(--warn) 55%, transparent); }
+input.fat { -webkit-appearance: none; appearance: none; height: 14px; border-radius: 7px; background: var(--panel-2); border: 1px solid var(--line); }
+input.fat::-webkit-slider-thumb { -webkit-appearance: none; width: 32px; height: 32px; border-radius: 50%; background: var(--accent); border: 3px solid var(--bg); }
+input.fat::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); border: 3px solid var(--bg); }
+
 /* Colour */
 .swatches { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; }
 .sw { aspect-ratio: 1; max-width: 100%; border-radius: 50%; border: 2px solid transparent; padding: 0; }
 .sw[aria-pressed="true"] { border-color: var(--fg); box-shadow: 0 0 0 2px var(--bg) inset; }
+.moods { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.moodbtn { display: grid; gap: 6px; text-align: left; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; font: 600 13px var(--display); letter-spacing: .02em; color: var(--fg); min-height: 48px; }
+.moodbtn i { display: block; height: 10px; border-radius: 5px; }
+.moodbtn[aria-pressed="true"] { border-color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg); }
 
 /* Sliders */
-.sl { display: grid; grid-template-columns: 110px 1fr 44px; gap: 10px; align-items: center; }
+.sl { display: grid; grid-template-columns: 110px 1fr 52px; gap: 10px; align-items: center; }
 .sl label { font-size: 13px; color: var(--muted); }
 .sl output { text-align: right; font-size: 13px; }
 input[type=range] { width: 100%; accent-color: var(--accent); min-width: 0; }
@@ -150,10 +167,10 @@ details > .inner { display: grid; gap: 10px; margin-top: 10px; }
 
 /* Buttons */
 .btn { border: 1px solid var(--line); background: var(--panel-2); padding: 9px 14px; border-radius: 8px; font: 600 14px var(--display); letter-spacing: .03em; }
-.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .btn.danger { color: var(--warn); }
 .btn.armed { background: var(--warn); color: #fff; border-color: var(--warn); }
 .btn.black[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.btn.small { padding: 6px 10px; font-size: 12px; }
 
 /* Setup */
 .setup details.sec { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; }
@@ -181,20 +198,18 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
 .hm .t { height: 8px; background: var(--panel-2); border-radius: 4px; overflow: hidden; }
 .hm .f { height: 100%; width: 0; background: var(--accent); }
 
-/* Save bar and toast */
-.savebar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
-  padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
-  background: var(--panel); border-top: 1px solid var(--line);
-}
-.savebar .row { max-width: 760px; margin: 0 auto; justify-content: space-between; flex-wrap: nowrap; }
-.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 7; max-width: calc(100% - 32px); }
+/* Toast */
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 7; max-width: calc(100% - 32px); }
 .toast.show { opacity: 1; }
 .toast.err { background: var(--warn); color: #fff; }
 
+@media (max-width: 520px) {
+  .tabs { order: 9; width: 100%; }
+  .tabs button { flex: 1; }
+}
 @media (max-width: 460px) {
   .live { grid-template-columns: 1fr; }
-  .sl { grid-template-columns: 92px 1fr 40px; }
+  .sl { grid-template-columns: 92px 1fr 48px; }
   .swatches { grid-template-columns: repeat(5, 1fr); }
   .modes { grid-template-columns: 1fr 1fr; }
 }
@@ -207,15 +222,51 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
     <span class="brand">LUMINA</span>
     <span class="chip" title="Who is driving the lights"><span class="dot" id="srcDot"></span><span id="srcChip">…</span></span>
     <span class="kick" id="kick" title="Bass hit"></span>
+    <span class="savechip hide" id="saveChip" role="status"></span>
     <span class="spacer"></span>
     <nav class="tabs" aria-label="Screens">
-      <button id="tabShow" aria-pressed="true" onclick="showScreen('show')">Show</button>
+      <button id="tabLive" aria-pressed="true" onclick="showScreen('live')">Live</button>
+      <button id="tabAdv" aria-pressed="false" onclick="showScreen('adv')">Advanced</button>
       <button id="tabSetup" aria-pressed="false" onclick="showScreen('setup')">Setup</button>
     </nav>
   </div>
 </header>
 
-<main class="wrap" id="screenShow" style="margin-top:14px">
+<!-- Live: the DJ page. Everything here applies to the whole rig. -->
+<main class="wrap" id="screenLive" style="margin-top:14px">
+  <section class="panel">
+    <div class="row" style="justify-content:space-between"><h2>Brightness</h2><span class="big num" id="liveBrightPct">–</span></div>
+    <input type="range" class="fat" id="liveBright" min="0" max="255" aria-label="Brightness">
+    <div class="row" style="justify-content:space-between"><p class="capline" id="liveCapLine"></p>
+      <button class="btn black" id="liveBlackout" aria-pressed="false" onclick="toggleBlackout()">Blackout</button></div>
+  </section>
+
+  <section class="panel">
+    <div class="row" style="justify-content:space-between"><h2>Looks</h2><span class="note" id="liveSrcNote"></span></div>
+    <div class="livemodes" id="liveModes"></div>
+    <p class="note" id="liveModeNote" hidden></p>
+  </section>
+
+  <section class="panel">
+    <h2>Colour mood</h2>
+    <div class="moods" id="liveMoods"></div>
+  </section>
+
+  <section class="panel">
+    <button class="bigstrobe" id="liveStrobe" aria-pressed="false" onclick="toggleStrobe()">STROBE OFF</button>
+    <p class="note" id="liveStrobeNote"></p>
+    <h2>Strobe colour</h2>
+    <div class="swatches" id="liveStrobeCols"></div>
+    <div class="sl"><label for="liveSense">Sensitivity</label><input type="range" id="liveSense" min="0" max="255"><output class="num" id="o_liveSense"></output></div>
+    <p class="note">Sensitivity: further left, Strobe flashes only on drops and the loudest parts; at the right end (Always) it flashes whenever it's on.</p>
+    <p class="warnnote">Flashing at about 3–30 flashes per second can trigger seizures in people with photosensitive epilepsy. Strobe is off after every restart.</p>
+  </section>
+
+  <div class="rooms" id="liveRooms"></div>
+</main>
+
+<!-- Advanced: every option (was the Show screen). -->
+<main class="wrap" id="screenAdv" style="margin-top:14px" hidden>
   <section class="panel">
     <div class="live">
       <div class="meters" aria-label="Live audio levels">
@@ -248,7 +299,7 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
     <div class="rooms" id="roomsLine"></div>
   </section>
 
-  <section class="panel">
+  <section class="panel" id="lookPanel">
     <div class="row" style="justify-content:space-between"><h2>Look</h2><span class="note" id="applyNote"></span></div>
     <div class="seg small" id="targetSeg" aria-label="Apply to">
       <button data-t="all">All</button><button data-t="0">1</button><button data-t="1">2</button><button data-t="2">3</button><button data-t="3">4</button>
@@ -259,16 +310,22 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
     <button class="offbtn" id="offBtn" aria-pressed="false" onclick="pickMode(0)">Turn off</button>
   </section>
 
-  <section class="panel">
+  <section class="panel" id="colourPanel">
     <h2>Colour</h2>
     <div class="swatches" id="swatches"></div>
     <input type="range" class="hue" id="hue" min="0" max="255" aria-label="Hue">
   </section>
 
-  <section class="panel">
-    <h2>Feel</h2>
+  <section class="panel" id="moodPanel">
+    <h2>Colour mood</h2>
+    <div class="moods" id="advMoods"></div>
+    <p class="note" id="moodNote">Off: the look's own colours (or SoundSwitch's). A mood keeps every look, Hybrid and SoundSwitch inside its two colours, drifting slowly between them. Halloween keeps its colours.</p>
+  </section>
+
+  <section class="panel" id="feelPanel">
+    <div class="row" style="justify-content:space-between"><h2>Feel</h2><button class="btn small" id="feelReset" title="Back to this look's starting values">Reset look</button></div>
     <div class="sl"><label for="f_speed">Speed</label><input type="range" id="f_speed" min="0" max="255"><output class="num" id="o_speed"></output></div>
-    <div class="sl"><label for="f_sensitivity">Audio response</label><input type="range" id="f_sensitivity" min="0" max="255"><output class="num" id="o_sensitivity"></output></div>
+    <div class="sl" id="rowSensitivity"><label for="f_sensitivity">Audio response</label><input type="range" id="f_sensitivity" min="0" max="255"><output class="num" id="o_sensitivity"></output></div>
     <div class="sl"><label for="f_brightness">Strand level</label><input type="range" id="f_brightness" min="0" max="255"><output class="num" id="o_brightness"></output></div>
     <details id="moreFeel"><summary>More: density, decay, sparkle, saturation, direction</summary>
       <div class="inner">
@@ -279,24 +336,40 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
         <div class="sl"><label>Direction</label><div class="seg small" id="dirSeg"><button data-d="0">Forward</button><button data-d="1">Reverse</button><button data-d="2">Centre</button></div><span></span></div>
       </div>
     </details>
+    <p class="note">Each look remembers its own sliders.</p>
   </section>
 
   <section class="panel" id="ssPanel" hidden>
     <div class="row" style="justify-content:space-between"><h2>SoundSwitch looks</h2><span class="note" id="ssNow"></span></div>
-    <div class="modes" id="kickLooks"></div>
-    <div class="switch"><span>Beam (follows SoundSwitch's movement)</span><button class="tog calm" id="swBeam" aria-label="Beam"></button></div>
-    <div class="switch"><span>UV sparkle bursts</span><button class="tog calm" id="swSparkle" aria-label="UV sparkle"></button></div>
-    <div class="switch"><span>FX Strobe (needs Strobe on)</span><button class="tog calm" id="swFxStrobe" aria-label="FX strobe"></button></div>
-    <div class="switch"><span>Kick looks on every kick (off = busy sections only)</span><button class="tog calm" id="swAlways" aria-label="Kicks always"></button></div>
+    <div class="switch"><div><b>Spaced cells</b><p class="note">SoundSwitch's cells as separate blocks with dark gaps, instead of one smooth, fully lit strip.</p></div>
+      <button class="tog calm" id="swSpaced" aria-pressed="false" aria-label="Spaced cells"></button></div>
+    <div class="sl" id="rowGap"><label for="cellGap">Gap</label><input type="range" id="cellGap" min="2" max="12"><output class="num" id="o_cellGap"></output></div>
+    <div id="fxLooks" class="inner" style="display:grid;gap:12px;margin:0">
+      <div class="modes" id="kickLooks"></div>
+      <div class="switch"><span>Beam (follows SoundSwitch's movement)</span><button class="tog calm" id="swBeam" aria-label="Beam"></button></div>
+      <div class="switch"><span>UV sparkle bursts</span><button class="tog calm" id="swSparkle" aria-label="UV sparkle"></button></div>
+      <div class="switch"><span>FX Strobe (needs Strobe on)</span><button class="tog calm" id="swFxStrobe" aria-label="FX strobe"></button></div>
+      <div class="switch"><span>Kick looks on every kick (off = busy sections only)</span><button class="tog calm" id="swAlways" aria-label="Kicks always"></button></div>
+    </div>
   </section>
 
   <section class="panel">
-    <div class="switch"><div><h2>Strobe</h2><p class="note" id="strobeNote">Off. Flash modes stay dark until you turn it on.</p></div>
+    <div class="switch"><div><h2>Strobe</h2><p class="note" id="strobeNote">Off. Flash looks stay dark until you turn it on.</p></div>
       <button class="tog" id="strobeTog" aria-pressed="false" aria-label="Strobe" onclick="toggleStrobe()"></button></div>
-    <div class="sl"><label for="kickFlash">Kick flash</label><input type="range" id="kickFlash" min="0" max="255"><output class="num" id="o_kickFlash"></output></div>
-    <p class="note">Kick flash adds a white hit on every kick over any mode. Strobe and Drop Strobe are in General.</p>
+    <div class="sl"><label for="advSense">Sensitivity</label><input type="range" id="advSense" min="0" max="255"><output class="num" id="o_advSense"></output></div>
+    <p class="note">Sensitivity: further left, Strobe flashes only on drops and the loudest parts; Always flashes whenever it's on.</p>
+    <h2>Strobe colour</h2>
+    <div class="swatches" id="advStrobeCols"></div>
+    <div class="sl" id="rowKickFlash"><label for="kickFlash">Kick flash</label><input type="range" id="kickFlash" min="0" max="255"><output class="num" id="o_kickFlash"></output></div>
+    <p class="note">Kick flash adds a flash in the strobe colour on every kick over any look. Strobe and Drop Strobe are in General.</p>
     <div class="sl"><label for="strobeHz">Max flashes/s</label><input type="range" id="strobeHz" min="1" max="15"><output class="num" id="o_strobeHz"></output></div>
     <p class="warnnote">Flashing at about 3–30 flashes per second can trigger seizures in people with photosensitive epilepsy. Strobe is off after every restart.</p>
+  </section>
+
+  <section class="panel">
+    <div class="switch"><div><h2>Status light</h2><p class="note">The RGB light on the Lumina S3 board: off keeps it dark at all times. On, it shows green when connected and blinks blue or red otherwise.</p></div>
+      <button class="tog calm" id="swStatusLed" aria-pressed="false" aria-label="Status light"></button></div>
+    <p class="warnnote" id="statusLedNote" hidden>On this board the RGB light shares GPIO48 with the PCM1808's audio data, so Lumina can't switch it: it shows whatever the audio line sends it. To free it, move the PCM1808 OUT wire to another pin (see docs/HARDWARE.md), cover the light, or open the board's RGB jumper.</p>
   </section>
 </main>
 
@@ -307,7 +380,16 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
       <p class="note" id="capNote"></p>
       <div class="sl"><label for="fallback">Auto falls back to</label><select id="fallback"><option value="audio">Audio</option><option value="standalone">Standalone</option></select><span></span></div>
       <div class="sl"><label for="standalone">Standalone level</label><input type="range" id="standalone" min="0" max="255"><output class="num" id="o_standalone"></output></div>
-      <p class="note">These save immediately. The cap applies to every source.</p>
+      <p class="note">The cap applies to every source. Everything on this page saves by itself.</p>
+    </div>
+  </details>
+
+  <details class="sec"><summary>Live page</summary>
+    <div class="inner">
+      <p class="note">The six looks and the colour moods on the Live page. Saved on Lumina, so every phone shows the same.</p>
+      <div id="liveSlots" class="inner" style="margin:0"></div>
+      <h2 style="margin-top:6px">Colour moods</h2>
+      <div class="picks" id="liveMoodPicks"></div>
     </div>
   </details>
 
@@ -327,9 +409,11 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
     </div>
   </details>
 
-  <details class="sec"><summary>Show screen buttons</summary>
+  <details class="sec"><summary>Advanced page buttons</summary>
     <div class="inner">
-      <p class="note">Tap to hide or show a button on the Show screen. Lit = shown. Saved on Lumina, so every phone sees the same.</p>
+      <p class="note">Tap to hide or show a button on the Advanced page. Lit = shown. Saved on Lumina, so every phone sees the same.</p>
+      <div class="switch"><div><b>Retired genres</b><p class="note">House, Techno, Drum &amp; Bass, Acid and Meters on the Advanced page.</p></div>
+        <button class="tog calm" id="archiveTog" aria-pressed="false" aria-label="Show retired genres"></button></div>
       <div id="uiModes" class="inner" style="margin:0"></div>
       <h2 style="margin-top:6px">Kick looks</h2>
       <div class="picks" id="uiKicks"></div>
@@ -343,7 +427,7 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
       <div class="strands" id="strandRows"></div>
       <div class="sl"><label for="maxLeds">Max LEDs/strand</label><input type="number" id="maxLeds" min="1" max="1000"><span></span></div>
       <p class="note">Room 1's receiver drives strands 1–2; room 2's receiver (the <code>receiver_room2</code> build) drives strands 3–4 on its own first two outputs, so set strands 3–4 to the pins wired in room 2 (e.g. 33 and 25). Set Active strands to 3 or 4 to light room 2.</p>
-      <p class="note">Pin, count, and type changes make the receiver reconfigure. Proven pins: 33, 25, 26, 27.</p>
+      <p class="note">Pin, count, and type changes make the receiver reconfigure. Proven pins: 33, 25, 26, 27. A strand switched off here stays off when you pick a look.</p>
     </div>
   </details>
 
@@ -355,8 +439,8 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
       <div class="sl"><label for="blueScale">Blue</label><input type="range" id="blueScale" min="0" max="255"><output class="num" id="o_blueScale"></output></div>
       <div class="sl"><label for="gamma10">Gamma ×10</label><input type="range" id="gamma10" min="10" max="30"><output class="num" id="o_gamma10"></output></div>
       <div class="row">
-        <button class="btn" onclick="calTest(0,255)">Test red</button><button class="btn" onclick="calTest(96,255)">Test green</button>
-        <button class="btn" onclick="calTest(165,255)">Test blue</button><button class="btn" onclick="calTest(0,0)">Test white</button>
+        <button class="btn" onclick="calTest(0,255)">Test red</button><button class="btn" onclick="calTest(86,255)">Test green</button>
+        <button class="btn" onclick="calTest(171,255)">Test blue</button><button class="btn" onclick="calTest(0,0)">Test white</button>
         <button class="btn" onclick="calReset()">Reset</button>
       </div>
       <p class="note">Tests put every active strand on a solid colour. Pick a look again afterwards.</p>
@@ -385,15 +469,11 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
   </details>
 
   <details class="sec"><summary>Reset</summary>
-    <div class="inner"><p class="note">Loads default audio and LED settings. Nothing is saved until you press Save.</p>
+    <div class="inner"><p class="note">Loads the default audio tuning and looks. The wiring (pins, LED counts, which strands are on) and the colour calibration are kept. Saved by itself.</p>
       <div class="row"><button class="btn danger" id="defaultsBtn" onclick="loadDefaults()">Load defaults</button></div></div>
   </details>
 </main>
 
-<div class="savebar" id="saveBar" hidden>
-  <div class="row"><span class="note">Unsaved changes. They're live now and are lost on restart.</span>
-    <button class="btn primary" id="saveBtn" onclick="saveAll()">Save</button></div>
-</div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -426,7 +506,7 @@ const MODES = {
   22: ["Acid Chase", "Comets that speed up with mids and highs.", ""],
   23: ["Portal Pulse", "Rings open from the centre, brighter on bass.", ""],
   24: ["Spectrum Sparks", "Sparks for each band, in band colours.", ""],
-  25: ["Hyper Strobe", "White bursts on energy spikes.", "s"],
+  25: ["Hyper Strobe", "Little strobe bursts on energy spikes, brighter on big hits.", "s"],
   26: ["Cyber Tunnel", "Dashes rush outward with the volume.", ""],
   27: ["White Lightning", "Forked flashes on hi-hat spikes.", "s"],
   28: ["DnB Split", "Three chopped band meters side by side.", ""],
@@ -438,29 +518,41 @@ const MODES = {
   34: ["Kick Ripple", "Each kick sends a ring out from the centre.", "k"],
   35: ["Break Chopper", "Kicks slam blocks into random slots; hats spark.", "k"],
   36: ["Acid Squelch", "A resonant peak glides with the mids, like a 303 sweep.", ""],
-  37: ["Strobe", "Classic strobe at your max flash rate.", "s"],
+  37: ["Strobe", "Classic strobe at your max flash rate, in the strobe colour.", "s"],
+  38: ["Drop Strobe", "Dark in quiet parts, kick flashes, flat-out strobe on drops.", "ks"],
   40: ["Candle Flicker", "Rows of orange candles flickering like jack-o'-lanterns.", ""],
   41: ["Witch's Brew", "Green and purple bubbles swell and pop.", ""],
   42: ["Ghost Drift", "Pale ghosts drift along the dark, fading in and out.", ""],
   43: ["Pumpkin Patch", "Orange pumpkins with green stems, gently breathing.", ""],
   44: ["Blood Drip", "Red drops gather, then run down the strip.", ""],
   45: ["Graveyard Fog", "Slow purple and green fog rolling past.", ""],
-  38: ["Drop Strobe", "Dark in quiet parts, kick flashes, flat-out strobe on drops.", "ks"],
+  46: ["Hyper Scatter", "Little strobes scattered along the strip; big hits throw a volley.", "s"],
+  47: ["Hyper Grid", "Spaced slots flash on hits; a big hit lights the whole grid.", "s"],
+  48: ["Hyper Mirror", "Strobe pairs from the centre; bigger hits land further out.", "s"],
+  49: ["Split Mirror", "DnB Split from the centre out: bass in the middle, highs at the ends.", ""],
+  50: ["Split Blocks", "Short spaced meters along the strip, bass, mid, high repeating.", ""],
+  51: ["Split Strobe", "DnB Split with a little strobe on each meter's tip on hits.", "s"],
   3:  ["Bass Comet", "Legacy mode.", ""],
   8:  ["Void Scanner", "Legacy mode.", ""],
   14: ["Beat Tracker", "Legacy mode (needs the old beat detector).", ""],
 };
+// Genres on the Advanced page (DJ feedback 2026-10-31: Club is built around Hyper Strobe and DnB Split).
 const GENRES = [
-  ["house", "House", [33, 23, 19, 7, 24]],
-  ["techno", "Techno", [34, 18, 26, 30, 25, 2]],
-  ["dnb", "Drum & Bass", [35, 21, 28, 20, 29, 27]],
-  ["acid", "Acid", [36, 22, 31]],
+  ["club", "Club", [25, 46, 47, 48, 28, 49, 50, 51]],
   ["general", "General", [37, 38, 9, 1, 4, 5]],
   ["chill", "Chill", [15, 16, 17]],
   ["halloween", "Halloween", [40, 41, 42, 43, 44, 45]],
+];
+// Retired genres: hidden unless Setup → Advanced page buttons → Retired genres is on.
+const ARCHIVE = [
+  ["house", "House", [33, 23, 19, 7, 24]],
+  ["techno", "Techno", [34, 18, 26, 30, 2]],
+  ["dnb", "Drum & Bass", [35, 21, 20, 29, 27]],
+  ["acid", "Acid", [36, 22, 31]],
   ["meters", "Meters", [32, 6, 11, 12, 13, 10]],
 ];
-// Starting values applied when a mode is picked: speed, density, sensitivity, strobe (decay), twinkle.
+// Starting values for each look: speed, density, sensitivity, strobe (decay), twinkle.
+// A look keeps the DJ's own sliders once they move them (/api/feel).
 const DEFAULTS = {
   9: [0, 0, 0, 0, 0], 15: [48, 118, 0, 175, 24], 16: [62, 48, 0, 205, 170], 17: [118, 76, 0, 185, 8],
   18: [168, 82, 0, 210, 0], 19: [178, 112, 0, 150, 20], 20: [118, 105, 168, 175, 0], 21: [220, 142, 180, 205, 16],
@@ -470,6 +562,8 @@ const DEFAULTS = {
   32: [0, 0, 128, 150, 0], 33: [0, 0, 160, 170, 0], 34: [150, 90, 0, 170, 0], 35: [0, 100, 160, 160, 120],
   36: [120, 60, 170, 0, 160], 37: [0, 0, 0, 0, 0], 38: [0, 0, 160, 0, 0],
   40: [120, 0, 0, 0, 0], 41: [120, 0, 0, 0, 0], 42: [80, 0, 0, 0, 0], 43: [100, 0, 0, 0, 0], 44: [100, 0, 0, 0, 0], 45: [90, 0, 0, 0, 0],
+  46: [0, 90, 185, 200, 0], 47: [0, 96, 185, 190, 0], 48: [0, 80, 185, 200, 0],
+  49: [198, 124, 168, 185, 16], 50: [0, 128, 168, 185, 0], 51: [198, 124, 168, 200, 0],
   6: [0, 0, 128, 150, 0], 11: [0, 0, 128, 150, 0], 12: [0, 0, 128, 150, 0], 13: [0, 0, 128, 150, 0],
 };
 const DEFAULT_FIELDS = ["speed", "density", "sensitivity", "strobe", "twinkle"];
@@ -477,6 +571,14 @@ const DEFAULT_FIELDS = ["speed", "density", "sensitivity", "strobe", "twinkle"];
 const COLOURS = [["Red", 0, 255, "#ff2b2b"], ["Orange", 22, 255, "#ff8c1a"], ["Yellow", 42, 255, "#ffd83d"],
   ["Green", 86, 255, "#00e040"], ["Cyan", 128, 255, "#00d9ff"], ["Blue", 171, 255, "#2050ff"],
   ["Purple", 190, 255, "#9d4dff"], ["Pink", 222, 255, "#ff4db8"], ["White", 0, 0, "#ffffff"]];
+// Colour moods: name, from hue, to hue (going up the wheel; Pink–Red wraps past red), swatch ends.
+const MOODS = [["Red–Orange", 0, 24, "#ff2b2b", "#ff8c1a"], ["Orange–Yellow", 16, 44, "#ff7a1a", "#ffd83d"],
+  ["Yellow–Green", 40, 90, "#ffd83d", "#00e040"], ["Green–Cyan", 86, 130, "#00e040", "#00d9ff"],
+  ["Cyan–Blue", 128, 171, "#00d9ff", "#2050ff"], ["Blue–Purple", 165, 200, "#2050ff", "#9d4dff"],
+  ["Purple–Pink", 190, 235, "#9d4dff", "#ff4db8"], ["Pink–Red", 225, 0, "#ff4db8", "#ff2b2b"]];
+// Strobe colours: name, code (0 = white, else hue + 1), swatch.
+const STROBE_COLOURS = [["White", 0, "#ffffff"], ["Red", 1, "#ff2b2b"], ["Orange", 23, "#ff8c1a"], ["Yellow", 43, "#ffd83d"],
+  ["Green", 87, "#00e040"], ["Cyan", 129, "#00d9ff"], ["Blue", 172, "#2050ff"], ["Purple", 191, "#9d4dff"], ["Pink", 223, "#ff4db8"]];
 const LED_TYPES = ["WS2815 / WS2812 RGB 800 kHz (proven)", "WS2811 RGB 800 kHz", "WS2811 GRB 800 kHz", "WS2811 RGB 400 kHz",
   "SK6812 RGB (GRB)", "SK6812 RGBW (GRBW)", "SK6812 RGBW (RGBW)"];
 const COLOR_MAPS = ["RGB", "RBG", "GRB", "GBR", "BRG", "BGR"];
@@ -487,12 +589,14 @@ const TUNING = [ // id, label, min, max, step
   ["trebleFloor", "High floor", 0, 500, 1], ["attack", "Attack", 0.02, 1, 0.01], ["release", "Release", 0.01, 0.8, 0.01],
   ["peakDecay", "Peak decay", 0.9, 0.999, 0.001], ["shiftTo16", "Input shift", 13, 18, 1], ["packetIntervalMs", "Send every (ms)", 20, 120, 1],
 ];
-// Strip power estimate: seller rating 9 W/m at 30 LEDs/m and 12 V = 25 mA per LED at full white (UNVERIFIED until measured).
+// Strip power estimate: seller rating 9 W/m at 30 LEDs/m and 12 V = 25 mA per LED at full white.
+// Measured 2026-10-28: about 3.7 A per 450-LED room at full white, so this overestimates.
 const MA_PER_LED = 25, SUPPLY_BUDGET_A = 6;
 
 let led = null, cfg = null, ctl = null;
-let target = "all", genre = "house", dirty = false, lastPulse = null, kickTimer = null, preBlackout = null;
-let screen = "show";
+let target = "all", genre = "club", lastPulse = null, kickTimer = null, preBlackout = null;
+let screen = "live";
+let lastLocalChange = 0;
 
 // ---------- networking ----------
 function call(path) {
@@ -505,7 +609,7 @@ const pending = new Map();
 let sendTimer = null, sending = false;
 function queue(params) {
   for (const [k, v] of Object.entries(params)) pending.set(k, v);
-  markDirty();
+  noteChange();
   clearTimeout(sendTimer);
   sendTimer = setTimeout(flush, 80);
 }
@@ -524,77 +628,125 @@ function control(query) {
   return call("/api/control" + (query ? "?" + query : "")).then(renderControl).catch(() => toast("Couldn't update the source", true));
 }
 
-// ---------- helpers ----------
-function targets() {
-  const n = led ? Math.max(1, Math.min(MAX_STRANDS, led.activeStrands)) : 1;
-  return target === "all" ? [...Array(n).keys()] : [Number(target)];
+// Lumina saves look and setup changes a few seconds after the last one; the chip just says so.
+let saveTimer = null;
+function noteChange() {
+  lastLocalChange = Date.now();
+  const c = $("saveChip");
+  c.textContent = "Saving…"; c.classList.remove("hide");
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => { c.textContent = "Saved"; saveTimer = setTimeout(() => c.classList.add("hide"), 1500); }, 3600);
 }
+
+// Sliders the user is holding (or just moved) are never moved by a poll.
+const busyUntil = new WeakMap();
+let heldRange = null;
+document.addEventListener("pointerdown", (e) => {
+  const r = e.target.closest ? e.target.closest("input[type=range]") : null;
+  if (r) { heldRange = r; busyUntil.set(r, Infinity); }
+}, true);
+const releaseRange = () => { if (heldRange) { busyUntil.set(heldRange, Date.now() + 1500); heldRange = null; } };
+document.addEventListener("pointerup", releaseRange, true);
+document.addEventListener("pointercancel", releaseRange, true);
+document.addEventListener("input", (e) => {
+  if (e.target.matches && e.target.matches("input[type=range]") && e.target !== heldRange) busyUntil.set(e.target, Date.now() + 1500);
+}, true);
+function setRange(el, v) {
+  if ((busyUntil.get(el) || 0) > Date.now()) return false;
+  el.value = v;
+  return true;
+}
+function setField(el, v) { if (document.activeElement !== el) el.value = v; }
+
+// ---------- helpers ----------
+function activeList() {
+  const n = led ? Math.max(1, Math.min(MAX_STRANDS, led.activeStrands)) : 1;
+  return [...Array(n).keys()];
+}
+function targets() { return target === "all" ? activeList() : [Number(target)]; }
 function first() { return led.strand[targets()[0]]; }
-function setStrandFields(fields) {
+function lead() { return led.strand[0]; }  // the Live page shows strand 1 (it sets every strand)
+function setStrandFields(fields, strands) {
   const p = {};
-  for (const s of targets()) for (const [f, v] of Object.entries(fields)) { led.strand[s][f] = v; p[`s${s}_${f}`] = v; }
+  for (const s of strands || targets()) for (const [f, v] of Object.entries(fields)) { led.strand[s][f] = v; p[`s${s}_${f}`] = v; }
   queue(p);
 }
 function pct(v) { return Math.round(v / 255 * 100) + "%"; }
 function pressed(container, attr, value) {
   for (const b of container.querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset[attr] === String(value)));
 }
-function markDirty() { dirty = true; $("saveBar").hidden = false; }
 let toastTimer = null;
 function toast(msg, err) {
   const t = $("toast"); t.textContent = msg; t.classList.toggle("err", !!err); t.classList.add("show");
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2400);
 }
+const allGenres = () => GENRES.concat(ARCHIVE);
 
-// ---------- build static UI ----------
-// Buttons hidden in Setup → Show screen buttons (bit masks kept on the S3; plain maths, ids go past 32).
-let ui = { hideModes: 0, hideKicks: 0 };
+// ---------- page preferences (saved on the S3) ----------
+// Bit masks use plain maths: mode ids go past 32.
+let ui = { hideModes: 0, hideKicks: 0, liveModes: [25, 28, 46, 47, 49, 51], liveMoods: 0xFFFF, archive: 0 };
+let feel = {};  // mode -> [speed, density, sensitivity, strobe, twinkle] the DJ last used
 const bitOn = (mask, i) => Math.floor(mask / 2 ** i) % 2 === 1;
 const bitFlip = (mask, i) => bitOn(mask, i) ? mask - 2 ** i : mask + 2 ** i;
 const modeShown = (id) => !bitOn(ui.hideModes, id);
 const kickShown = (id) => !bitOn(ui.hideKicks, id);
-const visibleGenres = () => GENRES.filter(g => g[2].some(modeShown));
-async function loadUi() { try { ui = await call("/api/ui"); } catch (e) {} applyUi(); }
-function saveUi() { call(`/api/ui?hideModes=${ui.hideModes}&hideKicks=${ui.hideKicks}`).catch(() => toast("Couldn't save the button choice", true)); applyUi(); }
+const genres = () => ui.archive ? allGenres() : GENRES;
+const visibleGenres = () => genres().filter(g => g[2].some(modeShown));
+async function loadUi() { try { ui = Object.assign(ui, await call("/api/ui")); } catch (e) {} applyUi(); }
+async function loadFeel() { try { feel = (await call("/api/feel")).modes || {}; } catch (e) {} }
+function saveUi() {
+  call(`/api/ui?hideModes=${ui.hideModes}&hideKicks=${ui.hideKicks}&liveModes=${ui.liveModes.join(",")}&liveMoods=${ui.liveMoods}&archive=${ui.archive ? 1 : 0}`)
+    .catch(() => toast("Couldn't save the button choice", true));
+  applyUi();
+}
 function applyUi() {
   buildGenres();
   if (!visibleGenres().some(g => g[0] === genre) && visibleGenres().length) genre = visibleGenres()[0][0];
   if (led) renderModes();
   $("kickLooks").innerHTML = "";
   renderLooks();
-  $("uiModes").innerHTML = GENRES.map(([gid, gname, ids]) =>
+  $("archiveTog").setAttribute("aria-pressed", String(!!ui.archive));
+  $("uiModes").innerHTML = genres().map(([gid, gname, ids]) =>
     `<div><div class="note" style="margin-bottom:4px">${gname}</div><div class="picks">` +
     ids.map(id => `<button data-m="${id}" aria-pressed="${modeShown(id)}">${MODES[id][0]}</button>`).join("") + "</div></div>").join("");
   $("uiKicks").innerHTML = KICK_LOOKS.filter(k => k[0] !== 0).map(([id, name]) =>
     `<button data-k="${id}" aria-pressed="${kickShown(id)}">${name}</button>`).join("");
+  renderLiveSetup();
+  buildLive();
 }
 
+// ---------- build static UI ----------
 function buildGenres() {
   $("genres").innerHTML = visibleGenres().map(([id, name]) =>
     `<button data-g="${id}"><span class="gdot" style="background:var(--g-${id})"></span>${name}</button>`).join("");
   $("genres").onclick = (e) => { const b = e.target.closest("button"); if (b) { genre = b.dataset.g; renderModes(); } };
 }
+function modeButton(id, cur) {
+  const [name, desc, tags] = MODES[id];
+  const t = (tags.includes("k") ? `<span class="tag kick">Kick</span>` : "") + (tags.includes("s") ? `<span class="tag strobe">Strobe</span>` : "");
+  return `<button class="mode" data-m="${id}" aria-pressed="${id === cur}"><b>${name}</b><span>${desc}</span>${t ? `<div class="tags">${t}</div>` : ""}</button>`;
+}
 function renderModes() {
   pressed($("genres"), "g", genre);
   const cur = led ? first().mode : -1;
-  const g = GENRES.find(x => x[0] === genre);
+  const g = genres().find(x => x[0] === genre);
   const list = g ? g[2].filter(modeShown) : [];
-  $("modes").innerHTML = list.map(id => {
-    const [name, desc, tags] = MODES[id];
-    const t = (tags.includes("k") ? `<span class="tag kick">Kick</span>` : "") + (tags.includes("s") ? `<span class="tag strobe">Strobe</span>` : "");
-    return `<button class="mode" data-m="${id}" aria-pressed="${id === cur}"><b>${name}</b><span>${desc}</span>${t ? `<div class="tags">${t}</div>` : ""}</button>`;
-  }).join("");
+  $("modes").innerHTML = list.map(id => modeButton(id, cur)).join("");
   $("offBtn").setAttribute("aria-pressed", String(cur === 0));
 }
-function buildSwatches() {
+function moodButtons(indices) {
+  return `<button class="moodbtn" data-mi="-1"><i style="background:linear-gradient(90deg,#f33,#fd3,#3e5,#3df,#35f,#d4f)"></i>Off</button>` +
+    indices.map(i => { const [n, , , c1, c2] = MOODS[i]; return `<button class="moodbtn" data-mi="${i}"><i style="background:linear-gradient(90deg,${c1},${c2})"></i>${n}</button>`; }).join("");
+}
+function strobeButtons() {
+  return STROBE_COLOURS.map(([n, code, css]) => `<button class="sw" style="background:${css}" data-sc="${code}" title="${n}" aria-label="Strobe ${n}"></button>`).join("");
+}
+function buildStatic() {
   $("swatches").innerHTML = COLOURS.map(([n, h, s, css]) =>
     `<button class="sw" style="background:${css}" data-h="${h}" data-s="${s}" title="${n}" aria-label="${n}"></button>`).join("");
-  $("swatches").onclick = (e) => {
-    const b = e.target.closest("button"); if (!b) return;
-    setStrandFields({ hue: +b.dataset.h, saturation: +b.dataset.s }); renderLook();
-  };
-}
-function buildSetup() {
+  $("advMoods").innerHTML = moodButtons(MOODS.map((m, i) => i));
+  $("advStrobeCols").innerHTML = strobeButtons();
+  $("liveStrobeCols").innerHTML = strobeButtons();
   $("mapSeg").innerHTML = COLOR_MAPS.map((m, i) => `<button data-c="${i}">${m}</button>`).join("");
   $("tuneSliders").innerHTML = TUNING.map(([id, label, mn, mx, st]) =>
     `<div class="sl"><label for="t_${id}">${label}</label><input type="range" id="t_${id}" min="${mn}" max="${mx}" step="${st}"><output class="num" id="o_t_${id}"></output></div>`).join("");
@@ -610,21 +762,38 @@ function buildSetup() {
   }
   $("strandRows").innerHTML = rows;
 }
+// Live page: the six chosen looks and the chosen moods.
+function buildLive() {
+  const ids = ui.liveModes.filter(id => id && MODES[id]);
+  $("liveModes").innerHTML = ids.map(id => modeButton(id, led ? lead().mode : -1)).join("")
+    || `<p class="note">Pick the looks in Setup → Live page.</p>`;
+  $("liveMoods").innerHTML = moodButtons(MOODS.map((m, i) => i).filter(i => bitOn(ui.liveMoods, i)));
+  renderLive();
+}
+function renderLiveSetup() {
+  const options = (sel) => `<option value="0">(empty)</option>` + allGenres().map(([gid, gname, ids]) =>
+    `<optgroup label="${gname}">${ids.map(id => `<option value="${id}"${id === sel ? " selected" : ""}>${MODES[id][0]}</option>`).join("")}</optgroup>`).join("");
+  $("liveSlots").innerHTML = ui.liveModes.map((m, i) =>
+    `<div class="sl"><label for="ls${i}">Look ${i + 1}</label><select id="ls${i}" data-i="${i}">${options(m)}</select><span></span></div>`).join("");
+  $("liveMoodPicks").innerHTML = MOODS.map(([n], i) => `<button data-mi="${i}" aria-pressed="${bitOn(ui.liveMoods, i)}">${n}</button>`).join("");
+}
 
 // ---------- render from state ----------
 function renderAll() {
   if (!led) return;
   const m = led.globalBrightness;
-  $("master").value = m;
-  $("masterPct").textContent = pct(m);
-  $("blackout").setAttribute("aria-pressed", String(m === 0));
+  setRange($("master"), m); setRange($("liveBright"), m);
+  $("masterPct").textContent = pct(m); $("liveBrightPct").textContent = pct(m);
+  for (const id of ["blackout", "liveBlackout"]) $(id).setAttribute("aria-pressed", String(m === 0));
   renderCapLine();
   pressed($("targetSeg"), "t", target);
   const n = led.activeStrands;
   $("applyNote").textContent = target === "all" ? `Applies to ${n} strand${n === 1 ? "" : "s"}` : `Strand ${+target + 1} only`;
   renderLook();
+  renderLive();
   renderSetup();
 }
+const moodIndex = (st) => st.moodFrom === st.moodTo ? -1 : MOODS.findIndex(m => m[1] === st.moodFrom && m[2] === st.moodTo);
 function renderLook() {
   const st = first();
   const owner = visibleGenres().find(g => g[2].includes(st.mode) && modeShown(st.mode));
@@ -635,48 +804,64 @@ function renderLook() {
     const on = s === 0 ? st.saturation < 20 : (st.saturation > 100 && Math.abs(((st.hue - h + 384) % 256) - 128) < 8);
     b.setAttribute("aria-pressed", String(on));
   }
-  $("hue").value = st.hue;
+  setRange($("hue"), st.hue);
+  pressed($("advMoods"), "mi", moodIndex(st));
   for (const f of ["speed", "sensitivity", "brightness", "density", "strobe", "twinkle", "saturation"]) {
-    $("f_" + f).value = st[f]; $("o_" + f).textContent = st[f];
+    if (setRange($("f_" + f), st[f])) $("o_" + f).textContent = st[f];
   }
   pressed($("dirSeg"), "d", st.direction);
+  $("feelReset").disabled = !DEFAULTS[st.mode];
+}
+function renderLive() {
+  if (!led) return;
+  const st = lead();
+  for (const b of $("liveModes").querySelectorAll("button")) b.setAttribute("aria-pressed", String(+b.dataset.m === st.mode));
+  pressed($("liveMoods"), "mi", moodIndex(st));
+  for (const box of [$("liveStrobeCols"), $("advStrobeCols")]) pressed(box, "sc", st.strobeColor || 0);
+  const needsStrobe = MODES[st.mode] && MODES[st.mode][2].includes("s");
+  $("liveModeNote").hidden = !(needsStrobe && ctl && !ctl.strobeEnabled);
+  $("liveModeNote").textContent = "This look flashes, so it stays dark until Strobe is on.";
 }
 function renderCapLine() {
   if (!led || !ctl) return;
   const cap = ctl.brightnessCap, m = led.globalBrightness;
-  $("capLine").textContent = cap >= 255 ? "" : m > cap
-    ? `Limited to ${pct(cap)} by the brightness cap (Setup → Power & safety).`
-    : `Brightness cap ${pct(cap)}.`;
+  const text = cap >= 255 ? "" : m > cap ? `Limited to ${pct(cap)} by the brightness cap (Setup → Power & safety).` : `Brightness cap ${pct(cap)}.`;
+  $("capLine").textContent = text; $("liveCapLine").textContent = text;
 }
 function renderSetup() {
   if (!led) return;
   pressed($("activeSeg"), "n", led.activeStrands);
   for (let s = 0; s < MAX_STRANDS; s++) {
     const st = led.strand[s];
-    $("pin" + s).value = st.pin; $("cnt" + s).value = st.ledCount; $("type" + s).value = st.ledType;
+    setField($("pin" + s), st.pin); setField($("cnt" + s), st.ledCount); setField($("type" + s), st.ledType);
     $("en" + s).setAttribute("aria-pressed", String(!!st.enabled));
   }
-  $("maxLeds").value = led.maxLedsPerStrand;
+  setField($("maxLeds"), led.maxLedsPerStrand);
   pressed($("mapSeg"), "c", led.colorMap);
-  for (const id of ["redScale", "greenScale", "blueScale", "gamma10"]) { $(id).value = led[id]; $("o_" + id).textContent = led[id]; }
-  if (cfg) for (const [id] of TUNING) { $("t_" + id).value = cfg[id]; $("o_t_" + id).textContent = cfg[id]; }
+  for (const id of ["redScale", "greenScale", "blueScale", "gamma10"]) { if (setRange($(id), led[id])) $("o_" + id).textContent = led[id]; }
+  if (cfg) for (const [id] of TUNING) { if (setRange($("t_" + id), cfg[id])) $("o_t_" + id).textContent = cfg[id]; }
   renderPower();
 }
 function renderPower() {
   if (!led || !ctl) return;
-  $("cap").value = ctl.brightnessCap; $("o_cap").textContent = pct(ctl.brightnessCap);
+  if (setRange($("cap"), ctl.brightnessCap)) $("o_cap").textContent = pct(ctl.brightnessCap);
   let leds = 0;
   for (let s = 0; s < led.activeStrands; s++) if (led.strand[s].enabled) leds += led.strand[s].ledCount;
   const amps = leds * MA_PER_LED / 1000 * ctl.brightnessCap / 255;
-  const over = amps > SUPPLY_BUDGET_A;
-  $("capNote").className = over ? "warnnote" : "note";
-  $("capNote").textContent = `${ctl.brightnessCap >= 255 ? "No cap: " : "At this cap, "}${leds} enabled LEDs at full white draw about ${amps.toFixed(1)} A; ` +
-    `the 90 W supply manages about ${SUPPLY_BUDGET_A} A.${over ? " Lower the cap or add power before running full white." : ""} Estimate from the strip rating (9 W/m).`;
-  $("fallback").value = ctl.autoFallback;
+  $("capNote").className = "note";
+  $("capNote").textContent = `${ctl.brightnessCap >= 255 ? "No cap: " : "At this cap, "}${leds} enabled LEDs at full white: about ${amps.toFixed(1)} A by the strip rating (9 W/m). ` +
+    `Measured 2026-10-28: about 3.7 A per 450-LED room, within one 90 W supply (about ${SUPPLY_BUDGET_A} A).`;
+  setField($("fallback"), ctl.autoFallback);
   renderFixture();
-  $("standalone").value = ctl.standaloneLevel; $("o_standalone").textContent = ctl.standaloneLevel;
+  if (setRange($("standalone"), ctl.standaloneLevel)) $("o_standalone").textContent = ctl.standaloneLevel;
 }
 const SRC_NAMES = { auto: "Auto", audio: "Audio", artnet: "SoundSwitch", hybrid: "Hybrid", standalone: "Standalone" };
+const senseLabel = (v) => v >= 255 ? "Always" : v >= 170 ? "Most" : v >= 85 ? "Loud" : "Drops";
+function strobeText(c) {
+  if (!c.strobeEnabled) return "Off. Flash looks stay dark until you turn it on.";
+  if (c.strobeSense >= 255) return `On: up to ${c.strobeHz} flashes/s across the whole rig.`;
+  return c.strobeOpen ? `On: flashing now (loud part), up to ${c.strobeHz}/s.` : `On: waiting for a loud part or a drop (up to ${c.strobeHz}/s).`;
+}
 function renderControl(c) {
   if (!c || !c.source) return;
   ctl = c;
@@ -687,21 +872,44 @@ function renderControl(c) {
   const age = c.artnetAgeMs > 4e9 ? "not seen since restart" : `last seen ${(c.artnetAgeMs / 1000).toFixed(c.artnetAgeMs < 10000 ? 1 : 0)} s ago`;
   const notes = {
     auto: `Following ${active}. SoundSwitch while it sends light; Hybrid for ${Math.round((c.hybridHoldMs || 10000) / 1000)} s after it stops or goes dark; then Audio. SoundSwitch ${age}.`,
-    hybrid: "Your Audio look, in SoundSwitch's latest colour. The music drives the motion and kicks.",
+    hybrid: "Your look, in SoundSwitch's latest colour (or the colour mood). The music drives the motion and kicks.",
     audio: "Lights react to the line input with the look below.",
     artnet: `SoundSwitch only. If it stops, the last frame holds. SoundSwitch ${age}.`,
     standalone: "The look below runs at a steady level, without audio.",
   };
   $("srcNote").textContent = notes[c.source] || "";
-  $("strobeTog").setAttribute("aria-pressed", String(c.strobeEnabled));
-  $("strobeNote").textContent = c.strobeEnabled ? `On, capped at ${c.strobeHz} flashes/s across the whole rig.` : "Off. Flash modes stay dark until you turn it on.";
-  if (c.kickFlash !== undefined) { $("kickFlash").value = c.kickFlash; $("o_kickFlash").textContent = c.kickFlash ? pct(c.kickFlash) : "Off"; }
+  $("liveSrcNote").textContent = c.source === "artnet" ? "SoundSwitch only: looks paused"
+    : c.active === "artnet" ? "SoundSwitch playing: looks return when it stops"
+    : c.active === "hybrid" ? "Hybrid: your look in SoundSwitch's colour" : "";
+  // Strobe (both pages)
+  const on = !!c.strobeEnabled;
+  $("strobeTog").setAttribute("aria-pressed", String(on));
+  $("liveStrobe").setAttribute("aria-pressed", String(on));
+  $("liveStrobe").textContent = on ? "STROBE ON" : "STROBE OFF";
+  $("strobeNote").textContent = strobeText(c); $("liveStrobeNote").textContent = strobeText(c);
+  const sense = c.strobeSense === undefined ? 255 : c.strobeSense;
+  for (const id of ["liveSense", "advSense"]) { if (setRange($(id), sense)) $("o_" + id).textContent = senseLabel(sense); }
+  if (c.kickFlash !== undefined && setRange($("kickFlash"), c.kickFlash)) $("o_kickFlash").textContent = c.kickFlash ? pct(c.kickFlash) : "Off";
   if (c.strobeMaxHz) $("strobeHz").max = c.strobeMaxHz;
-  $("strobeHz").value = c.strobeHz; $("o_strobeHz").textContent = c.strobeHz;
+  if (setRange($("strobeHz"), c.strobeHz)) $("o_strobeHz").textContent = c.strobeHz;
+  $("swStatusLed").setAttribute("aria-pressed", String(!!c.statusLed));
+  $("swStatusLed").disabled = c.statusLedUsable === 0;
+  $("statusLedNote").hidden = c.statusLedUsable !== 0;
+  renderVisibility();
   renderCapLine();
   renderPower();
   renderLooks();
+  renderLive();
   renderRooms(c.rooms || []);
+}
+// Advanced page: panels the current source doesn't use are hidden.
+function renderVisibility() {
+  const src = ctl ? ctl.source : "auto";
+  $("lookPanel").hidden = src === "artnet";           // SoundSwitch draws the lights
+  $("feelPanel").hidden = src === "artnet";
+  $("colourPanel").hidden = src === "artnet" || src === "hybrid";  // colour comes from SoundSwitch (or the mood)
+  $("rowSensitivity").hidden = src === "standalone";  // no audio to respond to
+  $("rowKickFlash").hidden = src === "standalone";
 }
 function renderUpdates(rooms) {
   $("updRows").innerHTML = [1, 2].map(n => {
@@ -712,12 +920,13 @@ function renderUpdates(rooms) {
 }
 function renderRooms(rooms) {
   renderUpdates(rooms);
-  $("roomsLine").innerHTML = rooms.filter(r => r.seen).map(r => r.online
+  const html = rooms.filter(r => r.seen).map(r => r.online
     ? `<span><span class="dot ok"></span>Room ${r.room} online · ${(r.lossPermille / 10).toFixed(1)}% loss · ${r.fps} fps</span>`
     : `<span><span class="dot bad"></span>Room ${r.room} offline (${Math.round(r.ageMs / 1000)} s)</span>`).join("")
     || `<span class="note">No room receiver has checked in since Lumina started.</span>`;
+  $("roomsLine").innerHTML = html; $("liveRooms").innerHTML = html;
 }
-function renderLive(j) {
+function renderMeters(j) {
   const bars = { mBass: j.bass, mMid: j.mid, mTreble: j.treble, mLeft: j.left, mRight: j.right };
   for (const [id, v] of Object.entries(bars)) $(id).style.height = (Math.min(255, v || 0) / 255 * 100) + "%";
   if (lastPulse !== null && j.beatPulse !== lastPulse) {
@@ -738,7 +947,8 @@ function renderDiag(j) {
   const items = [["Wi-Fi", `${j.wifiRssi} dBm`], ["Channel", j.wifiChannel], ["Address", j.wifiIp], ["Packets/s", j.pps],
     ["Sent OK", j.cbOk], ["Send fails", j.cbFail], ["Queue errors", j.enqErr], ["Busy skips", j.busySkip],
     ["Free heap", j.freeHeap], ["Loop µs", j.loopUs], ["Analyze µs", j.analyzeUs], ["HTTP µs", j.httpUs]];
-  if (ctl) items.push(["Source switches", ctl.switches], ["Art-Net frames used", ctl.appliedPackets], ["Cell packets sent", ctl.cellPacketsSent || 0]);
+  if (ctl) items.push(["Source switches", ctl.switches], ["Art-Net frames used", ctl.appliedPackets], ["Cell packets sent", ctl.cellPacketsSent || 0],
+    ["Music level", `${ctl.loudDb} dB`], ["Strobe gate", ctl.strobeOpen ? "open" : "closed"]);
   if (ctl && ctl.rooms) for (const r of ctl.rooms.filter(x => x.seen))
     items.push([`Room ${r.room} signal`, `${r.rssi} dBm`], [`Room ${r.room} uptime`, `${Math.floor(r.uptimeS / 60)} min`], [`Room ${r.room} restarts`, r.restarts]);
   $("diag").innerHTML = items.map(([k, v]) => `<div>${k}<b>${v}</b></div>`).join("");
@@ -747,25 +957,22 @@ function renderDiag(j) {
 // ---------- SoundSwitch layouts (Phase 15) ----------
 let fixtures = [];
 const lnum = (id) => "L" + id;
+const LAYOUT_BASE = 200;  // saved fixture code: 0 = LUMINA-16, 1..150 = N cells, 201.. = layout (code - 200)
 async function loadFixtures() {
   try { fixtures = await call("/api/fixtures"); } catch (e) { fixtures = []; }
-  const groups = [["SoundSwitch layouts (with Lumina FX)", () => true]];
   let html = `<option value="lumina16">LUMINA-16 (16 ch, one effect)</option><option value="plain">Plain cells (set the count)</option>`;
-  for (const [label, test] of groups) {
-    const items = fixtures.filter(test);
-    if (items.length) html += `<optgroup label="${label}">` + items.map(f => `<option value="${f.id}">${lnum(f.id)} ${f.name}</option>`).join("") + "</optgroup>";
-  }
+  if (fixtures.length) html += `<optgroup label="SoundSwitch layouts (with Lumina FX)">` + fixtures.map(f => `<option value="${f.id}">${lnum(f.id)} ${f.name}</option>`).join("") + "</optgroup>";
   $("fixSel").innerHTML = html;
   renderFixture();
 }
 function renderFixture() {
   if (!ctl || !$("fixSel").options.length) return;
   const code = ctl.fixture;
-  const preset = code > 150 ? fixtures.find(f => f.id === code - 150) : null;
+  const preset = code > LAYOUT_BASE ? fixtures.find(f => f.id === code - LAYOUT_BASE) : null;
   const sel = code === 0 ? "lumina16" : preset ? String(preset.id) : "plain";
-  if (document.activeElement !== $("fixSel")) $("fixSel").value = sel;
+  setField($("fixSel"), sel);
   $("cellRow").hidden = sel !== "plain";
-  if (sel === "plain" && document.activeElement !== $("cellCount")) $("cellCount").value = code;
+  if (sel === "plain") setField($("cellCount"), code);
   const leds = led ? led.strand[0].ledCount : 0;
   let plan;
   if (sel === "lumina16") {
@@ -791,23 +998,34 @@ function renderFixture() {
   const fxOn = !!ctl.fxEnabled, cellsOn = (ctl.fixtureCells || 0) > 0;
   $("splitTog").setAttribute("aria-pressed", String(!!ctl.splitStrands));
   $("fxRows").hidden = !fxOn;
-  renderLooks();
-  if (document.activeElement !== $("beam")) { $("beam").value = ctl.beamStrength; $("o_beam").textContent = pct(ctl.beamStrength); }
-  if (document.activeElement !== $("spread")) { $("spread").value = ctl.beamSpread; $("o_spread").textContent = "×" + ctl.beamSpread; }
+  if (setRange($("beam"), ctl.beamStrength)) $("o_beam").textContent = pct(ctl.beamStrength);
+  if (setRange($("spread"), ctl.beamSpread)) $("o_spread").textContent = "×" + ctl.beamSpread;
   const f = ctl.fxLive || {};
   $("fxLive").textContent = fxOn && cellsOn
     ? `Now: ${f.moving ? "moving" : "still"} · beam ${pct(f.beam || 0)} · ${f.pulsing ? "busy (kick effects on)" : "steady"}${f.sparkle ? " · UV sparkle" : ""}`
     : "";
 }
 
-const KICK_LOOKS = [[1, "Ripple", "White rings burst from the centre.", 0], [2, "Glitter", "A burst of white sparkles that thins out.", 0],
-  [4, "Shatter", "Random white shards light up and fade.", 0], [5, "Comet", "A comet shoots along the strip, alternating ends.", 0],
-  [3, "Pump", "The whole strip flashes white.", 1], [6, "Duck", "The colours dip dark and swell back, sidechain style.", 1],
+const KICK_LOOKS = [[1, "Ripple", "Rings burst from the centre.", 0], [2, "Glitter", "A burst of sparkles that thins out.", 0],
+  [4, "Shatter", "Random shards light up and fade.", 0], [5, "Comet", "A comet shoots along the strip, alternating ends.", 0],
+  [3, "Pump", "The whole strip flashes.", 1], [6, "Duck", "The colours dip dark and swell back, sidechain style.", 1],
   [7, "Ping-Pong", "Alternate halves flash, left then right.", 1], [0, "Off", "No kick look.", 0]];
+const gapPct = (g) => Math.round(g / 16 * 100) + "%";
+let lastGap = 6;  // the gap the Spaced switch turns back on with
 function renderLooks() {
-  const show = ctl && ctl.fxEnabled && (ctl.fixtureCells || 0) > 0;
+  // Only where SoundSwitch can drive the lights (Auto or SoundSwitch) with a cell layout;
+  // the kick looks and FX switches need a layout with the Lumina FX fixture.
+  const src = ctl ? ctl.source : "auto";
+  const show = !!(ctl && (ctl.fixtureCells || 0) > 0) && (src === "auto" || src === "artnet");
   $("ssPanel").hidden = !show;
   if (!show) return;
+  const gap = ctl.cellGap || 0;
+  if (gap) lastGap = gap;
+  $("swSpaced").setAttribute("aria-pressed", String(gap > 0));
+  $("rowGap").hidden = gap === 0;
+  if (ctl.cellGapMax) $("cellGap").max = ctl.cellGapMax;
+  if (gap && setRange($("cellGap"), gap)) $("o_cellGap").textContent = gapPct(gap);
+  $("fxLooks").hidden = !ctl.fxEnabled;
   if (!$("kickLooks").children.length) {
     $("kickLooks").innerHTML = KICK_LOOKS.filter(([id]) => id === 0 || kickShown(id) || id === ctl.fxHit).map(([id, name, desc, gated]) =>
       `<button class="mode" data-k="${id}"><b>${name}</b><span>${desc}</span>${gated ? '<div class="tags"><span class="tag strobe">Strobe</span></div>' : ""}</button>`).join("");
@@ -822,12 +1040,39 @@ function renderLooks() {
 }
 
 // ---------- actions ----------
-function pickMode(mode) {
-  const f = { mode, enabled: 1 };
-  if (DEFAULTS[mode]) DEFAULT_FIELDS.forEach((k, i) => f[k] = DEFAULTS[mode][i]);
-  if (mode === 37 || mode === 38) f.saturation = 0;  // strobes start white
-  setStrandFields(f);
-  renderLook();
+// A look starts at the DJ's own sliders for it, else its tuned starting values. A strand switched
+// off in Setup stays off.
+function pickMode(mode, strands) {
+  const f = { mode };
+  const v = feel[mode] || DEFAULTS[mode];
+  if (v) DEFAULT_FIELDS.forEach((k, i) => f[k] = v[i]);
+  setStrandFields(f, strands);
+  renderLook(); renderLive();
+}
+let feelTimer = null;
+function rememberFeel() {
+  const m = first().mode;
+  if (!m) return;
+  const v = DEFAULT_FIELDS.map(k => first()[k]);
+  feel[m] = v;
+  clearTimeout(feelTimer);
+  feelTimer = setTimeout(() => call(`/api/feel?mode=${m}&v=${v.join(",")}`).catch(() => {}), 400);
+}
+function resetFeel() {
+  const m = first().mode;
+  if (!DEFAULTS[m]) return;
+  delete feel[m];
+  call(`/api/feel?forget=${m}`).catch(() => {});
+  pickMode(m);
+}
+function setMood(i, strands) {
+  const from = i < 0 ? 0 : MOODS[i][1], to = i < 0 ? 0 : MOODS[i][2];
+  setStrandFields({ moodFrom: from, moodTo: to }, strands);
+  renderLook(); renderLive();
+}
+function setStrobeColour(code) {  // rig-wide, like the strobe itself
+  setStrandFields({ strobeColor: code }, [...Array(MAX_STRANDS).keys()]);
+  renderLive();
 }
 function toggleBlackout() {
   if (led.globalBrightness === 0) { setGlobal(preBlackout || 255); }
@@ -838,8 +1083,8 @@ function toggleStrobe() { control("strobe=" + (ctl && ctl.strobeEnabled ? 0 : 1)
 function calTest(hue, sat) {
   const p = {};
   for (let s = 0; s < led.activeStrands; s++) {
-    Object.assign(led.strand[s], { mode: 9, enabled: 1, brightness: 255, hue, saturation: sat });
-    for (const f of ["mode", "enabled", "brightness", "hue", "saturation"]) p[`s${s}_${f}`] = led.strand[s][f];
+    Object.assign(led.strand[s], { mode: 9, enabled: 1, brightness: 255, hue, saturation: sat, moodFrom: 0, moodTo: 0 });
+    for (const f of ["mode", "enabled", "brightness", "hue", "saturation", "moodFrom", "moodTo"]) p[`s${s}_${f}`] = led.strand[s][f];
   }
   queue(p); renderAll();
 }
@@ -856,36 +1101,22 @@ function loadDefaults() {
     return;
   }
   clearTimeout(defaultsArmed); defaultsArmed = null; b.textContent = "Load defaults"; b.classList.remove("armed");
-  call("/api/defaults").then(loadState).then(() => { markDirty(); toast("Defaults loaded. Save to keep them."); });
+  call("/api/defaults").then(loadState).then(() => { noteChange(); toast("Defaults loaded. Wiring and calibration kept."); });
 }
 function cleanBaseline() {
   const v = { shiftTo16: 16, volumeGain: 0.9, bassGain: 1.15, midGain: 1.05, trebleGain: 1.45, lrGain: 0.55, volumeFloor: 44, bassFloor: 70,
     midFloor: 126, trebleFloor: 83, attack: 0.6, release: 0.08, peakDecay: 0.995, packetIntervalMs: 33 };
   Object.assign(cfg, v);
   call("/api/setTuning?" + new URLSearchParams(v)).then(() => call("/api/resetAgc")).then(() => {
-    markDirty(); renderSetup(); toast("Clean baseline loaded. Tune the floors in silence first.");
+    noteChange(); renderSetup(); toast("Clean baseline loaded. Tune the floors in silence first.");
   });
-}
-async function saveAll() {
-  const btn = $("saveBtn"); btn.disabled = true; btn.textContent = "Saving…";
-  try {
-    clearTimeout(sendTimer); pending.clear();
-    for (let i = 0; i < 100 && sending; i++) await new Promise(r => setTimeout(r, 25));
-    const lp = new URLSearchParams();
-    for (const k of ["activeStrands", "maxLedsPerStrand", "globalBrightness", "globalHue", "colorMap", "redScale", "greenScale", "blueScale", "gamma10"]) lp.set(k, led[k]);
-    for (let s = 0; s < MAX_STRANDS; s++) for (const [f, v] of Object.entries(led.strand[s])) lp.set(`s${s}_${f}`, v);
-    await call("/api/setLed?" + lp);
-    await call("/api/setTuning?" + new URLSearchParams(cfg));
-    const r = await call("/api/save");
-    if (!r.saved) throw new Error(r.error || "the flash check failed");
-    dirty = false; $("saveBar").hidden = true; toast("Saved");
-  } catch (e) { toast("Save failed: " + e.message, true); }
-  btn.disabled = false; btn.textContent = "Save";
 }
 function showScreen(name) {
   screen = name;
-  $("screenShow").hidden = name !== "show"; $("screenSetup").hidden = name !== "setup";
-  $("tabShow").setAttribute("aria-pressed", String(name === "show")); $("tabSetup").setAttribute("aria-pressed", String(name === "setup"));
+  $("screenLive").hidden = name !== "live"; $("screenAdv").hidden = name !== "adv"; $("screenSetup").hidden = name !== "setup";
+  $("tabLive").setAttribute("aria-pressed", String(name === "live"));
+  $("tabAdv").setAttribute("aria-pressed", String(name === "adv"));
+  $("tabSetup").setAttribute("aria-pressed", String(name === "setup"));
   try { localStorage.setItem("lumina.screen", name); } catch (e) {}
   window.scrollTo(0, 0);
 }
@@ -893,12 +1124,30 @@ function showScreen(name) {
 // ---------- wire inputs ----------
 function wire() {
   $("master").oninput = (e) => setGlobal(+e.target.value);
+  $("liveBright").oninput = (e) => setGlobal(+e.target.value);
   $("hue").oninput = (e) => { setStrandFields({ hue: +e.target.value, saturation: Math.max(first().saturation, 200) }); renderLook(); };
+  $("swatches").onclick = (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    setStrandFields({ hue: +b.dataset.h, saturation: +b.dataset.s }); renderLook();
+  };
   for (const f of ["speed", "sensitivity", "brightness", "density", "strobe", "twinkle", "saturation"]) {
-    $("f_" + f).oninput = (e) => { $("o_" + f).textContent = e.target.value; setStrandFields({ [f]: +e.target.value }); };
+    $("f_" + f).oninput = (e) => {
+      $("o_" + f).textContent = e.target.value;
+      setStrandFields({ [f]: +e.target.value });
+      if (DEFAULT_FIELDS.includes(f)) rememberFeel();
+    };
   }
+  $("feelReset").onclick = resetFeel;
   $("dirSeg").onclick = (e) => { const b = e.target.closest("button"); if (b) { setStrandFields({ direction: +b.dataset.d }); renderLook(); } };
   $("modes").onclick = (e) => { const b = e.target.closest("button"); if (b) pickMode(+b.dataset.m); };
+  $("liveModes").onclick = (e) => { const b = e.target.closest("button[data-m]"); if (b) pickMode(+b.dataset.m, activeList()); };
+  $("advMoods").onclick = (e) => { const b = e.target.closest("button"); if (b) setMood(+b.dataset.mi); };
+  $("liveMoods").onclick = (e) => { const b = e.target.closest("button"); if (b) setMood(+b.dataset.mi, activeList()); };
+  for (const id of ["liveStrobeCols", "advStrobeCols"]) $(id).onclick = (e) => { const b = e.target.closest("button"); if (b) setStrobeColour(+b.dataset.sc); };
+  for (const id of ["liveSense", "advSense"]) {
+    $(id).oninput = (e) => { $("o_" + id).textContent = senseLabel(+e.target.value); };
+    $(id).onchange = (e) => control("strobeSense=" + e.target.value);
+  }
   $("genres").addEventListener("click", () => { renderLook.userPicked = true; });
   $("targetSeg").onclick = (e) => { const b = e.target.closest("button"); if (b) { target = b.dataset.t; renderLook.userPicked = false; renderAll(); } };
   $("srcSeg").onclick = (e) => { const b = e.target.closest("button"); if (b) control("source=" + b.dataset.src); };
@@ -915,6 +1164,9 @@ function wire() {
   };
   $("updRows").onclick = (e) => { const b = e.target.closest("button"); if (b) control("update=" + b.dataset.u).then(() => toast(`Room ${b.dataset.u} is joining Wi-Fi for updates`)); };
   $("splitTog").onclick = () => control("split=" + (ctl && ctl.splitStrands ? 0 : 1));
+  $("liveSlots").onchange = (e) => { const s = e.target.closest("select"); if (s) { ui.liveModes[+s.dataset.i] = +s.value; saveUi(); } };
+  $("liveMoodPicks").onclick = (e) => { const b = e.target.closest("button"); if (b) { ui.liveMoods = bitFlip(ui.liveMoods, +b.dataset.mi); saveUi(); } };
+  $("archiveTog").onclick = () => { ui.archive = ui.archive ? 0 : 1; saveUi(); };
   $("uiModes").onclick = (e) => { const b = e.target.closest("button"); if (b) { ui.hideModes = bitFlip(ui.hideModes, +b.dataset.m); saveUi(); } };
   $("uiKicks").onclick = (e) => { const b = e.target.closest("button"); if (b) { ui.hideKicks = bitFlip(ui.hideKicks, +b.dataset.k); saveUi(); } };
   $("uiShowAll").onclick = () => { ui.hideModes = 0; ui.hideKicks = 0; saveUi(); };
@@ -923,6 +1175,10 @@ function wire() {
   $("swSparkle").onclick = () => control("fxSparkle=" + (ctl.sparkleOn ? 0 : 1));
   $("swFxStrobe").onclick = () => control("fxStrobe=" + (ctl.fxStrobeOn ? 0 : 1));
   $("swAlways").onclick = () => control("fxAlways=" + (ctl.kicksAlways ? 0 : 1));
+  $("swSpaced").onclick = () => control("cellGap=" + (ctl && ctl.cellGap ? 0 : lastGap));
+  $("cellGap").oninput = (e) => { $("o_cellGap").textContent = gapPct(+e.target.value); };
+  $("cellGap").onchange = (e) => control("cellGap=" + e.target.value);
+  $("swStatusLed").onclick = () => control("statusLed=" + (ctl && ctl.statusLed ? 0 : 1));
   $("beam").oninput = (e) => { $("o_beam").textContent = pct(+e.target.value); };
   $("beam").onchange = (e) => control("beam=" + e.target.value);
   $("spread").oninput = (e) => { $("o_spread").textContent = "×" + e.target.value; };
@@ -945,7 +1201,7 @@ function wire() {
   let tuneTimer = null;
   for (const [id] of TUNING) {
     $("t_" + id).oninput = (e) => {
-      cfg[id] = +e.target.value; $("o_t_" + id).textContent = e.target.value; markDirty();
+      cfg[id] = +e.target.value; $("o_t_" + id).textContent = e.target.value; noteChange();
       clearTimeout(tuneTimer); tuneTimer = setTimeout(() => call("/api/setTuning?" + new URLSearchParams({ [id]: cfg[id] })), 100);
     };
   }
@@ -956,24 +1212,31 @@ async function loadState() {
   const j = await call("/api/state");
   led = j.led; cfg = j.cfg;
   renderAll();
-  renderLive(j);
+  renderMeters(j);
+}
+// Another phone may have changed something: refresh now and then, but never under the user's finger.
+async function refreshState() {
+  if (document.hidden || !led || pending.size || sending || heldRange || Date.now() - lastLocalChange < 4000) return;
+  try { const j = await call("/api/state"); if (!pending.size && Date.now() - lastLocalChange >= 4000) { led = j.led; cfg = j.cfg; renderAll(); } } catch (e) {}
 }
 let liveBusy = false;
 async function pollLive() {
   if (!liveBusy && !document.hidden) {
     liveBusy = true;
-    try { renderLive(await call("/api/live")); } catch (e) { $("srcDot").className = "dot bad"; }
+    try { renderMeters(await call("/api/live")); } catch (e) { $("srcDot").className = "dot bad"; }
     liveBusy = false;
   }
   setTimeout(pollLive, document.hidden ? 2000 : 250);
 }
 
-buildGenres(); buildSwatches(); buildSetup(); wire();
-try { if (localStorage.getItem("lumina.screen") === "setup") showScreen("setup"); } catch (e) {}
+buildStatic(); buildGenres(); wire();
+try { const s = localStorage.getItem("lumina.screen"); if (s === "adv" || s === "setup") showScreen(s); } catch (e) {}
 loadFixtures();
+loadFeel();
 loadUi();
 control("");
 setInterval(() => { if (!document.hidden) control(""); }, 2000);
+setInterval(refreshState, 5000);
 loadState().catch(() => toast("Couldn't load settings from Lumina", true)).finally(pollLive);
 </script>
 </body>

@@ -95,8 +95,7 @@ static void sanitize_loaded_config() {
       0,
       ledCfg.maxLedsPerStrand
     );
-    ledCfg.strand[s].reserved8 = 0;
-    ledCfg.strand[s].reserved = 0;
+    // strobeColor, moodFrom and moodTo take any value (0 = white strobe / no mood); older saves hold 0.
   }
 }
 

@@ -150,6 +150,23 @@ static void test_sample_range_for_split_strands() {
   TEST_ASSERT_EQUAL_UINT8(30, r);
 }
 
+// Spaced cells: each cell keeps its middle lit and goes dark toward both edges.
+static void test_spaced_cells_leave_gaps() {
+  TEST_ASSERT_FALSE(cells::in_gap(30, 7, 450, 6));   // the middle of cell 1 (15 LEDs per cell)
+  TEST_ASSERT_TRUE(cells::in_gap(30, 0, 450, 6));    // its first LED
+  TEST_ASSERT_TRUE(cells::in_gap(30, 14, 450, 6));   // and its last
+  uint16_t lit = 0, plain = 0, thin = 0;
+  for (uint16_t i = 0; i < 450; i++) {
+    if (!cells::in_gap(30, i, 450, 6)) lit++;
+    if (!cells::in_gap(30, i, 450, 0)) plain++;
+    if (!cells::in_gap(30, i, 450, 15)) thin++;
+  }
+  TEST_ASSERT_EQUAL_UINT16(270, lit);    // 9 of every 15 LEDs (gap 6/16)
+  TEST_ASSERT_EQUAL_UINT16(450, plain);  // gap 0 = the normal look
+  TEST_ASSERT_EQUAL_UINT16(30, thin);    // the widest gap still leaves one LED per cell
+  TEST_ASSERT_FALSE(cells::in_gap(0, 3, 450, 6));
+}
+
 void setup() {
   delay(2000);
   UNITY_BEGIN();
@@ -162,6 +179,7 @@ void setup() {
   RUN_TEST(test_sample_30_cells_on_900_leds);
   RUN_TEST(test_from_dmx);
   RUN_TEST(test_sample_range_for_split_strands);
+  RUN_TEST(test_spaced_cells_leave_gaps);
   UNITY_END();
 }
 

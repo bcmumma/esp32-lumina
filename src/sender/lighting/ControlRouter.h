@@ -34,7 +34,12 @@ struct ControlState {
   bool splitStrands;            // saved; cell layouts: strand k shows its share of the cells, not all of them
   uint8_t beamStrength;         // 0..255
   uint8_t beamSpread;           // 1..8
+  uint8_t strobeSense;          // saved; strobe sensitivity: 255 = always, lower = loud parts only (lib/StrobeAuto)
+  uint8_t cellGap;              // saved; spaced cells: dark gap between SoundSwitch cells in 16ths of a cell (0 = none)
+  bool statusLed;               // saved; the S3's onboard RGB status light (false = always dark, the default)
 };
+
+static constexpr uint8_t CELL_GAP_MAX = 12;  // 12/16: every cell keeps at least a quarter lit
 
 extern ControlState control;
 
@@ -45,6 +50,8 @@ bool save_control_settings();
 
 // Called on every analyzed packet, before it is sent.
 void control_apply(AudioLedPacket &p, uint32_t nowMs);
+// True while flashes may run: Strobe on, and the music loud enough for the strobe sensitivity.
+bool control_strobe_open();
 void append_control_json(String &s, uint32_t nowMs);
 // "LUMINA-16", "30 cells", or a named layout such as "10x3 Dim Strobe".
 const char *control_fixture_name();

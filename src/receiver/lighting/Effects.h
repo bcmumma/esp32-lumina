@@ -64,6 +64,13 @@ void render_ghost_drift(uint8_t s, const AudioLedPacket &p, const StrandSettings
 void render_pumpkin_patch(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
 void render_blood_drip(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
 void render_graveyard_fog(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
+// Club (DJ feedback): 46-51, built around Hyper Strobe and DnB Split.
+void render_hyper_scatter(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
+void render_hyper_grid(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
+void render_hyper_mirror(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
+void render_split_mirror(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
+void render_split_blocks(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
+void render_split_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings &st);
 // Kick Flash overlay: update once per frame, then apply after each strand's mode.
 void update_kick_flash(const AudioLedPacket &p, bool newBeat);
 void apply_kick_flash(uint8_t s, const AudioLedPacket &p);

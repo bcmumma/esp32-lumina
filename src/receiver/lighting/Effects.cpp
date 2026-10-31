@@ -2,6 +2,7 @@
 #include "Color.h"
 #include "EffectState.h"
 #include "LedOutput.h"
+#include "Mood.h"
 
 StrandRuntime rt[MAX_STRANDS];
 StrobeGate strobeGate = {0, 0};  // one flash timer for the whole rig (all strands)
@@ -24,8 +25,20 @@ static uint8_t combined_brightness(const AudioLedPacket &p, const StrandSettings
   return scale8_video(sb, gb);
 }
 
+// A look colour: the strand hue plus the effect's offset. Under a colour mood it is folded into the
+// mood's hue range and drifts slowly between its two ends (lib/Mood). Halloween looks use fixed
+// colours (hsv_to_rgb directly), so moods leave them alone.
 static Rgb strand_color(const AudioLedPacket &p, const StrandSettings &st, uint8_t offset = 0, uint8_t value = 255) {
-  return hsv_to_rgb(st.hue + p.globalHue + offset, st.saturation, value);
+  const uint8_t hue = (uint8_t)(st.hue + p.globalHue + offset);
+  if (!mood::active(st)) return hsv_to_rgb(hue, st.saturation, value);
+  return hsv_to_rgb(mood::fold(st, hue, mood::drift(p.ms)), max<uint8_t>(st.saturation, mood::kMinSaturation), value);
+}
+
+// Strobe-type flashes (Kick Flash, the strobe modes, Hyper bursts, the gated kick looks) use the
+// strand's strobe colour: white unless the DJ picked one. Moods never recolour it.
+static Rgb strobe_rgb(const StrandSettings &st, uint8_t value) {
+  if (strobe_color_is_white(st.strobeColor)) return {value, value, value};
+  return hsv_to_rgb(strobe_color_hue(st.strobeColor), 255, value);
 }
 
 // Phase 15: effects were tuned on 150-LED strands. Counts and speeds that are "per strand"
@@ -54,6 +67,7 @@ static uint8_t scaled_audio(uint8_t v, uint8_t sensitivity) {
 //   37 Strobe, 38 Drop Strobe; plus the rig-wide Kick Flash overlay
 //   39 SoundSwitch cells (Phase 15, set by the S3, not listed on the page)
 //   40 Candle Flicker, 41 Witch's Brew, 42 Ghost Drift, 43 Pumpkin Patch, 44 Blood Drip, 45 Graveyard Fog (Halloween)
+//   46 Hyper Scatter, 47 Hyper Grid, 48 Hyper Mirror, 49 Split Mirror, 50 Split Blocks, 51 Split Strobe (Club)
 // Internal/legacy modes 0-14 remain available for VU tuning and compatibility.
 // ============================================================
 void render_off(uint8_t s) {
@@ -92,7 +106,7 @@ void render_beat_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings
   if (newBeat && flash_allowed(s, p, millis())) rt[s].flash = 255;
   fade_strand(s, st.strobe > 0 ? st.strobe : 80);
   if (rt[s].flash > 10) {
-    fill_strand(s, strand_color(p, st, 0, combined_brightness(p, st)));
+    fill_strand(s, strobe_rgb(st, combined_brightness(p, st)));
     rt[s].flash = scale8(rt[s].flash, 150);
   }
 }
@@ -575,7 +589,7 @@ void render_hyper_strobe(uint8_t s, const AudioLedPacket &p, const StrandSetting
   uint8_t width = (uint8_t)map(st.density, 0, 255, 1, max<uint16_t>(2, min<uint16_t>(18, n)));
   uint8_t b = scale8_video(combined_brightness(p, st), rt[s].flash);
   for (uint8_t i = 0; i < width; i++) {
-    set_pixel(s, wrap_index((int32_t)rt[s].aux + i, n), (i & 1U) ? strand_color(p, st, 110, b) : Rgb{b,b,b});
+    set_pixel(s, wrap_index((int32_t)rt[s].aux + i, n), (i & 1U) ? strand_color(p, st, 110, b) : strobe_rgb(st, b));
   }
   rt[s].flash = scale8(rt[s].flash, (uint8_t)map(st.strobe, 0, 255, 90, 205));
 }
@@ -618,7 +632,7 @@ void render_white_lightning(uint8_t s, const AudioLedPacket &p, const StrandSett
         int32_t idx = start + (int32_t)k * (random(0, 2) ? 1 : -1);
         if (idx < 0 || idx >= n) continue;
         uint8_t b = scale8_video(combined_brightness(p, st), (uint8_t)(255U - (uint16_t)k * 180U / len));
-        add_pixel(s, (uint16_t)idx, (k & 1U) ? Rgb{0,(uint8_t)(b / 2U),b} : Rgb{b,b,b});
+        add_pixel(s, (uint16_t)idx, (k & 1U) ? Rgb{0,(uint8_t)(b / 2U),b} : strobe_rgb(st, b));
       }
     }
   }
@@ -806,7 +820,7 @@ void render_acid_squelch(uint8_t s, const AudioLedPacket &p, const StrandSetting
 void render_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
   if (count_for(s) == 0) return;
   if (flash_allowed(s, p, millis())) rt[s].flash = 255;
-  fill_strand(s, strand_color(p, st, 0, scale8_video(combined_brightness(p, st), rt[s].flash)));
+  fill_strand(s, strobe_rgb(st, scale8_video(combined_brightness(p, st), rt[s].flash)));
   rt[s].flash = scale8(rt[s].flash, (uint8_t)map(st.strobe, 0, 255, 0, 200));
 }
 
@@ -816,12 +830,12 @@ void render_drop_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings
   if (count_for(s) == 0) return;
   bool peak = energy_mix(p) >= (uint8_t)map(st.sensitivity, 0, 255, 230, 90);
   if ((peak || newBeat) && flash_allowed(s, p, millis())) rt[s].flash = 255;
-  fill_strand(s, strand_color(p, st, 0, scale8_video(combined_brightness(p, st), rt[s].flash)));
+  fill_strand(s, strobe_rgb(st, scale8_video(combined_brightness(p, st), rt[s].flash)));
   rt[s].flash = scale8(rt[s].flash, (uint8_t)map(st.strobe, 0, 255, 0, 200));
 }
 
-// Rig-wide Kick Flash overlay (packet.kickFlash, 0 = off): a white flash on every bass
-// hit, drawn over whatever mode each strand runs. Through the strobe gate like any flash.
+// Rig-wide Kick Flash overlay (packet.kickFlash, 0 = off): a flash in the strobe colour (white by
+// default) on every bass hit, drawn over whatever mode each strand runs. Through the strobe gate like any flash.
 static uint8_t kickFlashLevel = 0;
 
 void update_kick_flash(const AudioLedPacket &p, bool newBeat) {
@@ -833,13 +847,15 @@ void apply_kick_flash(uint8_t s, const AudioLedPacket &p) {
   if (!p.kickFlash || kickFlashLevel < 8) return;
   uint16_t n = count_for(s);
   uint8_t v = scale8_video(scale8_video(p.globalBrightness, p.kickFlash), kickFlashLevel);
-  for (uint16_t i = 0; i < n; i++) add_pixel(s, i, {v, v, v});
+  const Rgb c = strobe_rgb(p.strand[s], v);
+  for (uint16_t i = 0; i < n; i++) add_pixel(s, i, c);
 }
 
 // Phase 15: SoundSwitch cells. The S3 picks this mode while a cell fixture drives the
 // strip; each LED takes its colour from the cell frame, blended between cell centres
 // (density bit 7 gives hard-edged cells; bit 6 splits the cells across the active strands, so
-// strand k shows its share and the beam runs across all of them). Reverse direction flips the strand.
+// strand k shows its share and the beam runs across all of them; bits 0-3 space the cells out
+// with dark gaps). Reverse direction flips the strand.
 // The strand fields carry the Lumina FX cues from the S3 on top:
 //   speed = beam position, sensitivity = beam level (0 = none), twinkle = UV sparkle,
 //   strobe = kick look on each hit: 0 none, 1 ripple, 2 glitter, 3 pump*, 4 shatter, 5 comet, 6 duck*,
@@ -850,7 +866,10 @@ void render_cells(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, 
   uint16_t n = count_for(s);
   if (n == 0) return;
   uint8_t level = combined_brightness(p, st);
-  const bool smooth = (st.density & 0x80) == 0;
+  // density bits 0-3: spaced cells, the dark gap between cells in sixteenths of a cell (0 = none).
+  // Spaced cells are solid blocks (the DJs like dark space between lit parts).
+  const uint8_t gap16 = st.density & 0x0F;
+  const bool smooth = (st.density & 0x80) == 0 && gap16 == 0;
   const bool rev = st.direction == 1;
   const uint32_t now = millis();
   const uint8_t strands = p.activeStrands < 1 ? 1 : (p.activeStrands > MAX_STRANDS ? MAX_STRANDS : p.activeStrands);
@@ -862,10 +881,24 @@ void render_cells(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, 
     level = scale8_video(level, (uint8_t)(255U - scale8(rt[s].flash, 225)));
     rt[s].flash = scale8(rt[s].flash, 215);
   }
+  // Colour mood: SoundSwitch's colours are folded into the mood's range like any look colour.
+  const bool moodOn = mood::active(st);
+  const uint8_t moodDrift = mood::drift(p.ms), moodSpan = mood::span(st);
   for (uint16_t i = 0; i < n; i++) {
+    const uint16_t along = rev ? (uint16_t)(n - 1U - i) : i;
+    if (cells::in_gap(count, along, n, gap16)) {
+      set_pixel(s, i, {0, 0, 0});
+      continue;
+    }
     uint8_t r, g, b;
-    cells::sample_range(cellSnapshot, first, count, rev ? (uint16_t)(n - 1U - i) : i, n, smooth, r, g, b);
-    set_pixel(s, i, {scale8_video(r, level), scale8_video(g, level), scale8_video(b, level)});
+    cells::sample_range(cellSnapshot, first, count, along, n, smooth, r, g, b);
+    Rgb c = {scale8_video(r, level), scale8_video(g, level), scale8_video(b, level)};
+    if (moodOn && (c.r | c.g | c.b)) {
+      uint8_t h, sat, v;
+      rgb_to_hsv8(c, h, sat, v);
+      c = hsv_to_rgb(mood::fold(st.moodFrom, moodSpan, h, moodDrift), max<uint8_t>(sat, mood::kMinSaturation), v);
+    }
+    set_pixel(s, i, c);
   }
   const uint8_t gb = p.globalBrightness;  // overlays respect the rig brightness cap
 
@@ -895,8 +928,8 @@ void render_cells(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, 
     }
   }
 
-  // Kick look on each hit (the S3 decides whether kicks are on right now).
-  if (st.strobe == 1) {  // ripple: white rings from the centre (not a flash)
+  // Kick look on each hit (the S3 decides whether kicks are on right now), in the strobe colour.
+  if (st.strobe == 1) {  // ripple: rings from the centre (not a flash)
     if (newBeat) {
       const uint8_t slot = rt[s].phase & 3U;
       rt[s].ring[slot] = 1;
@@ -911,30 +944,29 @@ void render_cells(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, 
       for (uint16_t w = 0; w < width && w <= r; w++) {
         const uint16_t rr = r - w;
         if (rr >= half) continue;
-        const uint8_t v = scale8_video(gb, (uint8_t)(255U - (w * 200U) / width));
-        if (cl - (int)rr >= 0) add_pixel(s, (uint16_t)(cl - rr), {v, v, v});
-        if (cr + (int)rr < (int)n) add_pixel(s, (uint16_t)(cr + rr), {v, v, v});
+        const Rgb c = strobe_rgb(st, scale8_video(gb, (uint8_t)(255U - (w * 200U) / width)));
+        if (cl - (int)rr >= 0) add_pixel(s, (uint16_t)(cl - rr), c);
+        if (cr + (int)rr < (int)n) add_pixel(s, (uint16_t)(cr + rr), c);
       }
       rt[s].ring[k] += step;
     }
-  } else if (st.strobe == 2) {  // glitter: a burst of white sparkles that thins out
+  } else if (st.strobe == 2) {  // glitter: a burst of sparkles that thins out
     if (newBeat) rt[s].sparkle = 255;
     if (rt[s].sparkle > 8) {
       const uint16_t count = len_scale(n, (uint16_t)(rt[s].sparkle / 12U));
       for (uint16_t k = 0; k < count; k++) {
-        const uint8_t v = scale8_video(gb, (uint8_t)random(150, 256));
-        add_pixel(s, (uint16_t)random(n), {v, v, v});
+        add_pixel(s, (uint16_t)random(n), strobe_rgb(st, scale8_video(gb, (uint8_t)random(150, 256))));
       }
       rt[s].sparkle = scale8(rt[s].sparkle, 200);
     }
-  } else if (st.strobe == 3) {  // pump: a whole-strand white flash, through the strobe gate
+  } else if (st.strobe == 3) {  // pump: a whole-strand flash, through the strobe gate
     if (newBeat && flash_allowed(s, p, now)) rt[s].flash = 255;
     if (rt[s].flash > 8) {
-      const uint8_t v = scale8_video(gb, scale8(rt[s].flash, 160));
-      for (uint16_t i = 0; i < n; i++) add_pixel(s, i, {v, v, v});
+      const Rgb c = strobe_rgb(st, scale8_video(gb, scale8(rt[s].flash, 160)));
+      for (uint16_t i = 0; i < n; i++) add_pixel(s, i, c);
       rt[s].flash = scale8(rt[s].flash, 170);
     }
-  } else if (st.strobe == 4) {  // shatter: a few random white shards that fade (partial, not a flash)
+  } else if (st.strobe == 4) {  // shatter: a few random shards that fade (partial, not a flash)
     if (newBeat) {
       rt[s].aux = (uint16_t)random(1, 65535);
       rt[s].sparkle = 255;
@@ -942,15 +974,15 @@ void render_cells(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, 
     if (rt[s].sparkle > 8) {
       uint32_t x = rt[s].aux;  // same shard positions every frame until the next kick
       const uint16_t len = len_scale(n, 4);
-      const uint8_t v = scale8_video(gb, rt[s].sparkle);
+      const Rgb c = strobe_rgb(st, scale8_video(gb, rt[s].sparkle));
       for (uint8_t k = 0; k < 4; k++) {
         x = x * 1103515245UL + 12345UL;
         const uint16_t start = (uint16_t)((x >> 8) % (n > len ? n - len : 1));
-        for (uint16_t i = 0; i < len && start + i < n; i++) add_pixel(s, start + i, {v, v, v});
+        for (uint16_t i = 0; i < len && start + i < n; i++) add_pixel(s, start + i, c);
       }
       rt[s].sparkle = scale8(rt[s].sparkle, 190);
     }
-  } else if (st.strobe == 5) {  // comet: a white comet across the strip, alternating direction each kick
+  } else if (st.strobe == 5) {  // comet: a comet across the strip, alternating direction each kick
     const uint16_t tail = len_scale(n, 14), step = len_scale(n, 7);
     if (newBeat) {
       rt[s].pos = 1;  // 0 = no comet
@@ -961,8 +993,8 @@ void render_cells(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, 
       for (uint16_t k = 0; k < tail && k <= head; k++) {
         const uint16_t i = head - k;
         if (i >= n) continue;
-        const uint8_t v = scale8_video(gb, (uint8_t)(255U - (k * 240U) / tail));
-        add_pixel(s, (rt[s].phase & 1) ? (uint16_t)(n - 1U - i) : i, {v, v, v});
+        const Rgb c = strobe_rgb(st, scale8_video(gb, (uint8_t)(255U - (k * 240U) / tail)));
+        add_pixel(s, (rt[s].phase & 1) ? (uint16_t)(n - 1U - i) : i, c);
       }
       rt[s].pos = head >= n + tail ? 0 : (uint16_t)(rt[s].pos + step);  // run until the tail has left the strip
     }
@@ -972,9 +1004,9 @@ void render_cells(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, 
       rt[s].phase ^= 1;
     }
     if (rt[s].flash > 8) {
-      const uint8_t v = scale8_video(gb, rt[s].flash);
+      const Rgb c = strobe_rgb(st, scale8_video(gb, rt[s].flash));
       const uint16_t half = n / 2U, from = (rt[s].phase & 1) ? half : 0, to = (rt[s].phase & 1) ? n : half;
-      for (uint16_t i = from; i < to; i++) add_pixel(s, i, {v, v, v});
+      for (uint16_t i = from; i < to; i++) add_pixel(s, i, c);
       rt[s].flash = scale8(rt[s].flash, 150);
     }
   }
@@ -1094,5 +1126,217 @@ void render_graveyard_fog(uint8_t s, const AudioLedPacket &p, const StrandSettin
     const Rgb purple = hsv_to_rgb(200, 220, scale8_video(b, scale8(a, a)));
     const Rgb green = hsv_to_rgb(86, 200, scale8_video(b, scale8(c, c) / 2U));
     set_pixel(s, i, add_color(purple, green));
+  }
+}
+
+// ============================================================
+// Club (DJ feedback, 2026-10-31): built around the DJs' two favourites, Hyper Strobe (little
+// strobes, then an intense one) and DnB Split (spaced, chopped band meters). Dark space between
+// the lit parts; never the whole strip at once. Bursts go through the rig strobe gate like any
+// flash, in the strobe colour with look-coloured edges.
+// ============================================================
+
+// Energy spike for the Hyper modes: how far the jump in overall energy since the last packet went
+// past the threshold (0 = none). Audio response sets the threshold: higher fires more often.
+static uint8_t club_spike(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
+  const uint8_t energy = energy_mix(p);
+  const int16_t delta = (int16_t)energy - (int16_t)rt[s].prevEnergy;
+  rt[s].prevEnergy = energy;
+  const int16_t threshold = (int16_t)map(st.sensitivity, 0, 255, 60, 12);
+  return delta > threshold ? (uint8_t)min<int16_t>(255, delta - threshold) : 0;
+}
+
+// Little hits start a dim burst, big ones a full-brightness one.
+static uint8_t club_level(uint8_t spike) { return (uint8_t)min<uint16_t>(255, 130U + spike * 4U); }
+
+// Decay sets how long a burst glows (0 = one sharp blink).
+static uint8_t club_keep(const StrandSettings &st) { return (uint8_t)map(st.strobe, 0, 255, 80, 215); }
+
+static void add_burst(uint8_t s, uint16_t pos, uint8_t level) {
+  StrandRuntime &r = rt[s];
+  r.burstPos[r.burstNext] = pos;
+  r.burstLevel[r.burstNext] = level;
+  r.burstNext = (uint8_t)((r.burstNext + 1U) % 12U);
+}
+
+// One little strobe from `start`: strobe-colour core, look-coloured outer LEDs when 3 or wider.
+static void draw_burst(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, uint16_t n, int32_t start, uint16_t width, uint8_t level) {
+  const uint8_t b = scale8_video(combined_brightness(p, st), level);
+  const Rgb core = strobe_rgb(st, b), edge = strand_color(p, st, 110, b);
+  for (uint16_t k = 0; k < width; k++) {
+    const int32_t i = start + k;
+    if (i < 0 || i >= (int32_t)n) continue;
+    set_pixel(s, (uint16_t)i, (width >= 3 && (k == 0 || k == width - 1U)) ? edge : core);
+  }
+}
+
+// Little strobes scattered along the strip on energy spikes; a big hit throws a whole volley.
+void render_hyper_scatter(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
+  const uint16_t n = count_for(s);
+  if (n == 0) return;
+  const uint8_t spike = club_spike(s, p, st);
+  if (spike && flash_allowed(s, p, millis())) {
+    const uint16_t base = (uint16_t)(1U + spike / 14U + st.density / 96U);  // more bursts for bigger hits
+    const uint16_t count = min<uint16_t>(12, len_scale(n, base));
+    for (uint16_t k = 0; k < count; k++) add_burst(s, (uint16_t)random(n), club_level(spike));
+  }
+  clear_strand(s);
+  const uint16_t width = len_scale(n, (uint16_t)(2U + st.density / 64U));  // 2-5 LEDs per 150
+  const uint8_t keep = club_keep(st);
+  for (uint8_t k = 0; k < 12; k++) {
+    uint8_t &level = rt[s].burstLevel[k];
+    if (level < 10) continue;
+    draw_burst(s, p, st, n, (int32_t)rt[s].burstPos[k] - (int32_t)(width / 2U), width, level);
+    level = scale8(level, keep);
+  }
+}
+
+// Evenly spaced slots with dark gaps; spikes flash a few slots, a big hit the whole grid.
+// Sparkle keeps the slots faintly lit between hits (0 = dark).
+void render_hyper_grid(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
+  const uint16_t n = count_for(s);
+  if (n == 0) return;
+  const uint16_t slots = min<uint16_t>(48, max<uint16_t>(2, len_scale(n, (uint16_t)(8U + st.density / 32U))));  // 8-15 per 150
+  const uint16_t cell = max<uint16_t>(1, n / slots);
+  const uint16_t lit = max<uint16_t>(1, cell / 3U);  // a third of each slot lit
+  const uint8_t spike = club_spike(s, p, st);
+  if (spike && flash_allowed(s, p, millis())) {
+    if (spike >= 40) {
+      for (uint16_t k = 0; k < slots; k++) rt[s].slotLevel[k] = 255;
+    } else {
+      for (uint8_t k = 0; k < 1U + spike / 12U; k++) rt[s].slotLevel[random(slots)] = club_level(spike);
+    }
+  }
+  clear_strand(s);
+  const uint8_t keep = club_keep(st);
+  const uint8_t pilot = scale8_video(combined_brightness(p, st), scale8(st.twinkle, 90));
+  for (uint16_t k = 0; k < slots; k++) {
+    uint8_t &level = rt[s].slotLevel[k];
+    const uint16_t start = (uint16_t)(k * cell + (cell - lit) / 2U);
+    if (level >= 10) {
+      draw_burst(s, p, st, n, start, lit, level);
+      level = scale8(level, keep);
+    } else if (st.twinkle) {
+      const Rgb c = strand_color(p, st, (uint8_t)(k * 9U), pilot);
+      for (uint16_t i = start; i < start + lit && i < n; i++) set_pixel(s, i, c);
+    }
+  }
+}
+
+// Bursts in mirrored pairs around the centre; bigger hits land further out, a big hit adds a
+// second pair near the middle.
+void render_hyper_mirror(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
+  const uint16_t n = count_for(s);
+  if (n == 0) return;
+  const uint16_t half = max<uint16_t>(1, n / 2U);
+  const uint8_t spike = club_spike(s, p, st);
+  if (spike && flash_allowed(s, p, millis())) {
+    const uint32_t reach = ((uint32_t)min<uint8_t>(spike, 60) * (half - 1U)) / 60U + random(max<uint16_t>(1, half / 8U));
+    add_burst(s, (uint16_t)min<uint32_t>(half - 1U, reach), club_level(spike));  // distance from the centre
+    if (spike >= 40) add_burst(s, (uint16_t)random(max<uint16_t>(1, half / 4U)), 255);
+  }
+  clear_strand(s);
+  const uint16_t width = len_scale(n, (uint16_t)(2U + st.density / 64U));
+  const uint8_t keep = club_keep(st);
+  const int32_t cl = (int32_t)((n - 1U) / 2U), cr = (int32_t)(n / 2U);
+  for (uint8_t k = 0; k < 12; k++) {
+    uint8_t &level = rt[s].burstLevel[k];
+    if (level < 10) continue;
+    const int32_t d = rt[s].burstPos[k];
+    draw_burst(s, p, st, n, cl - d - (int32_t)width + 1, width, level);
+    draw_burst(s, p, st, n, cr + d, width, level);
+    level = scale8(level, keep);
+  }
+}
+
+// DnB Split folded around the centre: bass meters grow out from the middle, then mids, then highs
+// toward the ends, each chopped into scrolling tiles (same tiles as DnB Split).
+void render_split_mirror(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
+  const uint16_t n = count_for(s);
+  if (n == 0) return;
+  clear_strand(s);
+  const uint16_t half = max<uint16_t>(1, n / 2U);
+  const uint8_t values[3] = {p.bass, p.mid, p.treble};
+  const uint8_t tile = max<uint8_t>(1, (uint8_t)map(st.density, 0, 255, 1, 5));
+  const uint32_t scroll = millis() * (10U + st.speed) / 700U;
+  const int32_t cl = (int32_t)((n - 1U) / 2U), cr = (int32_t)(n / 2U);
+  uint16_t start = 0;  // distance from the centre
+  for (uint8_t band = 0; band < 3; band++) {
+    const uint16_t end = (uint16_t)(((uint32_t)(band + 1U) * half) / 3U);
+    const uint16_t width = max<uint16_t>(1, end - start);
+    const uint8_t level = audio_gate(values[band], st.sensitivity, 12);
+    const uint16_t lit = ((uint32_t)level * width) / 255U;
+    const Rgb c = strand_color(p, st, (uint8_t)(band * 82U), scale8_video(combined_brightness(p, st), level));
+    for (uint16_t i = 0; i < lit; i++) {
+      if (((i + scroll) / tile) & 1U) continue;
+      const int32_t d = (int32_t)start + i;
+      if (cl - d >= 0) set_pixel(s, (uint16_t)(cl - d), c);
+      if (cr + d < (int32_t)n) set_pixel(s, (uint16_t)(cr + d), c);
+    }
+    start = end;
+  }
+}
+
+// Short spaced meters along the whole strip, bass / mid / high repeating; each fills from its
+// own centre with its band's level.
+void render_split_blocks(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
+  const uint16_t n = count_for(s);
+  if (n == 0) return;
+  clear_strand(s);
+  const uint16_t blocks = max<uint16_t>(3, len_scale(n, (uint16_t)(6U + st.density / 43U)));  // 6-11 per 150
+  const uint16_t cell = max<uint16_t>(1, n / blocks);
+  const uint16_t len = max<uint16_t>(1, (uint16_t)((cell * 2U) / 3U));  // a third of each block stays dark
+  const uint8_t values[3] = {p.bass, p.mid, p.treble};
+  const uint8_t base = combined_brightness(p, st);
+  for (uint16_t k = 0; k < blocks; k++) {
+    const uint8_t band = (uint8_t)(k % 3U);
+    const uint8_t level = audio_gate(values[band], st.sensitivity, 12);
+    const uint16_t lit = ((uint32_t)level * len) / 255U;
+    if (!lit) continue;
+    const Rgb c = strand_color(p, st, (uint8_t)(band * 82U), scale8_video(base, max<uint8_t>(60, level)));
+    const uint16_t from = (uint16_t)(k * cell + (cell - len) / 2U + (len - lit) / 2U);
+    for (uint16_t i = from; i < from + lit && i < n; i++) set_pixel(s, oriented_index(i, n, st.direction), c);
+  }
+}
+
+// DnB Split with a little strobe at the top of each meter on energy spikes.
+void render_split_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
+  const uint16_t n = count_for(s);
+  if (n == 0) return;
+  clear_strand(s);
+  const uint8_t values[3] = {p.bass, p.mid, p.treble};
+  const uint8_t tile = max<uint8_t>(1, (uint8_t)map(st.density, 0, 255, 1, 5));
+  const uint32_t scroll = millis() * (10U + st.speed) / 700U;
+  const uint8_t spike = club_spike(s, p, st);
+  const bool fire = spike && flash_allowed(s, p, millis());
+  const uint8_t keep = club_keep(st);
+  const uint8_t base = combined_brightness(p, st);
+  const uint16_t tipWidth = len_scale(n, 3);
+  uint16_t start = 0;
+  for (uint8_t band = 0; band < 3; band++) {
+    const uint16_t end = (uint16_t)(((uint32_t)(band + 1U) * n) / 3U);
+    const uint16_t width = max<uint16_t>(1, end - start);
+    const uint8_t level = audio_gate(values[band], st.sensitivity, 12);
+    const uint16_t lit = ((uint32_t)level * width) / 255U;
+    const Rgb c = strand_color(p, st, (uint8_t)(band * 82U), scale8_video(base, level));
+    for (uint16_t i = 0; i < lit; i++) {
+      if (((i + scroll) / tile) & 1U) continue;
+      set_pixel(s, oriented_index(start + i, n, st.direction), c);
+    }
+    if (fire) {  // burst slot `band` marks this meter's tip
+      rt[s].burstPos[band] = (uint16_t)(start + lit);
+      rt[s].burstLevel[band] = club_level(spike);
+    }
+    uint8_t &tipLevel = rt[s].burstLevel[band];
+    if (tipLevel >= 10) {
+      const Rgb t = strobe_rgb(st, scale8_video(base, tipLevel));
+      const int32_t from = (int32_t)rt[s].burstPos[band] - (int32_t)(tipWidth / 2U);
+      for (uint16_t k = 0; k < tipWidth; k++) {
+        const int32_t i = from + k;
+        if (i >= (int32_t)start && i < (int32_t)end) set_pixel(s, oriented_index((uint16_t)i, n, st.direction), t);
+      }
+      tipLevel = scale8(tipLevel, keep);
+    }
+    start = end;
   }
 }

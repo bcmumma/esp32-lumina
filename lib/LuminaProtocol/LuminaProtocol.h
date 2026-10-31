@@ -8,7 +8,7 @@ static constexpr uint16_t PACKET_MAGIC = 0xA17D;
 static constexpr uint8_t PACKET_VERSION = 12;
 static constexpr uint8_t MAX_STRANDS = 4;
 static constexpr uint8_t CELLS_MODE = 39;     // receiver draws the latest SoundSwitch cell frame (Phase 15)
-static constexpr uint8_t LED_MODE_MAX = 45;  // highest render mode (40-45 Halloween; 32-39 added in Phase 14; IDs never renumbered)
+static constexpr uint8_t LED_MODE_MAX = 51;  // highest render mode (46-51 Club; 40-45 Halloween; 32-39 Phase 14; IDs never renumbered)
 
 enum LedType : uint8_t {
   LED_TYPE_WS2815_WS2812_RGB_800 = 0,
@@ -45,9 +45,10 @@ struct __attribute__((packed)) StrandSettings {
   uint8_t direction;    // 0 forward, 1 reverse, 2 mirror/center
   uint8_t pin;          // LED receiver GPIO pin, assigned from browser
   uint8_t ledType;      // browser-selected LED chipset/color order
-  uint8_t reserved8;    // keeps following uint16_t on an even byte boundary
+  uint8_t strobeColor;  // strobe-type flashes: 0 = white, else hue + 1 (was a zero-filled reserved byte)
   uint16_t ledCount;    // active LED count for this strand, assigned from browser
-  uint16_t reserved;    // future use
+  uint8_t moodFrom;     // colour mood hue range, moodFrom -> moodTo; equal = no mood
+  uint8_t moodTo;       // (both were a zero-filled reserved uint16_t)
 };
 
 struct __attribute__((packed)) AudioLedPacket {
@@ -97,6 +98,15 @@ struct __attribute__((packed)) AudioLedPacket {
   // reserved byte, so packet version 12 holds and older receivers ignore it.
   uint8_t kickFlash;
 };
+
+// Strobe colour and colour mood (DJ feedback, 2026-10-31). They use three strand bytes that older
+// senders and saved configs leave at zero, which reads as a white strobe and no mood, so packet
+// version 12 holds and older receivers ignore them.
+//   strobeColor: Kick Flash, the strobe modes, Hyper bursts and the gated kick looks flash in this colour.
+//   moodFrom/moodTo: the look's colours are folded into this hue range on the receiver (lib/Mood).
+static inline bool strobe_color_is_white(uint8_t code) { return code == 0; }
+static inline uint8_t strobe_color_hue(uint8_t code) { return (uint8_t)(code - 1U); }
+static inline uint8_t strobe_color_code(uint8_t hue) { return (uint8_t)(hue == 255 ? 255 : hue + 1U); }
 
 static_assert(sizeof(AudioLedPacket) < 250, "AudioLedPacket must fit in an ESP-NOW v1 payload");
 static_assert(sizeof(StrandSettings) == 18, "StrandSettings layout changed; update PACKET_VERSION on both boards");

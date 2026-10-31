@@ -40,4 +40,9 @@ void sample(const Frame &f, uint16_t i, uint16_t n, bool smooth, uint8_t &r, uin
 void sample_range(const Frame &f, uint8_t first, uint8_t count, uint16_t i, uint16_t n, bool smooth, uint8_t &r, uint8_t &g,
                   uint8_t &b);
 
+// Spaced cells (DJ feedback, 2026-10-31): true if LED i of n falls in the dark gap of its cell when
+// `count` cells share the strand and each cell keeps only its middle lit. gap16 = gap size in
+// sixteenths of a cell (0 = no gaps, the normal look).
+bool in_gap(uint8_t count, uint16_t i, uint16_t n, uint8_t gap16);
+
 }  // namespace cells

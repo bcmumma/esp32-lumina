@@ -44,6 +44,21 @@ static inline Rgb hsv_to_rgb(uint8_t h, uint8_t s, uint8_t v) {
   }
 }
 
+// Inverse of hsv_to_rgb on the same 6 x 43 wheel (red 0, green 85, blue 171).
+static inline void rgb_to_hsv8(Rgb c, uint8_t &h, uint8_t &s, uint8_t &v) {
+  const uint8_t mx = max(c.r, max(c.g, c.b));
+  const uint8_t mn = min(c.r, min(c.g, c.b));
+  v = mx;
+  const uint8_t d = mx - mn;
+  if (mx == 0 || d == 0) { h = 0; s = 0; return; }
+  s = (uint8_t)(((uint16_t)d * 255U) / mx);
+  int16_t hh;
+  if (mx == c.r) hh = (int16_t)(43 * ((int16_t)c.g - c.b) / d);
+  else if (mx == c.g) hh = (int16_t)(85 + 43 * ((int16_t)c.b - c.r) / d);
+  else hh = (int16_t)(171 + 43 * ((int16_t)c.r - c.g) / d);
+  h = (uint8_t)(hh < 0 ? hh + 256 : hh);
+}
+
 static inline Rgb scale_color(Rgb c, uint8_t scale) {
   c.r = scale8_video(c.r, scale);
   c.g = scale8_video(c.g, scale);

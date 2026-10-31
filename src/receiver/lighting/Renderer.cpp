@@ -71,6 +71,12 @@ void render_strand(uint8_t s, const AudioLedPacket &p, bool newBeat) {
     case 43: render_pumpkin_patch(s, p, st); break;
     case 44: render_blood_drip(s, p, st); break;
     case 45: render_graveyard_fog(s, p, st); break;
+    case 46: render_hyper_scatter(s, p, st); break;
+    case 47: render_hyper_grid(s, p, st); break;
+    case 48: render_hyper_mirror(s, p, st); break;
+    case 49: render_split_mirror(s, p, st); break;
+    case 50: render_split_blocks(s, p, st); break;
+    case 51: render_split_strobe(s, p, st); break;
     default: render_solid(s, p, st); break;
   }
   apply_kick_flash(s, p);

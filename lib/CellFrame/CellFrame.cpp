@@ -89,4 +89,14 @@ void sample_range(const Frame &f, uint8_t first, uint8_t count, uint16_t i, uint
   b = (uint8_t)((a[2] * (256U - t) + z[2] * t) >> 8);
 }
 
+bool in_gap(uint8_t count, uint16_t i, uint16_t n, uint8_t gap16) {
+  if (gap16 == 0 || count == 0 || n == 0 || i >= n) return false;
+  if (gap16 > 15) gap16 = 15;
+  // Where LED i's centre sits inside its cell, 0..255 (same mapping as sample_range).
+  const uint32_t pos = ((2U * i + 1U) * count * 256U) / (2U * n);
+  const int16_t fromMiddle = (int16_t)(pos & 0xFFU) - 128;
+  const int16_t halfLit = (int16_t)((16U - gap16) * 8U);  // the lit part, centred in the cell
+  return (fromMiddle < 0 ? -fromMiddle : fromMiddle) >= halfLit;
+}
+
 }  // namespace cells

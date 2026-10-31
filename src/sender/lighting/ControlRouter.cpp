@@ -6,12 +6,16 @@
 #include "CellFrame.h"
 #include "FixtureLayout.h"
 #include "FxLayer.h"
+#include "StrobeAuto.h"
 #include "../network/EspNowSender.h"
 #include "../config/ConfigManager.h"
 #include "../network/ArtNetReceiver.h"
+#include "../audio/AudioAnalyzer.h"
+#include "../network/WiFiManager.h"
 
 ControlState control = {router::Source::Auto, router::Source::Audio, router::kDefaultStandaloneLevel, STROBE_DEFAULT_HZ,
-                        false, 1, 0, 0, RIG_BRIGHTNESS_CAP_MAX, false, 1, true, true, true, false, false, 255, 3};
+                        false, 1, 0, 0, RIG_BRIGHTNESS_CAP_MAX, false, 1, true, true, true, false, false, 255, 3,
+                        strobeauto::kAlways, 0, false};
 
 namespace {
 
@@ -19,7 +23,7 @@ namespace {
 constexpr char kNamespace[] = "lumina_ctl";
 constexpr char kKey[] = "rec";
 constexpr uint32_t kMagic = 0x4C435431UL;  // "LCT1"
-constexpr uint8_t kVersion = 3;  // v3 appends the FX settings; v1 and v2 records still load
+constexpr uint8_t kVersion = 4;  // v4 appends the DJ settings; v3 appends the FX settings; v1-v3 records still load
 
 struct ControlRecord {
   uint32_t magic;
@@ -49,6 +53,28 @@ struct ControlRecordV3 {
 uint32_t record_crc_v3(const ControlRecordV3 &r) {
   return config_crc32(reinterpret_cast<const uint8_t *>(&r), offsetof(ControlRecordV3, crc32));
 }
+
+// v4 (DJ feedback, 2026-10-31): the v3 fields, then the DJ settings.
+struct ControlRecordV4 {
+  ControlRecord base;  // base.crc32 unused
+  uint8_t fxFlags;
+  uint8_t beamStrength;
+  uint8_t beamSpread;
+  uint8_t flags2;
+  uint8_t strobeSense;  // 255 = always
+  uint8_t cellGap;      // 0 = smooth cells, 1..CELL_GAP_MAX = spaced
+  uint8_t flags3;       // bit 0: onboard status light ON (0 = dark, the default)
+  uint8_t reserved;
+  uint32_t crc32;
+};
+
+uint32_t record_crc_v4(const ControlRecordV4 &r) {
+  return config_crc32(reinterpret_cast<const uint8_t *>(&r), offsetof(ControlRecordV4, crc32));
+}
+
+// Strobe sensitivity: whether the music is loud enough right now, and the resulting live gate.
+strobeauto::State strobeAuto = {};
+bool strobeOpen = false;
 
 uint8_t clamp_cap(int v) {
   return (uint8_t)(v < RIG_BRIGHTNESS_CAP_MIN ? RIG_BRIGHTNESS_CAP_MIN : (v > RIG_BRIGHTNESS_CAP_MAX ? RIG_BRIGHTNESS_CAP_MAX : v));
@@ -149,7 +175,7 @@ uint32_t cellFlashUntilMs = 0;
 uint32_t cellFlashes = 0;
 
 bool apply_cell_strobe(uint8_t n, uint32_t nowMs) {
-  if (!control.strobeEnabled) return false;
+  if (!strobeOpen) return false;
   uint8_t hz = 0;
   for (uint8_t c = 0; c < n; c++) {
     const uint8_t h = layout::strobe_hz(cellStrobe[c], control.strobeHz);
@@ -185,10 +211,19 @@ void load_control_settings() {
   Preferences store;
   ControlRecord r = {};
   ControlRecordV3 r3 = {};
-  bool ok = false, v3 = false;
+  ControlRecordV4 r4 = {};
+  bool ok = false, v3 = false, v4 = false;
   if (store.begin(kNamespace, true)) {
     const size_t len = store.getBytesLength(kKey);
-    if (len == sizeof(ControlRecordV3) && store.getBytes(kKey, &r3, sizeof(r3)) == sizeof(r3) && r3.base.magic == kMagic &&
+    if (len == sizeof(ControlRecordV4) && store.getBytes(kKey, &r4, sizeof(r4)) == sizeof(r4) && r4.base.magic == kMagic &&
+        r4.base.version == 4 && r4.crc32 == record_crc_v4(r4)) {
+      r = r4.base;
+      r3.fxFlags = r4.fxFlags;  // same FX fields as v3
+      r3.beamStrength = r4.beamStrength;
+      r3.beamSpread = r4.beamSpread;
+      r3.flags2 = r4.flags2;
+      ok = v3 = v4 = true;
+    } else if (len == sizeof(ControlRecordV3) && store.getBytes(kKey, &r3, sizeof(r3)) == sizeof(r3) && r3.base.magic == kMagic &&
         r3.base.version == 3 && r3.crc32 == record_crc_v3(r3)) {
       r = r3.base;
       ok = v3 = true;
@@ -220,16 +255,19 @@ void load_control_settings() {
       control.beamStrength = r3.beamStrength;
       control.beamSpread = r3.beamSpread < 1 || r3.beamSpread > 8 ? 3 : r3.beamSpread;
     }
+    control.strobeSense = v4 ? r4.strobeSense : strobeauto::kAlways;
+    control.cellGap = v4 && r4.cellGap <= CELL_GAP_MAX ? r4.cellGap : 0;
+    control.statusLed = v4 && (r4.flags3 & 1) != 0;
   }
   control.strobeEnabled = false;  // never restored: strobe is always off at boot
-  Serial.printf("Control: source=%s fallback=%s strobe off (cap %u/s) standalone=%u brightnessCap=%u/255 fixture=%s (code %u) (%s)\n",
-                router::name(control.source), router::name(control.autoFallback), control.strobeHz,
+  Serial.printf("Control: source=%s fallback=%s strobe off (cap %u/s, sensitivity %u) standalone=%u brightnessCap=%u/255 fixture=%s (code %u) (%s)\n",
+                router::name(control.source), router::name(control.autoFallback), control.strobeHz, control.strobeSense,
                 control.standaloneLevel, control.brightnessCap, control_fixture_name(),
                 control.fixture, ok ? "loaded" : "defaults");
 }
 
 bool save_control_settings() {
-  ControlRecordV3 r3 = {};
+  ControlRecordV4 r3 = {};
   ControlRecord &r = r3.base;
   r.magic = kMagic;
   r.version = kVersion;
@@ -245,7 +283,10 @@ bool save_control_settings() {
   r3.flags2 = control.splitStrands ? 1 : 0;
   r3.beamStrength = control.beamStrength;
   r3.beamSpread = control.beamSpread;
-  r3.crc32 = record_crc_v3(r3);
+  r3.strobeSense = control.strobeSense;
+  r3.cellGap = control.cellGap;
+  r3.flags3 = control.statusLed ? 1 : 0;
+  r3.crc32 = record_crc_v4(r3);
   Preferences store;
   if (!store.begin(kNamespace, false)) return false;
   bool ok = store.putBytes(kKey, &r3, sizeof(r3)) == sizeof(r3);
@@ -253,8 +294,15 @@ bool save_control_settings() {
   return ok;
 }
 
+bool control_strobe_open() { return strobeOpen; }
+
 void control_apply(AudioLedPacket &p, uint32_t nowMs) {
-  p.flags = strobe_encode_flags(p.flags, control.strobeEnabled, control.strobeHz);
+  // Strobe sensitivity: with Strobe on, flashes run only while the music is loud enough (Always = 255).
+  strobeauto::Config sc = strobeauto::kDefaultConfig;
+  sc.floor = cfg.volumeFloor / (cfg.volumeGain > 0.1f ? cfg.volumeGain : 0.1f);  // same silence level as the volume meter
+  const bool loudEnough = strobeauto::update(strobeAuto, sc, raw_volume, control.strobeSense, nowMs);
+  strobeOpen = control.strobeEnabled && loudEnough;
+  p.flags = strobe_encode_flags(p.flags, strobeOpen, control.strobeHz);
 
   uint16_t length = 0;
   uint32_t lastRxMs = 0;
@@ -307,8 +355,10 @@ void control_apply(AudioLedPacket &p, uint32_t nowMs) {
       for (uint8_t s = 0; s < MAX_STRANDS; s++) {
         p.strand[s].mode = CELLS_MODE;
         p.strand[s].brightness = 255;                    // intensity is in the cell colours; the rig cap still applies
-        // density bit 7: hard-edged blocks (else smooth); bit 6: split the cells across the active strands
-        p.strand[s].density = (uint8_t)((l.hardEdges ? 0x80 : 0) | (control.splitStrands ? 0x40 : 0));
+        // density bit 7: hard-edged blocks (else smooth); bit 6: split the cells across the active strands;
+        // bits 0-3: spaced cells, the dark gap in 16ths of a cell (0 = none)
+        p.strand[s].density = (uint8_t)((l.hardEdges ? 0x80 : 0) | (control.splitStrands ? 0x40 : 0) |
+                                        (control.cellGap > CELL_GAP_MAX ? CELL_GAP_MAX : control.cellGap));
         p.strand[s].speed = fxOut.beamPos;
         p.strand[s].sensitivity = fxOut.beamLevel;
         p.strand[s].twinkle = fxOut.sparkle;
@@ -381,6 +431,14 @@ void append_control_json(String &s, uint32_t nowMs) {
   s += control.strobeEnabled ? "true" : "false";
   s += ",\"strobeHz\":" + String(control.strobeHz);
   s += ",\"strobeMaxHz\":" + String(STROBE_MAX_HZ);
+  s += ",\"strobeSense\":" + String(control.strobeSense);
+  s += ",\"strobeOpen\":";
+  s += strobeOpen ? "true" : "false";
+  s += ",\"loudDb\":" + String((int)lroundf(strobeAuto.levelDb < -60.0f ? -60.0f : strobeAuto.levelDb));
+  s += ",\"strobeThresholdDb\":" + String(strobeauto::threshold_db(control.strobeSense), 1);
+  s += ",\"cellGap\":" + String(control.cellGap) + ",\"cellGapMax\":" + String(CELL_GAP_MAX);
+  s += ",\"statusLed\":" + String(control.statusLed ? 1 : 0);
+  s += ",\"statusLedUsable\":" + String(status_rgb_usable() ? 1 : 0);
   s += ",\"kickFlash\":" + String(control.kickFlash);
   s += ",\"fixture\":" + String(control.fixture);
   s += ",\"fixtureName\":\"" + String(control_fixture_name()) + "\"";

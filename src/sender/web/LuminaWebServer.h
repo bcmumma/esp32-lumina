@@ -14,3 +14,5 @@ extern uint32_t httpRequestCount;
 extern uint32_t lastLiveBytes;
 
 void setup_web_server();
+// Saves look/setup changes and the per-mode slider memory a few seconds after the last change.
+void web_autosave(uint32_t nowMs);

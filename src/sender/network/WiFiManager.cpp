@@ -37,7 +37,11 @@ uint8_t active_wifi_channel = 1;
 static bool wifiWasConnected = false;
 static uint32_t lastWifiReconnectAttemptMs = 0;
 
-static bool statusRgbUsable = false;
+// The board's RGB LED is on GPIO48 (confirmed 2026-10-31: writes to GPIO38 did not reach it). GPIO48 is
+// also PCM1808 DOUT, so the LED is never driven while that wiring stands; it shows whatever the audio
+// data line makes it show. Move DOUT to another pin and the switch below controls it.
+static int statusRgbPin = -1;         // -1 = no usable status LED pin
+static bool statusRgbEnabled = false;  // owner switch (Advanced page); off = always dark, errors included
 
 static int onboard_rgb_physical_pin() {
 #if defined(RGB_BUILTIN)
@@ -55,13 +59,21 @@ static bool pin_conflicts_with_pcm1808(int pin) {
   return pin == PIN_MCLK || pin == PIN_BCLK || pin == PIN_LRCK || pin == PIN_DIN;
 }
 
-void status_rgb_write(uint8_t r, uint8_t g, uint8_t b) {
-#if defined(RGB_BUILTIN)
-  if (statusRgbUsable) rgbLedWrite(RGB_BUILTIN, r, g, b);
-#else
-  (void)r; (void)g; (void)b;
-#endif
+static void rgb_pin_write(uint8_t r, uint8_t g, uint8_t b) {
+  if (statusRgbPin >= 0) rgbLedWrite((uint8_t)statusRgbPin, r, g, b);
 }
+
+void status_rgb_write(uint8_t r, uint8_t g, uint8_t b) {
+  if (statusRgbEnabled) rgb_pin_write(r, g, b);
+}
+
+void status_rgb_set_enabled(bool on) {
+  statusRgbEnabled = on;
+  if (!on) rgb_pin_write(0, 0, 0);  // dark, and every later status colour is ignored
+  else if (WiFi.status() == WL_CONNECTED) show_connected_rgb();
+}
+
+bool status_rgb_usable() { return statusRgbPin >= 0; }
 
 void setup_status_rgb() {
 #if defined(RGB_BUILTIN)
@@ -70,21 +82,19 @@ void setup_status_rgb() {
   Serial.println(physicalPin);
 
   if (pin_conflicts_with_pcm1808(physicalPin)) {
-    statusRgbUsable = false;
-    Serial.println("WARNING: onboard RGB status LED disabled because its GPIO conflicts with PCM1808 wiring.");
-    Serial.println("If this is GPIO48, move PCM1808 DOUT to another free GPIO before enabling the onboard RGB LED.");
+    statusRgbPin = -1;
+    Serial.println("Onboard RGB: its GPIO is PCM1808 DOUT, so Lumina can't drive it (it shows the audio data line).");
     return;
   }
-
-  statusRgbUsable = true;
-  status_rgb_write(0, 0, 0);
+  statusRgbPin = (int)RGB_BUILTIN;
+  rgb_pin_write(0, 0, 0);  // dark until the owner's setting says otherwise
 #else
   Serial.println("No RGB_BUILTIN definition for the selected Arduino board; onboard RGB status is disabled.");
 #endif
 }
 
 void show_connecting_rgb(uint32_t nowMs) {
-  if (!statusRgbUsable) return;
+  if (!statusRgbEnabled) return;
   bool on = ((nowMs / 300U) & 1U) == 0;
   status_rgb_write(0, 0, on ? STATUS_RGB_BRIGHTNESS : 0);
 }
@@ -94,7 +104,7 @@ void show_connected_rgb() {
 }
 
 void show_disconnected_rgb(uint32_t nowMs) {
-  if (!statusRgbUsable) return;
+  if (!statusRgbEnabled) return;
   bool on = ((nowMs / 350U) & 1U) == 0;
   status_rgb_write(on ? STATUS_RGB_BRIGHTNESS : 0, 0, 0);
 }

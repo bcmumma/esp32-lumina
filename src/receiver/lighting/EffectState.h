@@ -16,6 +16,11 @@ struct StrandRuntime {
   uint32_t lastTriggerMs;
   uint16_t ring[4];     // Kick Ripple: radius + 1 of each travelling ring (0 = unused)
   uint8_t ringHue[4];
+  // Club modes (46-51): little strobe bursts (position, brightness) and Hyper Grid slot levels.
+  uint16_t burstPos[12];
+  uint8_t burstLevel[12];
+  uint8_t burstNext;
+  uint8_t slotLevel[48];
 };
 
 extern StrandRuntime rt[MAX_STRANDS];
