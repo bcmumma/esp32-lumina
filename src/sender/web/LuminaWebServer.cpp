@@ -556,7 +556,8 @@ static void load_ui_prefs() {
   if (!store.begin("lumina_ui", true)) return;
   uiHiddenModes = store.getULong64("modes", 0);
   uiHiddenKicks = store.getUChar("kicks", 0);
-  if (store.getBytesLength("live") == kLiveSlots) store.getBytes("live", uiLiveModes, kLiveSlots);
+  // isKey first: getBytesLength logs an error for a key that was never saved (a fresh board).
+  if (store.isKey("live") && store.getBytesLength("live") == kLiveSlots) store.getBytes("live", uiLiveModes, kLiveSlots);
   uiLiveMoods = store.getUShort("moods", 0xFFFF);
   uiArchive = store.getUChar("archive", 0);
   store.end();
@@ -622,7 +623,7 @@ static uint64_t feelTouched = 0;  // bit n = mode n has remembered values
 static void load_feel() {
   Preferences store;
   if (!store.begin("lumina_ui", true)) return;
-  if (store.getBytesLength("feel") == sizeof(feelValues)) {
+  if (store.isKey("feel") && store.getBytesLength("feel") == sizeof(feelValues)) {
     store.getBytes("feel", feelValues, sizeof(feelValues));
     feelTouched = store.getULong64("feelmask", 0) & ((1ULL << (LED_MODE_MAX + 1)) - 1);
   }

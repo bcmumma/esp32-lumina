@@ -42,7 +42,9 @@ A change request, not a phase: the DJs who will run the lights asked for these. 
 - [x] Status light switch (Advanced, dark by default) *(Claude)*. **Finding:** the S3's RGB LED is on GPIO48 with the PCM1808 data, so no switch can turn it off on this wiring (GPIO38 test: no effect); the options are in `docs/HARDWARE.md` *(owner decides)*
 - [x] Builds warning-free; page script parses (esprima); on-device tests 92/92 plus cells 10/10 (new gap test) *(Claude)*
 - [x] Sender flashed over USB; boot log clean; new API fields; autosave and per-look sliders survive a restart; strobe gate closed in silence at sensitivity 128, open at Always *(Claude)*
-- [ ] Receivers: update both over Wi-Fi (`tools/ota_update.py --room 1|2`); until then they run the old look code (white strobe, no moods, no gaps; Club modes show Solid) *(Claude; owner powers the rooms first)*
+- [x] Boot log: the S3 logged an NVS error at boot for a Live-page key that was never saved; both new keys are now checked first (boot log clean, re-flashed) *(Claude)*
+- [ ] Receivers: update both over Wi-Fi (`tools/ota_update.py --room 1|2`); until then they run the old look code (white strobe, no moods, no gaps; Club modes show Solid) *(Claude)*. **Blocked (2026-10-31):** after the owner powered the rooms, the S3 heard no heartbeat from either room in about 8 minutes (it sends 28 packets/s on channel 6 with no errors; its radio code is unchanged since Phase 16). Neither receiver is on USB, and the bench webcam shows only a placeholder.
+- [ ] Owner: for each receiver board, is its small red power light on, and what do its strips show (dark, the first few LEDs lit, or a look)? If a board has power but stays silent, plug it into the PC by USB so Claude can read its log *(owner)*
 - [ ] Owner/DJ look check: the six Club modes, moods, strobe colour, spaced cells, and strobe sensitivity through a real breakdown and drop *(owner)*
 - [ ] Owner: the S3 RGB LED: move PCM1808 OUT to GPIO38 (then Claude switches `PIN_DIN`), open the board's RGB jumper, or cover it *(owner)*
 
