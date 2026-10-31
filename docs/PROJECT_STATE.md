@@ -14,7 +14,7 @@ The DJ and firmware tracks merged at Phase 10. Phases 10–16 are done; the ROAD
 - Authorize a phase with `/start-milestone Phase <N>` in Claude Code. Until then, everything is read-only.
 - **Branch:** `main` holds v2 unchanged. `develop-v23` = `6b3d860` (Phases 7–15). Phase 16 is on `feature/show-hardening`, ready to fast-forward `develop-v23` (owner OK needed). The DJ changes (below) are on `feature/dj-feedback`, branched from Phase 16.
 - **Last verified commit:** `313c620` on `feature/show-hardening` (Phase 16, closed 2026-10-28).
-- **Boards:** all on Phase 16 firmware. Receivers update over Wi-Fi with `tools/ota_update.py --room N`; USB only for recovery.
+- **Boards:** all three run the DJ-feedback firmware (`feature/dj-feedback`, 2026-10-31). The S3 now sits at its show spot on a USB charger (owner, 2026-10-31); it has no Wi-Fi update, so a change to the S3 or its page needs it back on USB. Receivers update over Wi-Fi with `tools/ota_update.py --room N`; USB only for recovery.
   - **Room 1** (`receiver`): strand 1 GPIO 33, strand 2 GPIO 25 (on, 450 LEDs; turn it off if it isn't wired, room 1 then runs about twice as fast).
   - **Room 2** (`receiver_room2`): strand 3, GPIO 26.
   - **Saved:** Standalone source, layout L1, brightness 106, strobe off at boot.
@@ -43,8 +43,9 @@ A change request, not a phase: the DJs who will run the lights asked for these. 
 - [x] Builds warning-free; page script parses (esprima); on-device tests 92/92 plus cells 10/10 (new gap test) *(Claude)*
 - [x] Sender flashed over USB; boot log clean; new API fields; autosave and per-look sliders survive a restart; strobe gate closed in silence at sensitivity 128, open at Always *(Claude)*
 - [x] Boot log: the S3 logged an NVS error at boot for a Live-page key that was never saved; both new keys are now checked first (boot log clean, re-flashed) *(Claude)*
-- [ ] Receivers: update both over Wi-Fi (`tools/ota_update.py --room 1|2`); until then they run the old look code (white strobe, no moods, no gaps; Club modes show Solid) *(Claude)*. **Blocked (2026-10-31):** the S3 heard no heartbeat from either room; the owner found the cause: the S3 is at the PC (on USB for flashing), out of radio range of the rooms. The update needs no USB: the PC reaches the S3 over the home network, the S3 wakes a room over ESP-NOW, and the room joins home Wi-Fi to take the upload.
-- [ ] Owner: move the S3 (with the PCM1808) to its show spot, in range of both rooms, on any USB charger, and tell Claude. Claude then checks each room's signal and loss and updates both over Wi-Fi. The S3 itself has no Wi-Fi update, so a later change to the S3 or its page needs USB again *(owner)*
+- [x] Owner moved the S3 from the PC (where the rooms couldn't hear it) to its show spot on a USB charger; both rooms checked in within seconds *(owner, 2026-10-31)*
+- [x] Receivers updated over Wi-Fi (2026-10-31): both uploads HTTP 200, both back online within seconds. Then the six Club modes, two moods (one wrapping past red) and spaced cells (Art-Net test pattern, gap 6 and 12, with a mood) ran on both rooms: no restarts, frame rates steady (room 1 about 30 fps, room 2 about 62), settings restored. Not exercised: the Club bursts, which need Strobe on and music *(Claude)*
+- [ ] **Room 2's radio link is weak from the S3's show spot** (2026-10-31, about 7 minutes after the update): room 1 −66 dBm, 0.5% loss; room 2 −77 to −85 dBm, 6.3% loss (Phase 16 bench: 0.02% / 0.01%). A crowd weakens 2.4 GHz further. Owner: move the S3 toward room 2 or higher up (room 1 has about 15 dB to spare), and keep both boards' antenna ends clear of metal and the LED supply; then Claude re-measures (aim: room 2 under 1% loss) *(owner; Claude)*
 - [ ] Owner/DJ look check: the six Club modes, moods, strobe colour, spaced cells, and strobe sensitivity through a real breakdown and drop *(owner)*
 - [ ] Owner: the S3 RGB LED: move PCM1808 OUT to GPIO38 (then Claude switches `PIN_DIN`), open the board's RGB jumper, or cover it *(owner)*
 
