@@ -49,8 +49,8 @@ A change request, not a phase: the DJs who will run the lights asked for these. 
 - [x] DnB Split Original (owner, 2026-11-09): look 52 in Club, mode 28's drawing with no colour mood and a white kick flash; picking it always applies the original sliders. Builds warning-free; not flashed yet *(Claude)*
 - [x] Owner changes (2026-11-09): 3-band EQ (Bass, Mid, High) for DnB Split, DnB Split Original, Split Mirror and Split Strobe, shown only on those looks (Live and Advanced); flash looks run without the Strobe button, which is now the full-strip strobe over any look; Strobe brightness slider; Setup → Power & safety → Flashing looks is the global flash kill switch (on by default); Laser Sweep back in Club and on the Live page (eight looks now). Packet v13 (112 bytes); receivers also accept v12. Builds warning-free, unit tests compile; not flashed *(Claude)*
 - [x] Both rooms updated over Wi-Fi to `278ffc4` (2026-11-09): HTTP 200, back online, running on the old S3's v12 packets; one minute after: room 1 −65 dBm, 1.1% loss; room 2 −81 dBm, 5.2% loss *(Claude)*
-- [ ] Owner: flash the S3 over USB (an updated S3 sends v13, which old receivers ignore); then try DnB Split Original, the EQ, flash looks with the button off, the full-strip strobe and strobe brightness *(owner)*
-- [ ] On-device unit tests (`pio test -e sender_test`, needs the S3 on USB) *(Claude)*
+- [x] S3 flashed over USB with `278ffc4` (2026-11-09): on-device tests 94/94; boot clean, 112-byte packets, saved settings loaded (Flashing looks on, strobe brightness 100%, EQ flat); page has the EQ panel and the full-strip strobe button; Live page lists eight looks *(Claude)*
+- [ ] Owner: put the S3 back where both rooms hear it, then try DnB Split Original, the EQ, flash looks with the button off, the full-strip strobe and strobe brightness *(owner)*
 - [ ] Owner/DJ look check: the six Club modes, moods, strobe colour, spaced cells, and strobe sensitivity through a real breakdown and drop *(owner)*
 - [ ] Owner: the S3 RGB LED: move PCM1808 OUT to GPIO38 (then Claude switches `PIN_DIN`), open the board's RGB jumper, or cover it *(owner)*
 
