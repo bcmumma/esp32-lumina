@@ -17,7 +17,7 @@
   };
   const ctl = { source: "auto", active: "audio", reason: "auto: no fresh art-net, fallback", autoFallback: "audio", timeoutMs: 1000,
     standaloneLevel: 128, switches: 7, artnetAgeMs: 84641, applyingArtnet: false, appliedPackets: 46847, address: 1,
-    brightnessCap: 255, brightnessCapMin: 8, brightnessCapMax: 255, strobeEnabled: false, strobeHz: 3, strobeMaxHz: 15, strobeSense: 255, strobeOpen: false, loudDb: -3, cellGap: 0, cellGapMax: 12, statusLed: 0, statusLedUsable: 0, kickFlash: 0, fixture: 203, fixtureName: "18x5 Dim + FX", fixtureCells: 90, fixtureChannels: 288, splitStrands: 1, cellFrames: 0, cellPacketsSent: 0, cellFlashes: 0, hybridHoldMs: 10000,
+    brightnessCap: 255, brightnessCapMin: 8, brightnessCapMax: 255, strobeEnabled: false, strobeHz: 3, strobeMaxHz: 15, strobeSense: 255, strobeOpen: false, loudDb: -3, cellGap: 0, cellGapMax: 12, statusLed: 0, statusLedUsable: 0, flashLooks: 1, strobeLevel: 255, eq: [128, 128, 128], kickFlash: 0, fixture: 203, fixtureName: "18x5 Dim + FX", fixtureCells: 90, fixtureChannels: 288, splitStrands: 1, cellFrames: 0, cellPacketsSent: 0, cellFlashes: 0, hybridHoldMs: 10000,
     rooms: [{ room: 1, seen: 1, online: 1, ageMs: 400, lossPermille: 4, fps: 61, count: [450, 0], rssi: -58, channel: 6, uptimeS: 5400, good: 160000, lost: 600, restarts: 0 },
       { room: 2, seen: 1, online: 1, ageMs: 700, lossPermille: 11, fps: 62, count: [450, 0], rssi: -66, channel: 6, uptimeS: 5380, good: 159000, lost: 1700, restarts: 0 }], fxEnabled: 1, fxHit: 1, beamOn: 1, sparkleOn: 1, fxStrobeOn: 1, kicksAlways: 0, beamStrength: 255, beamSpread: 3, fxAddress: 289,
     fxLive: { beam: 230, pos: 140, moving: 1, pulsing: 1, sparkle: 0, edges: 0 } };
@@ -29,7 +29,7 @@
   const FIXTURES = [L(1, "6x5 Dim + FX", "5 Cell Dim", 6, 5, 1, 0), L(2, "12x5 Dim + FX", "5 Cell Dim", 12, 5, 1, 0),
     L(3, "18x5 Dim + FX", "5 Cell Dim", 18, 5, 1, 0), L(4, "6x5 Dim Strobe + FX", "5 Cell Dim Strobe", 6, 5, 1, 1),
     L(5, "12x5 Dim Strobe + FX", "5 Cell Dim Strobe", 12, 5, 1, 1), L(6, "18x5 Dim Strobe + FX", "5 Cell Dim Strobe", 18, 5, 1, 1)];
-  const UI = { hideModes: 0, hideKicks: 0, liveModes: [25, 28, 46, 47, 49, 51], liveMoods: 65535, archive: 0 };
+  const UI = { hideModes: 0, hideKicks: 0, liveModes: [25, 28, 46, 47, 49, 51, 18, 52], liveMoods: 65535, archive: 0 };
   const FEEL = {};
   const t0 = performance.now();
   let pulse = 0, lastKick = -1;
@@ -74,6 +74,9 @@
     if (q.has("kickFlash")) ctl.kickFlash = Math.max(0, Math.min(255, +q.get("kickFlash")));
     if (q.has("strobe")) ctl.strobeEnabled = q.get("strobe") !== "0";
     if (q.has("cellGap")) ctl.cellGap = Math.max(0, Math.min(12, +q.get("cellGap")));
+    if (q.has("flashLooks")) ctl.flashLooks = +q.get("flashLooks") ? 1 : 0;
+    if (q.has("strobeLevel")) ctl.strobeLevel = Math.max(0, Math.min(255, +q.get("strobeLevel")));
+    ["eqBass", "eqMid", "eqHigh"].forEach((k, b) => { if (q.has(k)) ctl.eq[b] = Math.max(0, Math.min(255, +q.get(k))); });
     if (q.has("statusLed")) ctl.statusLed = +q.get("statusLed");
     if (q.has("strobeSense")) ctl.strobeSense = Math.max(0, Math.min(255, +q.get("strobeSense")));
     ctl.strobeOpen = ctl.strobeEnabled && (ctl.strobeSense >= 255 || Math.random() < 0.6);

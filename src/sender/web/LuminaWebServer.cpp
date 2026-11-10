@@ -453,6 +453,10 @@ static void handle_artnet() {
 //   &strobeSense=0..255 (strobe sensitivity: 255 = always, lower = flashes only in loud parts; saved)
 //   &cellGap=0..12 (spaced SoundSwitch cells: dark gap in 16ths of a cell, 0 = none; saved)
 //   &statusLed=0|1 (the S3's onboard RGB status light; saved, dark by default)
+//   &flashLooks=0|1 (Setup "Flashing looks", the global flash kill switch; saved, on by default)
+//   &strobeLevel=0..255 (brightness of every strobe-type flash; saved)
+//   &eqBass= &eqMid= &eqHigh=0..255 (split looks' band gain, 128 = flat; saved)
+//   strobe=1 is the full-strip strobe over any look; flash looks no longer need it (packet v13)
 //   &kickFlash=0..255 (rig-wide white flash on bass hits, saved; 0 = off)
 //   &cells=0..150 (SoundSwitch fixture: 0 = LUMINA-16, N = N plain RGB cells; saved)
 //   &fixture=lumina16|<layout id> (named layouts, see /api/fixtures; saved)
@@ -492,6 +496,22 @@ static void handle_control() {
   if (server.hasArg("cellGap")) {  // spaced SoundSwitch cells: gap in 16ths of a cell, 0 = none (saved)
     control.cellGap = (uint8_t)clamp_int(server.arg("cellGap").toInt(), 0, CELL_GAP_MAX);
     persist = true;
+  }
+  if (server.hasArg("flashLooks")) {  // Setup "Flashing looks": the global flash kill switch (saved)
+    control.flashLooks = server.arg("flashLooks").toInt() != 0;
+    persist = true;
+  }
+  if (server.hasArg("strobeLevel")) {  // brightness of every strobe-type flash (saved)
+    control.strobeLevel = (uint8_t)clamp_int(server.arg("strobeLevel").toInt(), 0, 255);
+    persist = true;
+  }
+  {  // split looks' EQ, 128 = flat (saved)
+    static const char *const kEqArgs[3] = {"eqBass", "eqMid", "eqHigh"};
+    for (uint8_t b = 0; b < 3; b++) {
+      if (!server.hasArg(kEqArgs[b])) continue;
+      control.eq[b] = (uint8_t)clamp_int(server.arg(kEqArgs[b]).toInt(), 0, 255);
+      persist = true;
+    }
   }
   if (server.hasArg("statusLed")) {  // the S3's onboard RGB status light (saved; dark by default)
     control.statusLed = server.arg("statusLed").toInt() != 0;
@@ -546,8 +566,9 @@ static void handle_control() {
 // mood i of the page's list); uiArchive shows the retired genres on the Advanced page.
 static uint64_t uiHiddenModes = 0;
 static uint8_t uiHiddenKicks = 0;
-static constexpr uint8_t kLiveSlots = 6;
-static uint8_t uiLiveModes[kLiveSlots] = {25, 28, 46, 47, 49, 51};  // Hyper Strobe, DnB Split, Hyper Scatter/Grid, Split Mirror/Strobe
+static constexpr uint8_t kLiveSlots = 8;  // was 6 until 2026-11-09; a saved 6-slot list still loads
+// Hyper Strobe, DnB Split, Hyper Scatter/Grid, Split Mirror/Strobe, then Laser Sweep and DnB Split Original (owner, 2026-11-09)
+static uint8_t uiLiveModes[kLiveSlots] = {25, 28, 46, 47, 49, 51, 18, 52};
 static uint16_t uiLiveMoods = 0xFFFF;
 static uint8_t uiArchive = 0;
 
@@ -557,14 +578,16 @@ static void load_ui_prefs() {
   uiHiddenModes = store.getULong64("modes", 0);
   uiHiddenKicks = store.getUChar("kicks", 0);
   // isKey first: getBytesLength logs an error for a key that was never saved (a fresh board).
-  if (store.isKey("live") && store.getBytesLength("live") == kLiveSlots) store.getBytes("live", uiLiveModes, kLiveSlots);
+  // A list saved with fewer slots keeps its looks; the new slots keep their defaults.
+  const size_t liveLen = store.isKey("live") ? store.getBytesLength("live") : 0;
+  if (liveLen > 0 && liveLen <= kLiveSlots) store.getBytes("live", uiLiveModes, liveLen);
   uiLiveMoods = store.getUShort("moods", 0xFFFF);
   uiArchive = store.getUChar("archive", 0);
   store.end();
   for (uint8_t i = 0; i < kLiveSlots; i++) if (uiLiveModes[i] > LED_MODE_MAX) uiLiveModes[i] = 0;
 }
 
-//   /api/ui[?hideModes=<decimal bit mask>&hideKicks=0..255&liveModes=m1,..,m6&liveMoods=<mask>&archive=0|1]
+//   /api/ui[?hideModes=<decimal bit mask>&hideKicks=0..255&liveModes=m1,..,m8&liveMoods=<mask>&archive=0|1]
 static void handle_ui() {
   bool changed = false;
   if (server.hasArg("hideModes")) {
@@ -605,10 +628,10 @@ static void handle_ui() {
       store.end();
     }
   }
-  char out[192];
-  snprintf(out, sizeof(out), "{\"hideModes\":%llu,\"hideKicks\":%u,\"liveModes\":[%u,%u,%u,%u,%u,%u],\"liveMoods\":%u,\"archive\":%u}",
+  char out[224];
+  snprintf(out, sizeof(out), "{\"hideModes\":%llu,\"hideKicks\":%u,\"liveModes\":[%u,%u,%u,%u,%u,%u,%u,%u],\"liveMoods\":%u,\"archive\":%u}",
            (unsigned long long)uiHiddenModes, uiHiddenKicks, uiLiveModes[0], uiLiveModes[1], uiLiveModes[2], uiLiveModes[3],
-           uiLiveModes[4], uiLiveModes[5], uiLiveMoods, uiArchive);
+           uiLiveModes[4], uiLiveModes[5], uiLiveModes[6], uiLiveModes[7], uiLiveMoods, uiArchive);
   no_cache();
   server.send(200, "application/json", out);
 }

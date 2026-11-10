@@ -36,9 +36,18 @@ static Rgb strand_color(const AudioLedPacket &p, const StrandSettings &st, uint8
 
 // Strobe-type flashes (Kick Flash, the strobe modes, Hyper bursts, the gated kick looks) use the
 // strand's strobe colour: white unless the DJ picked one. Moods never recolour it.
-static Rgb strobe_rgb(const StrandSettings &st, uint8_t value) {
+static Rgb strobe_colour(const StrandSettings &st, uint8_t value) {
   if (strobe_color_is_white(st.strobeColor)) return {value, value, value};
   return hsv_to_rgb(strobe_color_hue(st.strobeColor), 255, value);
+}
+
+// Strobe brightness (packet v13, the Live page slider) scales every strobe-type flash. Kick Flash has
+// its own strength slider, so it uses strobe_colour() directly.
+static uint8_t strobeLevelNow = 255;
+void effects_begin_frame(const AudioLedPacket &p) { strobeLevelNow = p.strobeLevel; }
+
+static Rgb strobe_rgb(const StrandSettings &st, uint8_t value) {
+  return strobe_colour(st, scale8_video(value, strobeLevelNow));
 }
 
 // Phase 15: effects were tuned on 150-LED strands. Counts and speeds that are "per strand"
@@ -69,6 +78,9 @@ static uint8_t scaled_audio(uint8_t v, uint8_t sensitivity) {
 //   40 Candle Flicker, 41 Witch's Brew, 42 Ghost Drift, 43 Pumpkin Patch, 44 Blood Drip, 45 Graveyard Fog (Halloween)
 //   46 Hyper Scatter, 47 Hyper Grid, 48 Hyper Mirror, 49 Split Mirror, 50 Split Blocks, 51 Split Strobe (Club)
 //   52 DnB Split Original (28 without colour moods or strobe colour)
+// The split looks (28, 49, 51, 52) read the bands through the packet's EQ (eq_apply, 128 = flat).
+// Every flash onset goes through flash_allowed: flags bit 7 (Setup "Flashing looks") and the max rate.
+// The Strobe button is apply_full_strobe(), drawn over any look.
 // Internal/legacy modes 0-14 remain available for VU tuning and compatibility.
 // ============================================================
 void render_off(uint8_t s) {
@@ -643,7 +655,7 @@ void render_dnb_split(uint8_t s, const AudioLedPacket &p, const StrandSettings &
   uint16_t n = count_for(s);
   if (n == 0) return;
   clear_strand(s);
-  uint8_t values[3] = {p.bass, p.mid, p.treble};
+  uint8_t values[3] = {eq_apply(p.bass, p.eq[0]), eq_apply(p.mid, p.eq[1]), eq_apply(p.treble, p.eq[2])};  // split-look EQ
   uint16_t start = 0;
   for (uint8_t band = 0; band < 3; band++) {
     uint16_t end = (uint16_t)(((uint32_t)(band + 1U) * n) / 3U);
@@ -849,7 +861,7 @@ void apply_kick_flash(uint8_t s, const AudioLedPacket &p) {
   uint16_t n = count_for(s);
   uint8_t v = scale8_video(scale8_video(p.globalBrightness, p.kickFlash), kickFlashLevel);
   // DnB Split Original keeps the white flash it had before strobe colours existed.
-  const Rgb c = p.strand[s].mode == DNB_SPLIT_ORIGINAL_MODE ? Rgb{v, v, v} : strobe_rgb(p.strand[s], v);
+  const Rgb c = p.strand[s].mode == DNB_SPLIT_ORIGINAL_MODE ? Rgb{v, v, v} : strobe_colour(p.strand[s], v);
   for (uint16_t i = 0; i < n; i++) add_pixel(s, i, c);
 }
 
@@ -1258,7 +1270,7 @@ void render_split_mirror(uint8_t s, const AudioLedPacket &p, const StrandSetting
   if (n == 0) return;
   clear_strand(s);
   const uint16_t half = max<uint16_t>(1, n / 2U);
-  const uint8_t values[3] = {p.bass, p.mid, p.treble};
+  const uint8_t values[3] = {eq_apply(p.bass, p.eq[0]), eq_apply(p.mid, p.eq[1]), eq_apply(p.treble, p.eq[2])};  // split-look EQ
   const uint8_t tile = max<uint8_t>(1, (uint8_t)map(st.density, 0, 255, 1, 5));
   const uint32_t scroll = millis() * (10U + st.speed) / 700U;
   const int32_t cl = (int32_t)((n - 1U) / 2U), cr = (int32_t)(n / 2U);
@@ -1306,7 +1318,7 @@ void render_split_strobe(uint8_t s, const AudioLedPacket &p, const StrandSetting
   const uint16_t n = count_for(s);
   if (n == 0) return;
   clear_strand(s);
-  const uint8_t values[3] = {p.bass, p.mid, p.treble};
+  const uint8_t values[3] = {eq_apply(p.bass, p.eq[0]), eq_apply(p.mid, p.eq[1]), eq_apply(p.treble, p.eq[2])};  // split-look EQ
   const uint8_t tile = max<uint8_t>(1, (uint8_t)map(st.density, 0, 255, 1, 5));
   const uint32_t scroll = millis() * (10U + st.speed) / 700U;
   const uint8_t spike = club_spike(s, p, st);
@@ -1351,4 +1363,19 @@ void render_dnb_split_original(uint8_t s, const AudioLedPacket &p, const StrandS
   plain.moodFrom = 0;
   plain.moodTo = 0;
   render_dnb_split(s, p, plain);
+}
+
+// Full-strip strobe (packet v13, owner 2026-11-09): the Strobe button flashes every strand over whatever
+// look is running, in the strobe colour and brightness. Each flash starts through flash_allowed(), so the
+// Flashing-looks switch, the max rate and the one rig-wide flash timer all apply; a flash lasts one frame.
+static constexpr uint32_t kFullStrobeOnMs = 30;
+
+void apply_full_strobe(uint8_t s, const AudioLedPacket &p) {
+  if (!p.fullStrobe) return;
+  const uint32_t now = millis();
+  if (now - rt[s].fullStrobeMs >= kFullStrobeOnMs && flash_allowed(s, p, now)) rt[s].fullStrobeMs = now ? now : 1;
+  if (rt[s].fullStrobeMs == 0 || now - rt[s].fullStrobeMs >= kFullStrobeOnMs) return;
+  const uint16_t n = count_for(s);
+  const Rgb c = strobe_rgb(p.strand[s], combined_brightness(p, p.strand[s]));
+  for (uint16_t i = 0; i < n; i++) set_pixel(s, i, c);
 }

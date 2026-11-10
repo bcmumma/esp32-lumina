@@ -53,25 +53,31 @@ static void copy_packet_from_callback(const uint8_t *mac, const uint8_t *data, i
   if (update_mode_handle_command(data, len)) return;  // Phase 16: S3 -> receiver commands
   // The other room's heartbeat is broadcast too: not for us, and not an error.
   if (len == sizeof(HeartbeatPacket) && (uint16_t)(data[0] | (data[1] << 8)) == HEARTBEAT_MAGIC) return;
-  if (len != sizeof(AudioLedPacket) && len >= 2 && (uint16_t)(data[0] | (data[1] << 8)) == CELL_PACKET_MAGIC) {
+  // By magic, not length: a 33-cell frame part is 107 bytes, the same as a version 12 state packet.
+  if (len >= 2 && (uint16_t)(data[0] | (data[1] << 8)) == CELL_PACKET_MAGIC) {
     portENTER_CRITICAL(&packetMux);
     bool ok = cells::accept(cellFrame, data, len);
     portEXIT_CRITICAL(&packetMux);
     if (ok) lastCellMs = millis(); else badPackets = badPackets + 1;
     return;
   }
-  if (len != sizeof(AudioLedPacket)) {
+  // Version 13, or version 12 from an S3 that hasn't been updated yet (its first 107 bytes).
+  const bool v13 = len == (int)sizeof(AudioLedPacket);
+  const bool v12 = len == (int)PACKET_SIZE_V12;
+  if (!v13 && !v12) {
     badPackets = badPackets + 1;
     return;
   }
 
   AudioLedPacket p = {};
-  memcpy(&p, data, sizeof(p));
+  memcpy(&p, data, (size_t)len);
 
-  if (p.magic != PACKET_MAGIC || p.version != PACKET_VERSION || p.size != sizeof(AudioLedPacket)) {
+  if (p.magic != PACKET_MAGIC || p.size != (uint8_t)len ||
+      p.version != (v13 ? PACKET_VERSION : PACKET_VERSION_V12)) {
     badPackets = badPackets + 1;
     return;
   }
+  if (v12) packet_v12_defaults(p);
 
   if (p.senderChannel >= FIRST_WIFI_CHANNEL && p.senderChannel <= LAST_WIFI_CHANNEL) {
     announcedChannel = p.senderChannel;

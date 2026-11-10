@@ -15,7 +15,7 @@
 
 ControlState control = {router::Source::Auto, router::Source::Audio, router::kDefaultStandaloneLevel, STROBE_DEFAULT_HZ,
                         false, 1, 0, 0, RIG_BRIGHTNESS_CAP_MAX, false, 1, true, true, true, false, false, 255, 3,
-                        strobeauto::kAlways, 0, false};
+                        strobeauto::kAlways, 0, false, true, 255, {EQ_FLAT, EQ_FLAT, EQ_FLAT}};
 
 namespace {
 
@@ -23,7 +23,7 @@ namespace {
 constexpr char kNamespace[] = "lumina_ctl";
 constexpr char kKey[] = "rec";
 constexpr uint32_t kMagic = 0x4C435431UL;  // "LCT1"
-constexpr uint8_t kVersion = 4;  // v4 appends the DJ settings; v3 appends the FX settings; v1-v3 records still load
+constexpr uint8_t kVersion = 5;  // v5: strobe brightness, EQ, Flashing looks; v4 DJ settings; v3 FX settings; v1-v4 still load
 
 struct ControlRecord {
   uint32_t magic;
@@ -70,6 +70,27 @@ struct ControlRecordV4 {
 
 uint32_t record_crc_v4(const ControlRecordV4 &r) {
   return config_crc32(reinterpret_cast<const uint8_t *>(&r), offsetof(ControlRecordV4, crc32));
+}
+
+// v5 (owner, 2026-11-09): v4's fields, then strobe brightness and the split-look EQ.
+// flags3 bit 1 = Flashing looks OFF, so zero (and every older record) means flashing allowed.
+struct ControlRecordV5 {
+  ControlRecord base;  // base.crc32 unused
+  uint8_t fxFlags;
+  uint8_t beamStrength;
+  uint8_t beamSpread;
+  uint8_t flags2;
+  uint8_t strobeSense;
+  uint8_t cellGap;
+  uint8_t flags3;       // bit 0: status light ON; bit 1: Flashing looks OFF
+  uint8_t strobeLevel;
+  uint8_t eq[3];
+  uint8_t reserved;
+  uint32_t crc32;
+};
+
+uint32_t record_crc_v5(const ControlRecordV5 &r) {
+  return config_crc32(reinterpret_cast<const uint8_t *>(&r), offsetof(ControlRecordV5, crc32));
 }
 
 // Strobe sensitivity: whether the music is loud enough right now, and the resulting live gate.
@@ -167,15 +188,15 @@ void track_frame(const uint8_t *dmx, uint16_t length, uint32_t rxMs) {
 }
 
 // Fixture Strobe channels (named layouts with "Strobe"; each strobes its fixture's last cell).
-// Rig-wide and safety-first: strobing cells flash only while Strobe is enabled, never faster than
-// the rig's max rate (the fastest sets the pace); with Strobe off they stay steady. Between
-// flashes they go dark.
+// Rig-wide and safety-first: strobing cells flash only while Flashing looks is on (Setup; since
+// 2026-11-09 they no longer wait for the Strobe button), never faster than the rig's max rate (the
+// fastest sets the pace); with Flashing looks off they stay steady. Between flashes they go dark.
 uint32_t lastCellFlashMs = 0;
 uint32_t cellFlashUntilMs = 0;
 uint32_t cellFlashes = 0;
 
 bool apply_cell_strobe(uint8_t n, uint32_t nowMs) {
-  if (!strobeOpen) return false;
+  if (!control.flashLooks) return false;  // SoundSwitch's strobes are flash looks: no Strobe button needed
   uint8_t hz = 0;
   for (uint8_t c = 0; c < n; c++) {
     const uint8_t h = layout::strobe_hz(cellStrobe[c], control.strobeHz);
@@ -212,10 +233,20 @@ void load_control_settings() {
   ControlRecord r = {};
   ControlRecordV3 r3 = {};
   ControlRecordV4 r4 = {};
-  bool ok = false, v3 = false, v4 = false;
+  ControlRecordV5 r5 = {};
+  bool ok = false, v3 = false, v4 = false, v5 = false;
   if (store.begin(kNamespace, true)) {
     const size_t len = store.getBytesLength(kKey);
-    if (len == sizeof(ControlRecordV4) && store.getBytes(kKey, &r4, sizeof(r4)) == sizeof(r4) && r4.base.magic == kMagic &&
+    if (len == sizeof(ControlRecordV5) && store.getBytes(kKey, &r5, sizeof(r5)) == sizeof(r5) && r5.base.magic == kMagic &&
+        r5.base.version == 5 && r5.crc32 == record_crc_v5(r5)) {
+      memcpy(&r4, &r5, offsetof(ControlRecordV4, reserved));  // v5 starts with v4's fields
+      r = r5.base;
+      r3.fxFlags = r5.fxFlags;
+      r3.beamStrength = r5.beamStrength;
+      r3.beamSpread = r5.beamSpread;
+      r3.flags2 = r5.flags2;
+      ok = v3 = v4 = v5 = true;
+    } else if (len == sizeof(ControlRecordV4) && store.getBytes(kKey, &r4, sizeof(r4)) == sizeof(r4) && r4.base.magic == kMagic &&
         r4.base.version == 4 && r4.crc32 == record_crc_v4(r4)) {
       r = r4.base;
       r3.fxFlags = r4.fxFlags;  // same FX fields as v3
@@ -258,16 +289,20 @@ void load_control_settings() {
     control.strobeSense = v4 ? r4.strobeSense : strobeauto::kAlways;
     control.cellGap = v4 && r4.cellGap <= CELL_GAP_MAX ? r4.cellGap : 0;
     control.statusLed = v4 && (r4.flags3 & 1) != 0;
+    control.flashLooks = !(v5 && (r5.flags3 & 2) != 0);
+    control.strobeLevel = v5 ? r5.strobeLevel : 255;
+    for (uint8_t b = 0; b < 3; b++) control.eq[b] = v5 ? r5.eq[b] : EQ_FLAT;
   }
   control.strobeEnabled = false;  // never restored: strobe is always off at boot
-  Serial.printf("Control: source=%s fallback=%s strobe off (cap %u/s, sensitivity %u) standalone=%u brightnessCap=%u/255 fixture=%s (code %u) (%s)\n",
+  Serial.printf("Control: source=%s fallback=%s strobe off (cap %u/s, sensitivity %u, level %u, flashing looks %s) standalone=%u brightnessCap=%u/255 fixture=%s (code %u) (%s)\n",
                 router::name(control.source), router::name(control.autoFallback), control.strobeHz, control.strobeSense,
+                control.strobeLevel, control.flashLooks ? "on" : "off",
                 control.standaloneLevel, control.brightnessCap, control_fixture_name(),
                 control.fixture, ok ? "loaded" : "defaults");
 }
 
 bool save_control_settings() {
-  ControlRecordV4 r3 = {};
+  ControlRecordV5 r3 = {};
   ControlRecord &r = r3.base;
   r.magic = kMagic;
   r.version = kVersion;
@@ -285,8 +320,10 @@ bool save_control_settings() {
   r3.beamSpread = control.beamSpread;
   r3.strobeSense = control.strobeSense;
   r3.cellGap = control.cellGap;
-  r3.flags3 = control.statusLed ? 1 : 0;
-  r3.crc32 = record_crc_v4(r3);
+  r3.flags3 = (uint8_t)((control.statusLed ? 1 : 0) | (control.flashLooks ? 0 : 2));
+  r3.strobeLevel = control.strobeLevel;
+  memcpy(r3.eq, control.eq, sizeof(r3.eq));
+  r3.crc32 = record_crc_v5(r3);
   Preferences store;
   if (!store.begin(kNamespace, false)) return false;
   bool ok = store.putBytes(kKey, &r3, sizeof(r3)) == sizeof(r3);
@@ -302,7 +339,12 @@ void control_apply(AudioLedPacket &p, uint32_t nowMs) {
   sc.floor = cfg.volumeFloor / (cfg.volumeGain > 0.1f ? cfg.volumeGain : 0.1f);  // same silence level as the volume meter
   const bool loudEnough = strobeauto::update(strobeAuto, sc, raw_volume, control.strobeSense, nowMs);
   strobeOpen = control.strobeEnabled && loudEnough;
-  p.flags = strobe_encode_flags(p.flags, strobeOpen, control.strobeHz);
+  // Packet v13 (owner, 2026-11-09): flash looks run whenever Flashing looks is on (flags bit 7);
+  // the Strobe button is the full-strip strobe on top. The max rate covers both.
+  p.flags = strobe_encode_flags(p.flags, control.flashLooks, control.strobeHz);
+  p.fullStrobe = (strobeOpen && control.flashLooks) ? 1 : 0;
+  p.strobeLevel = control.strobeLevel;
+  memcpy(p.eq, control.eq, sizeof(p.eq));
 
   uint16_t length = 0;
   uint32_t lastRxMs = 0;
@@ -438,6 +480,8 @@ void append_control_json(String &s, uint32_t nowMs) {
   s += ",\"strobeThresholdDb\":" + String(strobeauto::threshold_db(control.strobeSense), 1);
   s += ",\"cellGap\":" + String(control.cellGap) + ",\"cellGapMax\":" + String(CELL_GAP_MAX);
   s += ",\"statusLed\":" + String(control.statusLed ? 1 : 0);
+  s += ",\"flashLooks\":" + String(control.flashLooks ? 1 : 0) + ",\"strobeLevel\":" + String(control.strobeLevel);
+  s += ",\"eq\":[" + String(control.eq[0]) + "," + String(control.eq[1]) + "," + String(control.eq[2]) + "]";
   s += ",\"statusLedUsable\":" + String(status_rgb_usable() ? 1 : 0);
   s += ",\"kickFlash\":" + String(control.kickFlash);
   s += ",\"fixture\":" + String(control.fixture);

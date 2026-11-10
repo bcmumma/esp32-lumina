@@ -6,6 +6,7 @@ void render_strand(uint8_t s, const AudioLedPacket &p, bool newBeat) {
   if (s >= MAX_STRANDS || !configured[s] || !strips[s] || count_for(s) == 0) return;
 
   StrandSettings st = p.strand[s];
+  effects_begin_frame(p);
 
   // Hardware is configured separately by apply_hardware_from_packet().
   // Rendering uses the currently configured local strip.
@@ -81,4 +82,5 @@ void render_strand(uint8_t s, const AudioLedPacket &p, bool newBeat) {
     default: render_solid(s, p, st); break;
   }
   apply_kick_flash(s, p);
+  apply_full_strobe(s, p);
 }

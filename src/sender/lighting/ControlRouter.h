@@ -19,7 +19,8 @@ struct ControlState {
   router::Source autoFallback;  // saved; AUDIO or STANDALONE
   uint8_t standaloneLevel;      // saved
   uint8_t strobeHz;             // saved; 1..STROBE_MAX_HZ
-  bool strobeEnabled;           // never saved: always off at boot
+  bool strobeEnabled;           // never saved: always off at boot. Since packet v13 it is the full-strip strobe;
+                                // flash looks run without it (owner, 2026-11-09)
   uint16_t address;             // fixture's 1-based DMX start address in the listen universe
   uint8_t fixture;              // saved; 0 = LUMINA-16, 1..150 = N plain RGB cells, 151.. = named layout (lib/FixtureLayout)
   uint8_t kickFlash;            // saved; 0..255 rig-wide white flash on bass hits (0 = off)
@@ -37,6 +38,9 @@ struct ControlState {
   uint8_t strobeSense;          // saved; strobe sensitivity: 255 = always, lower = loud parts only (lib/StrobeAuto)
   uint8_t cellGap;              // saved; spaced cells: dark gap between SoundSwitch cells in 16ths of a cell (0 = none)
   bool statusLed;               // saved; the S3's onboard RGB status light (false = always dark, the default)
+  bool flashLooks;              // saved; Setup "Flashing looks": the global flash kill switch (true = flashing allowed)
+  uint8_t strobeLevel;          // saved; brightness of every strobe-type flash, 0..255
+  uint8_t eq[3];                // saved; split looks' band gain: bass, mid, high (EQ_FLAT = 128 = 100 %)
 };
 
 static constexpr uint8_t CELL_GAP_MAX = 12;  // 12/16: every cell keeps at least a quarter lit
@@ -50,7 +54,7 @@ bool save_control_settings();
 
 // Called on every analyzed packet, before it is sent.
 void control_apply(AudioLedPacket &p, uint32_t nowMs);
-// True while flashes may run: Strobe on, and the music loud enough for the strobe sensitivity.
+// True while the full-strip strobe runs: Strobe on, and the music loud enough for the strobe sensitivity.
 bool control_strobe_open();
 void append_control_json(String &s, uint32_t nowMs);
 // "LUMINA-16", "30 cells", or a named layout such as "10x3 Dim Strobe".

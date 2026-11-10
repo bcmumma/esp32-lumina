@@ -1,11 +1,16 @@
 // Lumina ESP-NOW protocol shared by the S3 sender and the WROOM receiver.
-// Both boards must compile against this one definition (packet version 12).
+// Both boards must compile against this one definition (packet version 13; receivers still accept 12).
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
 
 static constexpr uint16_t PACKET_MAGIC = 0xA17D;
-static constexpr uint8_t PACKET_VERSION = 12;
+static constexpr uint8_t PACKET_VERSION = 13;
+// Version 12 packets (107 bytes) are version 13 without its last five bytes. Receivers take both,
+// filling the missing fields with packet_v12_defaults(), so rooms can be updated before the S3.
+static constexpr uint8_t PACKET_VERSION_V12 = 12;
+static constexpr uint8_t PACKET_SIZE_V12 = 107;
 static constexpr uint8_t MAX_STRANDS = 4;
 static constexpr uint8_t CELLS_MODE = 39;     // receiver draws the latest SoundSwitch cell frame (Phase 15)
 static constexpr uint8_t LED_MODE_MAX = 52;  // highest render mode (52 DnB Split Original; 46-51 Club; 40-45 Halloween; 32-39 Phase 14; IDs never renumbered)
@@ -100,7 +105,23 @@ struct __attribute__((packed)) AudioLedPacket {
   // Rig-wide Kick Flash overlay strength (0 = off), Phase 14. Was a zero-filled
   // reserved byte, so packet version 12 holds and older receivers ignore it.
   uint8_t kickFlash;
+
+  // ---- version 13 (owner, 2026-11-09) ----
+  // Full-strip strobe: the Strobe button, after strobe sensitivity. 1 = flash every strand at the
+  // max rate, on top of the look. Flash looks no longer need it; flags bit 7 now means "flashing allowed".
+  uint8_t fullStrobe;
+  // Brightness of every strobe-type flash (flash looks, the full-strip strobe, gated kick looks), 0-255.
+  uint8_t strobeLevel;
+  // Band gains for the split looks (DnB Split, DnB Split Original, Split Mirror, Split Strobe):
+  // bass, mid, high. EQ_FLAT (128) = 100 %, 0 = band off, 255 = about 200 %.
+  uint8_t eq[3];
 };
+
+static constexpr uint8_t EQ_FLAT = 128;
+static inline uint8_t eq_apply(uint8_t value, uint8_t gain) {
+  const uint16_t v = (uint16_t)(((uint32_t)value * gain) / EQ_FLAT);
+  return (uint8_t)(v > 255 ? 255 : v);
+}
 
 // Strobe colour and colour mood (DJ feedback, 2026-10-31). They use three strand bytes that older
 // senders and saved configs leave at zero, which reads as a white strobe and no mood, so packet
@@ -113,7 +134,16 @@ static inline uint8_t strobe_color_code(uint8_t hue) { return (uint8_t)(hue == 2
 
 static_assert(sizeof(AudioLedPacket) < 250, "AudioLedPacket must fit in an ESP-NOW v1 payload");
 static_assert(sizeof(StrandSettings) == 18, "StrandSettings layout changed; update PACKET_VERSION on both boards");
-static_assert(sizeof(AudioLedPacket) == 107, "AudioLedPacket layout changed; update PACKET_VERSION on both boards");
+static_assert(sizeof(AudioLedPacket) == 112, "AudioLedPacket layout changed; update PACKET_VERSION on both boards");
+static_assert(offsetof(AudioLedPacket, fullStrobe) == PACKET_SIZE_V12, "version 12 must stay a prefix of version 13");
+
+// What a version 12 sender meant for the version 13 fields: no full-strip strobe (its strobe bit
+// already gates the flash looks), full-brightness flashes, flat EQ.
+static inline void packet_v12_defaults(AudioLedPacket &p) {
+  p.fullStrobe = 0;
+  p.strobeLevel = 255;
+  p.eq[0] = p.eq[1] = p.eq[2] = EQ_FLAT;
+}
 
 // ------------------------------------------------------------
 // Cell frames (Phase 15): colours of a multi-cell SoundSwitch fixture, sent as a
@@ -192,7 +222,9 @@ static_assert(sizeof(CommandPacket) == 8, "CommandPacket layout changed");
 //   bits 0-1: beat diagnostics (unchanged)
 //   bits 4-6: low 3 bits of (max flash rate - 1)
 //   bit 3:    high bit of (max flash rate - 1), added in Phase 14 (rates 9..16)
-//   bit 7:    strobe enabled (0 = all flash effects suppressed)
+//   bit 7:    flashing allowed (0 = all flash effects suppressed). Up to version 12 this was the
+//             Strobe button; from version 13 it is Setup's "Flashing looks" safety switch, and the
+//             button drives AudioLedPacket.fullStrobe instead. The rate cap applies either way.
 // Older senders leave bits 3-7 at 0, which reads as "strobe disabled": the safe default.
 // Older receivers ignore bit 3, so they cap a 9-15/s rate lower, never higher.
 // ------------------------------------------------------------
