@@ -8,7 +8,10 @@ static constexpr uint16_t PACKET_MAGIC = 0xA17D;
 static constexpr uint8_t PACKET_VERSION = 12;
 static constexpr uint8_t MAX_STRANDS = 4;
 static constexpr uint8_t CELLS_MODE = 39;     // receiver draws the latest SoundSwitch cell frame (Phase 15)
-static constexpr uint8_t LED_MODE_MAX = 51;  // highest render mode (46-51 Club; 40-45 Halloween; 32-39 Phase 14; IDs never renumbered)
+static constexpr uint8_t LED_MODE_MAX = 52;  // highest render mode (52 DnB Split Original; 46-51 Club; 40-45 Halloween; 32-39 Phase 14; IDs never renumbered)
+// DnB Split exactly as it was before the DJ-feedback page (owner, 2026-11-09): mode 28's drawing with no colour mood
+// and a white Kick Flash, whatever the strand's mood and strobe colour say.
+static constexpr uint8_t DNB_SPLIT_ORIGINAL_MODE = 52;
 
 enum LedType : uint8_t {
   LED_TYPE_WS2815_WS2812_RGB_800 = 0,

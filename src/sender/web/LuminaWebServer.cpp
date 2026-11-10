@@ -623,8 +623,11 @@ static uint64_t feelTouched = 0;  // bit n = mode n has remembered values
 static void load_feel() {
   Preferences store;
   if (!store.begin("lumina_ui", true)) return;
-  if (store.isKey("feel") && store.getBytesLength("feel") == sizeof(feelValues)) {
-    store.getBytes("feel", feelValues, sizeof(feelValues));
+  // A record saved before a look was added is shorter (one row per mode up to the old LED_MODE_MAX);
+  // load it as the first rows so the DJs' remembered sliders survive the update.
+  const size_t len = store.isKey("feel") ? store.getBytesLength("feel") : 0;
+  if (len > 0 && len <= sizeof(feelValues) && len % kFeelFields == 0) {
+    store.getBytes("feel", feelValues, len);
     feelTouched = store.getULong64("feelmask", 0) & ((1ULL << (LED_MODE_MAX + 1)) - 1);
   }
   store.end();

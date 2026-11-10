@@ -319,7 +319,7 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
   <section class="panel" id="moodPanel">
     <h2>Colour mood</h2>
     <div class="moods" id="advMoods"></div>
-    <p class="note" id="moodNote">Off: the look's own colours (or SoundSwitch's). A mood keeps every look, Hybrid and SoundSwitch inside its two colours, drifting slowly between them. Halloween keeps its colours.</p>
+    <p class="note" id="moodNote">Off: the look's own colours (or SoundSwitch's). A mood keeps every look, Hybrid and SoundSwitch inside its two colours, drifting slowly between them. Halloween and DnB Split Original keep their colours.</p>
   </section>
 
   <section class="panel" id="feelPanel">
@@ -532,13 +532,14 @@ const MODES = {
   49: ["Split Mirror", "DnB Split from the centre out: bass in the middle, highs at the ends.", ""],
   50: ["Split Blocks", "Short spaced meters along the strip, bass, mid, high repeating.", ""],
   51: ["Split Strobe", "DnB Split with a little strobe on each meter's tip on hits.", "s"],
+  52: ["DnB Split Original", "DnB Split exactly as before the new page: no colour moods, a white kick flash, and always its original sliders.", ""],
   3:  ["Bass Comet", "Legacy mode.", ""],
   8:  ["Void Scanner", "Legacy mode.", ""],
   14: ["Beat Tracker", "Legacy mode (needs the old beat detector).", ""],
 };
 // Genres on the Advanced page (DJ feedback 2026-10-31: Club is built around Hyper Strobe and DnB Split).
 const GENRES = [
-  ["club", "Club", [25, 46, 47, 48, 28, 49, 50, 51]],
+  ["club", "Club", [25, 46, 47, 48, 28, 52, 49, 50, 51]],
   ["general", "General", [37, 38, 9, 1, 4, 5]],
   ["chill", "Chill", [15, 16, 17]],
   ["halloween", "Halloween", [40, 41, 42, 43, 44, 45]],
@@ -563,10 +564,13 @@ const DEFAULTS = {
   36: [120, 60, 170, 0, 160], 37: [0, 0, 0, 0, 0], 38: [0, 0, 160, 0, 0],
   40: [120, 0, 0, 0, 0], 41: [120, 0, 0, 0, 0], 42: [80, 0, 0, 0, 0], 43: [100, 0, 0, 0, 0], 44: [100, 0, 0, 0, 0], 45: [90, 0, 0, 0, 0],
   46: [0, 90, 185, 200, 0], 47: [0, 96, 185, 190, 0], 48: [0, 80, 185, 200, 0],
-  49: [198, 124, 168, 185, 16], 50: [0, 128, 168, 185, 0], 51: [198, 124, 168, 200, 0],
+  49: [198, 124, 168, 185, 16], 50: [0, 128, 168, 185, 0], 51: [198, 124, 168, 200, 0], 52: [198, 124, 168, 185, 16],
   6: [0, 0, 128, 150, 0], 11: [0, 0, 128, 150, 0], 12: [0, 0, 128, 150, 0], 13: [0, 0, 128, 150, 0],
 };
 const DEFAULT_FIELDS = ["speed", "density", "sensitivity", "strobe", "twinkle"];
+// DnB Split Original (owner, 2026-11-09): like the old page, picking it always applies its starting sliders
+// (no per-look memory) and clears the mood; the receiver ignores moods and strobe colour for it anyway.
+const DNB_ORIGINAL = 52;
 // Hues on the receiver's colour wheel (6 x 43 steps): red 0, yellow 43, green 86, cyan 128, blue 171, magenta 213.
 const COLOURS = [["Red", 0, 255, "#ff2b2b"], ["Orange", 22, 255, "#ff8c1a"], ["Yellow", 42, 255, "#ffd83d"],
   ["Green", 86, 255, "#00e040"], ["Cyan", 128, 255, "#00d9ff"], ["Blue", 171, 255, "#2050ff"],
@@ -819,8 +823,10 @@ function renderLive() {
   pressed($("liveMoods"), "mi", moodIndex(st));
   for (const box of [$("liveStrobeCols"), $("advStrobeCols")]) pressed(box, "sc", st.strobeColor || 0);
   const needsStrobe = MODES[st.mode] && MODES[st.mode][2].includes("s");
-  $("liveModeNote").hidden = !(needsStrobe && ctl && !ctl.strobeEnabled);
-  $("liveModeNote").textContent = "This look flashes, so it stays dark until Strobe is on.";
+  const note = needsStrobe && ctl && !ctl.strobeEnabled ? "This look flashes, so it stays dark until Strobe is on."
+    : st.mode === DNB_ORIGINAL && moodIndex(st) >= 0 ? "DnB Split Original keeps its own colours, so moods don't change it." : "";
+  $("liveModeNote").hidden = !note;
+  $("liveModeNote").textContent = note;
 }
 function renderCapLine() {
   if (!led || !ctl) return;
@@ -1044,15 +1050,16 @@ function renderLooks() {
 // off in Setup stays off.
 function pickMode(mode, strands) {
   const f = { mode };
-  const v = feel[mode] || DEFAULTS[mode];
+  const v = mode === DNB_ORIGINAL ? DEFAULTS[mode] : (feel[mode] || DEFAULTS[mode]);
   if (v) DEFAULT_FIELDS.forEach((k, i) => f[k] = v[i]);
+  if (mode === DNB_ORIGINAL) { f.moodFrom = 0; f.moodTo = 0; }
   setStrandFields(f, strands);
   renderLook(); renderLive();
 }
 let feelTimer = null;
 function rememberFeel() {
   const m = first().mode;
-  if (!m) return;
+  if (!m || m === DNB_ORIGINAL) return;
   const v = DEFAULT_FIELDS.map(k => first()[k]);
   feel[m] = v;
   clearTimeout(feelTimer);

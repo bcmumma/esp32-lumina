@@ -68,6 +68,7 @@ static uint8_t scaled_audio(uint8_t v, uint8_t sensitivity) {
 //   39 SoundSwitch cells (Phase 15, set by the S3, not listed on the page)
 //   40 Candle Flicker, 41 Witch's Brew, 42 Ghost Drift, 43 Pumpkin Patch, 44 Blood Drip, 45 Graveyard Fog (Halloween)
 //   46 Hyper Scatter, 47 Hyper Grid, 48 Hyper Mirror, 49 Split Mirror, 50 Split Blocks, 51 Split Strobe (Club)
+//   52 DnB Split Original (28 without colour moods or strobe colour)
 // Internal/legacy modes 0-14 remain available for VU tuning and compatibility.
 // ============================================================
 void render_off(uint8_t s) {
@@ -847,7 +848,8 @@ void apply_kick_flash(uint8_t s, const AudioLedPacket &p) {
   if (!p.kickFlash || kickFlashLevel < 8) return;
   uint16_t n = count_for(s);
   uint8_t v = scale8_video(scale8_video(p.globalBrightness, p.kickFlash), kickFlashLevel);
-  const Rgb c = strobe_rgb(p.strand[s], v);
+  // DnB Split Original keeps the white flash it had before strobe colours existed.
+  const Rgb c = p.strand[s].mode == DNB_SPLIT_ORIGINAL_MODE ? Rgb{v, v, v} : strobe_rgb(p.strand[s], v);
   for (uint16_t i = 0; i < n; i++) add_pixel(s, i, c);
 }
 
@@ -1339,4 +1341,14 @@ void render_split_strobe(uint8_t s, const AudioLedPacket &p, const StrandSetting
     }
     start = end;
   }
+}
+
+// 52 DnB Split Original (owner, 2026-11-09): the DJs found DnB Split under a colour mood too different.
+// The same drawing as mode 28 (render_dnb_split, unchanged since Phase 14) with the mood switched off,
+// so it always shows the strand's own hue and saturation; apply_kick_flash keeps its flash white.
+void render_dnb_split_original(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
+  StrandSettings plain = st;
+  plain.moodFrom = 0;
+  plain.moodTo = 0;
+  render_dnb_split(s, p, plain);
 }

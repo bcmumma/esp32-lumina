@@ -1,6 +1,6 @@
 # Project State
 
-_Last updated: 2026-10-31_
+_Last updated: 2026-11-09_
 
 ## Current
 
@@ -46,6 +46,8 @@ A change request, not a phase: the DJs who will run the lights asked for these. 
 - [x] Owner moved the S3 from the PC (where the rooms couldn't hear it) to its show spot on a USB charger; both rooms checked in within seconds *(owner, 2026-10-31)*
 - [x] Receivers updated over Wi-Fi (2026-10-31): both uploads HTTP 200, both back online within seconds. Then the six Club modes, two moods (one wrapping past red) and spaced cells (Art-Net test pattern, gap 6 and 12, with a mood) ran on both rooms: no restarts, frame rates steady (room 1 about 30 fps, room 2 about 62), settings restored. Not exercised: the Club bursts, which need Strobe on and music *(Claude)*
 - [ ] **Room 2's radio link is weak from the S3's show spot** (2026-10-31, about 7 minutes after the update): room 1 −66 dBm, 0.5% loss; room 2 −77 to −85 dBm, 6.3% loss (Phase 16 bench: 0.02% / 0.01%). A crowd weakens 2.4 GHz further. Owner: move the S3 toward room 2 or higher up (room 1 has about 15 dB to spare), and keep both boards' antenna ends clear of metal and the LED supply; then Claude re-measures (aim: room 2 under 1% loss) *(owner; Claude)*
+- [x] DnB Split Original (owner, 2026-11-09): look 52 in Club, mode 28's drawing with no colour mood and a white kick flash; picking it always applies the original sliders. Builds warning-free; not flashed yet *(Claude)*
+- [ ] Owner: flash the S3 over USB and both rooms, then compare DnB Split Original with the old look *(owner)*
 - [ ] Owner/DJ look check: the six Club modes, moods, strobe colour, spaced cells, and strobe sensitivity through a real breakdown and drop *(owner)*
 - [ ] Owner: the S3 RGB LED: move PCM1808 OUT to GPIO38 (then Claude switches `PIN_DIN`), open the board's RGB jumper, or cover it *(owner)*
 

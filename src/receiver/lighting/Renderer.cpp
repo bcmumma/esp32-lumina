@@ -77,6 +77,7 @@ void render_strand(uint8_t s, const AudioLedPacket &p, bool newBeat) {
     case 49: render_split_mirror(s, p, st); break;
     case 50: render_split_blocks(s, p, st); break;
     case 51: render_split_strobe(s, p, st); break;
+    case 52: render_dnb_split_original(s, p, st); break;
     default: render_solid(s, p, st); break;
   }
   apply_kick_flash(s, p);
