@@ -56,6 +56,14 @@ static Rgb strobe_rgb(const StrandSettings &st, uint8_t value) {
   return strobe_colour(st, scale8_video(value, strobeLevelNow));
 }
 
+// The flash looks (Hyper Strobe, White Lightning, Strobe, Drop Strobe, Beat Strobe and the Club bursts)
+// flash in the look's own colour, so a colour mood recolours them (owner, 2026-11-09); with no mood and
+// saturation 0 that is white, as before. Strobe brightness still applies. The strobe colour is kept for
+// the Strobe button's whole-strip flash and the SoundSwitch kick looks.
+static Rgb look_flash(const AudioLedPacket &p, const StrandSettings &st, uint8_t offset, uint8_t value) {
+  return strand_color(p, st, offset, scale8_video(value, strobeLevelNow));
+}
+
 // Phase 15: effects were tuned on 150-LED strands. Counts and speeds that are "per strand"
 // scale by length so a 900-LED strand looks the same; 150 or fewer are unchanged.
 static constexpr uint16_t TUNED_STRAND_LEDS = 150;
@@ -125,7 +133,7 @@ void render_beat_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings
   if (newBeat && full_flash_allowed(s, p, millis())) rt[s].flash = 255;
   fade_strand(s, st.strobe > 0 ? st.strobe : 80);
   if (rt[s].flash > 10) {
-    fill_strand(s, strobe_rgb(st, combined_brightness(p, st)));
+    fill_strand(s, look_flash(p, st, 0, combined_brightness(p, st)));
     rt[s].flash = scale8(rt[s].flash, 150);
   }
 }
@@ -608,7 +616,7 @@ void render_hyper_strobe(uint8_t s, const AudioLedPacket &p, const StrandSetting
   uint8_t width = (uint8_t)map(st.density, 0, 255, 1, max<uint16_t>(2, min<uint16_t>(18, n)));
   uint8_t b = scale8_video(combined_brightness(p, st), rt[s].flash);
   for (uint8_t i = 0; i < width; i++) {
-    set_pixel(s, wrap_index((int32_t)rt[s].aux + i, n), (i & 1U) ? strand_color(p, st, 110, b) : strobe_rgb(st, b));
+    set_pixel(s, wrap_index((int32_t)rt[s].aux + i, n), (i & 1U) ? strand_color(p, st, 110, b) : look_flash(p, st, 0, b));
   }
   rt[s].flash = scale8(rt[s].flash, (uint8_t)map(st.strobe, 0, 255, 90, 205));
 }
@@ -651,7 +659,7 @@ void render_white_lightning(uint8_t s, const AudioLedPacket &p, const StrandSett
         int32_t idx = start + (int32_t)k * (random(0, 2) ? 1 : -1);
         if (idx < 0 || idx >= n) continue;
         uint8_t b = scale8_video(combined_brightness(p, st), (uint8_t)(255U - (uint16_t)k * 180U / len));
-        add_pixel(s, (uint16_t)idx, (k & 1U) ? Rgb{0,(uint8_t)(b / 2U),b} : strobe_rgb(st, b));
+        add_pixel(s, (uint16_t)idx, (k & 1U) ? (mood::active(st) ? look_flash(p, st, 110, b) : Rgb{0,(uint8_t)(b / 2U),b}) : look_flash(p, st, 0, b));
       }
     }
   }
@@ -839,7 +847,7 @@ void render_acid_squelch(uint8_t s, const AudioLedPacket &p, const StrandSetting
 void render_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
   if (count_for(s) == 0) return;
   if (full_flash_allowed(s, p, millis())) rt[s].flash = 255;
-  fill_strand(s, strobe_rgb(st, scale8_video(combined_brightness(p, st), rt[s].flash)));
+  fill_strand(s, look_flash(p, st, 0, scale8_video(combined_brightness(p, st), rt[s].flash)));
   rt[s].flash = scale8(rt[s].flash, (uint8_t)map(st.strobe, 0, 255, 0, 200));
 }
 
@@ -849,7 +857,7 @@ void render_drop_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings
   if (count_for(s) == 0) return;
   bool peak = energy_mix(p) >= (uint8_t)map(st.sensitivity, 0, 255, 230, 90);
   if ((peak || newBeat) && full_flash_allowed(s, p, millis())) rt[s].flash = 255;
-  fill_strand(s, strobe_rgb(st, scale8_video(combined_brightness(p, st), rt[s].flash)));
+  fill_strand(s, look_flash(p, st, 0, scale8_video(combined_brightness(p, st), rt[s].flash)));
   rt[s].flash = scale8(rt[s].flash, (uint8_t)map(st.strobe, 0, 255, 0, 200));
 }
 
@@ -1184,7 +1192,7 @@ static void add_burst(uint8_t s, uint16_t pos, uint8_t level) {
 // One little strobe from `start`: strobe-colour core, look-coloured outer LEDs when 3 or wider.
 static void draw_burst(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, uint16_t n, int32_t start, uint16_t width, uint8_t level) {
   const uint8_t b = scale8_video(combined_brightness(p, st), level);
-  const Rgb core = strobe_rgb(st, b), edge = strand_color(p, st, 110, b);
+  const Rgb core = look_flash(p, st, 0, b), edge = strand_color(p, st, 110, b);
   for (uint16_t k = 0; k < width; k++) {
     const int32_t i = start + k;
     if (i < 0 || i >= (int32_t)n) continue;
@@ -1351,7 +1359,7 @@ void render_split_strobe(uint8_t s, const AudioLedPacket &p, const StrandSetting
     }
     uint8_t &tipLevel = rt[s].burstLevel[band];
     if (tipLevel >= 10) {
-      const Rgb t = strobe_rgb(st, scale8_video(base, tipLevel));
+      const Rgb t = look_flash(p, st, 0, scale8_video(base, tipLevel));
       const int32_t from = (int32_t)rt[s].burstPos[band] - (int32_t)(tipWidth / 2U);
       for (uint16_t k = 0; k < tipWidth; k++) {
         const int32_t i = from + k;

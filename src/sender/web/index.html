@@ -262,7 +262,7 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
     <h2>Strobe colour</h2>
     <div class="swatches" id="liveStrobeCols"></div>
     <div class="sl"><label for="liveSense">Sensitivity</label><input type="range" id="liveSense" min="0" max="255"><output class="num" id="o_liveSense"></output></div>
-    <p class="note">Strobe on: the whole strip flashes on every kick, over any look (and the Strobe and Drop Strobe looks run). Strobe off: nothing flashes the whole strip; looks like Hyper Strobe keep only their own small flashes. Sensitivity: further left, Strobe flashes only on drops and the loudest parts; Always flashes on every kick while it's on. Brightness and colour apply to every flash.</p>
+    <p class="note">Strobe on: the whole strip flashes on every kick, over any look (and the Strobe and Drop Strobe looks run). Strobe off: nothing flashes the whole strip; looks like Hyper Strobe keep only their own small flashes. Sensitivity: further left, Strobe flashes only on drops and the loudest parts; Always flashes on every kick while it's on. Brightness applies to every flash. Strobe colour is the colour of the whole-strip flash; the flash looks take their colour from the mood.</p>
     <p class="warnnote">Flashing at about 3–30 flashes per second can trigger seizures in people with photosensitive epilepsy. Strobe is off after every restart. Setup → Power &amp; safety → Flashing looks stops all flashing.</p>
   </section>
 
@@ -527,7 +527,7 @@ const MODES = {
   34: ["Kick Ripple", "Each kick sends a ring out from the centre.", "k"],
   35: ["Break Chopper", "Kicks slam blocks into random slots; hats spark.", "k"],
   36: ["Acid Squelch", "A resonant peak glides with the mids, like a 303 sweep.", ""],
-  37: ["Strobe", "Classic strobe at your max flash rate, in the strobe colour. Needs Strobe on.", "sf"],
+  37: ["Strobe", "Classic strobe at your max flash rate, in the look's colour or mood. Needs Strobe on.", "sf"],
   38: ["Drop Strobe", "Dark in quiet parts, kick flashes, flat-out strobe on drops. Needs Strobe on.", "ksf"],
   40: ["Candle Flicker", "Rows of orange candles flickering like jack-o'-lanterns.", ""],
   41: ["Witch's Brew", "Green and purple bubbles swell and pop.", ""],

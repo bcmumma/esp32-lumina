@@ -127,7 +127,8 @@ static inline uint8_t eq_apply(uint8_t value, uint8_t gain) {
 // Strobe colour and colour mood (DJ feedback, 2026-10-31). They use three strand bytes that older
 // senders and saved configs leave at zero, which reads as a white strobe and no mood, so packet
 // version 12 holds and older receivers ignore them.
-//   strobeColor: Kick Flash, the strobe modes, Hyper bursts and the gated kick looks flash in this colour.
+//   strobeColor: the Strobe button's whole-strip flash and the SoundSwitch kick looks flash in this colour.
+//               (Since 2026-11-09 the flash looks use the look's colour, so moods recolour them.)
 //   moodFrom/moodTo: the look's colours are folded into this hue range on the receiver (lib/Mood).
 static inline bool strobe_color_is_white(uint8_t code) { return code == 0; }
 static inline uint8_t strobe_color_hue(uint8_t code) { return (uint8_t)(code - 1U); }
