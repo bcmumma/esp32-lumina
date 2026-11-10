@@ -21,7 +21,6 @@ struct StrandRuntime {
   uint8_t burstLevel[12];
   uint8_t burstNext;
   uint8_t slotLevel[48];
-  uint32_t fullStrobeMs;  // onset of the current full-strip strobe flash (0 = none yet)
 };
 
 extern StrandRuntime rt[MAX_STRANDS];

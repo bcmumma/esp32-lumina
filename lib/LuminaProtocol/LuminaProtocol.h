@@ -107,8 +107,9 @@ struct __attribute__((packed)) AudioLedPacket {
   uint8_t kickFlash;
 
   // ---- version 13 (owner, 2026-11-09) ----
-  // Full-strip strobe: the Strobe button, after strobe sensitivity. 1 = flash every strand at the
-  // max rate, on top of the look. Flash looks no longer need it; flags bit 7 now means "flashing allowed".
+  // The Strobe button, after strobe sensitivity: 1 = whole-strip flashes may run (the strip flashes on
+  // every kick, and the Strobe / Drop Strobe / Beat Strobe looks). Flash looks' own small flashes don't
+  // need it; flags bit 7 now means "flashing allowed" (Setup's kill switch).
   uint8_t fullStrobe;
   // Brightness of every strobe-type flash (flash looks, the full-strip strobe, gated kick looks), 0-255.
   uint8_t strobeLevel;
@@ -137,10 +138,10 @@ static_assert(sizeof(StrandSettings) == 18, "StrandSettings layout changed; upda
 static_assert(sizeof(AudioLedPacket) == 112, "AudioLedPacket layout changed; update PACKET_VERSION on both boards");
 static_assert(offsetof(AudioLedPacket, fullStrobe) == PACKET_SIZE_V12, "version 12 must stay a prefix of version 13");
 
-// What a version 12 sender meant for the version 13 fields: no full-strip strobe (its strobe bit
-// already gates the flash looks), full-brightness flashes, flat EQ.
+// What a version 12 sender meant for the version 13 fields: whole-strip flashes followed its strobe
+// bit (the button), full-brightness flashes, flat EQ.
 static inline void packet_v12_defaults(AudioLedPacket &p) {
-  p.fullStrobe = 0;
+  p.fullStrobe = (p.flags & 0x80) ? 1 : 0;
   p.strobeLevel = 255;
   p.eq[0] = p.eq[1] = p.eq[2] = EQ_FLAT;
 }

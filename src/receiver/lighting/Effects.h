@@ -75,8 +75,6 @@ void render_dnb_split_original(uint8_t s, const AudioLedPacket &p, const StrandS
 // Kick Flash overlay: update once per frame, then apply after each strand's mode.
 void update_kick_flash(const AudioLedPacket &p, bool newBeat);
 void apply_kick_flash(uint8_t s, const AudioLedPacket &p);
-// Full-strip strobe over any look (the Strobe button, packet v13); call after apply_kick_flash.
-void apply_full_strobe(uint8_t s, const AudioLedPacket &p);
 // Per-frame packet values the effects share (strobe brightness). Call before drawing a strand.
 void effects_begin_frame(const AudioLedPacket &p);
 

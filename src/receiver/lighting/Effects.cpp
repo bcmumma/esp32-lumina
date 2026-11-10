@@ -15,6 +15,13 @@ static bool flash_allowed(uint8_t s, const AudioLedPacket &p, uint32_t now) {
   return true;
 }
 
+// Whole-strip flashes (Strobe, Drop Strobe, Beat Strobe, Kick Flash) also need the Strobe button
+// (packet.fullStrobe, after strobe sensitivity). Owner, 2026-11-09: with Strobe off nothing flashes
+// the whole strip; the flash looks keep only their own small flashes.
+static bool full_flash_allowed(uint8_t s, const AudioLedPacket &p, uint32_t now) {
+  return p.fullStrobe && flash_allowed(s, p, now);
+}
+
 static uint8_t combined_brightness(const AudioLedPacket &p, const StrandSettings &st) {
   uint8_t gb = p.globalBrightness;
   uint8_t sb = st.brightness;
@@ -41,8 +48,7 @@ static Rgb strobe_colour(const StrandSettings &st, uint8_t value) {
   return hsv_to_rgb(strobe_color_hue(st.strobeColor), 255, value);
 }
 
-// Strobe brightness (packet v13, the Live page slider) scales every strobe-type flash. Kick Flash has
-// its own strength slider, so it uses strobe_colour() directly.
+// Strobe brightness (packet v13, the Live page slider) scales every strobe-type flash.
 static uint8_t strobeLevelNow = 255;
 void effects_begin_frame(const AudioLedPacket &p) { strobeLevelNow = p.strobeLevel; }
 
@@ -80,7 +86,7 @@ static uint8_t scaled_audio(uint8_t v, uint8_t sensitivity) {
 //   52 DnB Split Original (28 without colour moods or strobe colour)
 // The split looks (28, 49, 51, 52) read the bands through the packet's EQ (eq_apply, 128 = flat).
 // Every flash onset goes through flash_allowed: flags bit 7 (Setup "Flashing looks") and the max rate.
-// The Strobe button is apply_full_strobe(), drawn over any look.
+// Whole-strip flashes also need the Strobe button (full_flash_allowed); it flashes the strip on kicks.
 // Internal/legacy modes 0-14 remain available for VU tuning and compatibility.
 // ============================================================
 void render_off(uint8_t s) {
@@ -116,7 +122,7 @@ void render_space_pulse(uint8_t s, const AudioLedPacket &p, const StrandSettings
 }
 
 void render_beat_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat) {
-  if (newBeat && flash_allowed(s, p, millis())) rt[s].flash = 255;
+  if (newBeat && full_flash_allowed(s, p, millis())) rt[s].flash = 255;
   fade_strand(s, st.strobe > 0 ? st.strobe : 80);
   if (rt[s].flash > 10) {
     fill_strand(s, strobe_rgb(st, combined_brightness(p, st)));
@@ -832,7 +838,7 @@ void render_acid_squelch(uint8_t s, const AudioLedPacket &p, const StrandSetting
 // Decay sets the flash length (0 = one frame, the sharpest).
 void render_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings &st) {
   if (count_for(s) == 0) return;
-  if (flash_allowed(s, p, millis())) rt[s].flash = 255;
+  if (full_flash_allowed(s, p, millis())) rt[s].flash = 255;
   fill_strand(s, strobe_rgb(st, scale8_video(combined_brightness(p, st), rt[s].flash)));
   rt[s].flash = scale8(rt[s].flash, (uint8_t)map(st.strobe, 0, 255, 0, 200));
 }
@@ -842,26 +848,28 @@ void render_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings &st)
 void render_drop_strobe(uint8_t s, const AudioLedPacket &p, const StrandSettings &st, bool newBeat) {
   if (count_for(s) == 0) return;
   bool peak = energy_mix(p) >= (uint8_t)map(st.sensitivity, 0, 255, 230, 90);
-  if ((peak || newBeat) && flash_allowed(s, p, millis())) rt[s].flash = 255;
+  if ((peak || newBeat) && full_flash_allowed(s, p, millis())) rt[s].flash = 255;
   fill_strand(s, strobe_rgb(st, scale8_video(combined_brightness(p, st), rt[s].flash)));
   rt[s].flash = scale8(rt[s].flash, (uint8_t)map(st.strobe, 0, 255, 0, 200));
 }
 
-// Rig-wide Kick Flash overlay (packet.kickFlash, 0 = off): a flash in the strobe colour (white by
-// default) on every bass hit, drawn over whatever mode each strand runs. Through the strobe gate like any flash.
+// The Strobe button (owner, 2026-11-09): while packet.fullStrobe is set, the whole strip flashes on
+// every kick, over whatever look each strand runs, in the strobe colour and strobe brightness. Through
+// the strobe gate like any flash, so Flashing looks and the max rate apply. Nothing when Strobe is off.
+// (Until then this was Kick Flash, with its own strength in packet.kickFlash; that byte is now unused.)
 static uint8_t kickFlashLevel = 0;
 
 void update_kick_flash(const AudioLedPacket &p, bool newBeat) {
   if (kickFlashLevel) kickFlashLevel = scale8(kickFlashLevel, 110);
-  if (p.kickFlash && newBeat && strobe_gate_allow(strobeGate, p.flags, millis())) kickFlashLevel = 255;
+  if (p.fullStrobe && newBeat && strobe_gate_allow(strobeGate, p.flags, millis())) kickFlashLevel = 255;
 }
 
 void apply_kick_flash(uint8_t s, const AudioLedPacket &p) {
-  if (!p.kickFlash || kickFlashLevel < 8) return;
+  if (kickFlashLevel < 8) return;
   uint16_t n = count_for(s);
-  uint8_t v = scale8_video(scale8_video(p.globalBrightness, p.kickFlash), kickFlashLevel);
-  // DnB Split Original keeps the white flash it had before strobe colours existed.
-  const Rgb c = p.strand[s].mode == DNB_SPLIT_ORIGINAL_MODE ? Rgb{v, v, v} : strobe_colour(p.strand[s], v);
+  uint8_t v = scale8_video(p.globalBrightness, kickFlashLevel);
+  // DnB Split Original keeps the plain white flash it had before strobe colours existed.
+  const Rgb c = p.strand[s].mode == DNB_SPLIT_ORIGINAL_MODE ? Rgb{v, v, v} : strobe_rgb(p.strand[s], v);
   for (uint16_t i = 0; i < n; i++) add_pixel(s, i, c);
 }
 
@@ -1363,19 +1371,4 @@ void render_dnb_split_original(uint8_t s, const AudioLedPacket &p, const StrandS
   plain.moodFrom = 0;
   plain.moodTo = 0;
   render_dnb_split(s, p, plain);
-}
-
-// Full-strip strobe (packet v13, owner 2026-11-09): the Strobe button flashes every strand over whatever
-// look is running, in the strobe colour and brightness. Each flash starts through flash_allowed(), so the
-// Flashing-looks switch, the max rate and the one rig-wide flash timer all apply; a flash lasts one frame.
-static constexpr uint32_t kFullStrobeOnMs = 30;
-
-void apply_full_strobe(uint8_t s, const AudioLedPacket &p) {
-  if (!p.fullStrobe) return;
-  const uint32_t now = millis();
-  if (now - rt[s].fullStrobeMs >= kFullStrobeOnMs && flash_allowed(s, p, now)) rt[s].fullStrobeMs = now ? now : 1;
-  if (rt[s].fullStrobeMs == 0 || now - rt[s].fullStrobeMs >= kFullStrobeOnMs) return;
-  const uint16_t n = count_for(s);
-  const Rgb c = strobe_rgb(p.strand[s], combined_brightness(p, p.strand[s]));
-  for (uint16_t i = 0; i < n; i++) set_pixel(s, i, c);
 }

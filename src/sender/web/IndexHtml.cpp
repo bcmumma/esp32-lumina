@@ -261,14 +261,14 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
   </section>
 
   <section class="panel">
-    <button class="bigstrobe" id="liveStrobe" aria-pressed="false" onclick="toggleStrobe()">FULL STRIP STROBE OFF</button>
+    <button class="bigstrobe" id="liveStrobe" aria-pressed="false" onclick="toggleStrobe()">STROBE OFF</button>
     <p class="note" id="liveStrobeNote"></p>
     <div class="sl"><label for="liveStrobeLevel">Strobe brightness</label><input type="range" id="liveStrobeLevel" min="0" max="255"><output class="num" id="o_liveStrobeLevel"></output></div>
     <h2>Strobe colour</h2>
     <div class="swatches" id="liveStrobeCols"></div>
     <div class="sl"><label for="liveSense">Sensitivity</label><input type="range" id="liveSense" min="0" max="255"><output class="num" id="o_liveSense"></output></div>
-    <p class="note">The button flashes the whole strip over any look. Flash looks such as Hyper Strobe flash by themselves. Sensitivity: further left, the full-strip strobe flashes only on drops and the loudest parts; at the right end (Always) it flashes whenever it's on. Brightness and colour apply to every flash.</p>
-    <p class="warnnote">Flashing at about 3–30 flashes per second can trigger seizures in people with photosensitive epilepsy. The full-strip strobe is off after every restart. Setup → Power &amp; safety → Flashing looks stops all flashing.</p>
+    <p class="note">Strobe on: the whole strip flashes on every kick, over any look (and the Strobe and Drop Strobe looks run). Strobe off: nothing flashes the whole strip; looks like Hyper Strobe keep only their own small flashes. Sensitivity: further left, Strobe flashes only on drops and the loudest parts; Always flashes on every kick while it's on. Brightness and colour apply to every flash.</p>
+    <p class="warnnote">Flashing at about 3–30 flashes per second can trigger seizures in people with photosensitive epilepsy. Strobe is off after every restart. Setup → Power &amp; safety → Flashing looks stops all flashing.</p>
   </section>
 
   <div class="rooms" id="liveRooms"></div>
@@ -360,23 +360,22 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
       <div class="modes" id="kickLooks"></div>
       <div class="switch"><span>Beam (follows SoundSwitch's movement)</span><button class="tog calm" id="swBeam" aria-label="Beam"></button></div>
       <div class="switch"><span>UV sparkle bursts</span><button class="tog calm" id="swSparkle" aria-label="UV sparkle"></button></div>
-      <div class="switch"><span>FX Strobe</span><button class="tog calm" id="swFxStrobe" aria-label="FX strobe"></button></div>
+      <div class="switch"><span>FX Strobe (needs Strobe on)</span><button class="tog calm" id="swFxStrobe" aria-label="FX strobe"></button></div>
       <div class="switch"><span>Kick looks on every kick (off = busy sections only)</span><button class="tog calm" id="swAlways" aria-label="Kicks always"></button></div>
     </div>
   </section>
 
   <section class="panel">
-    <div class="switch"><div><h2>Full-strip strobe</h2><p class="note" id="strobeNote">Off. Flash looks still flash by themselves.</p></div>
-      <button class="tog" id="strobeTog" aria-pressed="false" aria-label="Full-strip strobe" onclick="toggleStrobe()"></button></div>
+    <div class="switch"><div><h2>Strobe</h2><p class="note" id="strobeNote">Off: nothing flashes the whole strip.</p></div>
+      <button class="tog" id="strobeTog" aria-pressed="false" aria-label="Strobe" onclick="toggleStrobe()"></button></div>
     <div class="sl"><label for="advSense">Sensitivity</label><input type="range" id="advSense" min="0" max="255"><output class="num" id="o_advSense"></output></div>
-    <p class="note">Sensitivity: further left, the full-strip strobe flashes only on drops and the loudest parts; Always flashes whenever it's on.</p>
+    <p class="note">Strobe flashes the whole strip on every kick. Sensitivity: further left, it flashes only on drops and the loudest parts; Always flashes on every kick while it's on.</p>
     <div class="sl"><label for="advStrobeLevel">Strobe brightness</label><input type="range" id="advStrobeLevel" min="0" max="255"><output class="num" id="o_advStrobeLevel"></output></div>
     <h2>Strobe colour</h2>
     <div class="swatches" id="advStrobeCols"></div>
-    <div class="sl" id="rowKickFlash"><label for="kickFlash">Kick flash</label><input type="range" id="kickFlash" min="0" max="255"><output class="num" id="o_kickFlash"></output></div>
-    <p class="note">Kick flash adds a flash in the strobe colour on every kick over any look. Strobe and Drop Strobe are in General.</p>
+    <p class="note">The Strobe and Drop Strobe looks (General) also need Strobe on.</p>
     <div class="sl"><label for="strobeHz">Max flashes/s</label><input type="range" id="strobeHz" min="1" max="15"><output class="num" id="o_strobeHz"></output></div>
-    <p class="warnnote">Flashing at about 3–30 flashes per second can trigger seizures in people with photosensitive epilepsy. The full-strip strobe is off after every restart. Setup → Power &amp; safety → Flashing looks stops all flashing.</p>
+    <p class="warnnote">Flashing at about 3–30 flashes per second can trigger seizures in people with photosensitive epilepsy. Strobe is off after every restart. Setup → Power &amp; safety → Flashing looks stops all flashing.</p>
   </section>
 
   <section class="panel">
@@ -533,8 +532,8 @@ const MODES = {
   34: ["Kick Ripple", "Each kick sends a ring out from the centre.", "k"],
   35: ["Break Chopper", "Kicks slam blocks into random slots; hats spark.", "k"],
   36: ["Acid Squelch", "A resonant peak glides with the mids, like a 303 sweep.", ""],
-  37: ["Strobe", "Classic strobe at your max flash rate, in the strobe colour.", "s"],
-  38: ["Drop Strobe", "Dark in quiet parts, kick flashes, flat-out strobe on drops.", "ks"],
+  37: ["Strobe", "Classic strobe at your max flash rate, in the strobe colour. Needs Strobe on.", "sf"],
+  38: ["Drop Strobe", "Dark in quiet parts, kick flashes, flat-out strobe on drops. Needs Strobe on.", "ksf"],
   40: ["Candle Flicker", "Rows of orange candles flickering like jack-o'-lanterns.", ""],
   41: ["Witch's Brew", "Green and purple bubbles swell and pop.", ""],
   42: ["Ghost Drift", "Pale ghosts drift along the dark, fading in and out.", ""],
@@ -853,8 +852,9 @@ function renderLive() {
   for (const b of $("liveModes").querySelectorAll("button")) b.setAttribute("aria-pressed", String(+b.dataset.m === st.mode));
   pressed($("liveMoods"), "mi", moodIndex(st));
   for (const box of [$("liveStrobeCols"), $("advStrobeCols")]) pressed(box, "sc", st.strobeColor || 0);
-  const needsStrobe = MODES[st.mode] && MODES[st.mode][2].includes("s");
-  const note = needsStrobe && ctl && ctl.flashLooks === 0 ? "Flashing looks are off (Setup → Power & safety), so this look stays dark."
+  const tags = MODES[st.mode] ? MODES[st.mode][2] : "";  // s = flashes, f = whole-strip flashes (need Strobe on)
+  const note = tags.includes("s") && ctl && ctl.flashLooks === 0 ? "Flashing looks are off (Setup → Power & safety), so this look stays dark."
+    : tags.includes("f") && ctl && !ctl.strobeEnabled ? "This look flashes the whole strip, so it stays dark until Strobe is on."
     : st.mode === DNB_ORIGINAL && moodIndex(st) >= 0 ? "DnB Split Original keeps its own colours, so moods don't change it." : "";
   $("liveModeNote").hidden = !note;
   $("liveModeNote").textContent = note;
@@ -896,9 +896,9 @@ const SRC_NAMES = { auto: "Auto", audio: "Audio", artnet: "SoundSwitch", hybrid:
 const senseLabel = (v) => v >= 255 ? "Always" : v >= 170 ? "Most" : v >= 85 ? "Loud" : "Drops";
 function strobeText(c) {
   if (c.flashLooks === 0) return "Flashing looks are off (Setup → Power & safety): nothing flashes.";
-  if (!c.strobeEnabled) return "Off. Flash looks still flash by themselves.";
-  if (c.strobeSense >= 255) return `On: the whole strip flashes, up to ${c.strobeHz} flashes/s.`;
-  return c.strobeOpen ? `On: flashing now (loud part), up to ${c.strobeHz}/s.` : `On: waiting for a loud part or a drop (up to ${c.strobeHz}/s).`;
+  if (!c.strobeEnabled) return "Off: nothing flashes the whole strip.";
+  if (c.strobeSense >= 255) return `On: the whole strip flashes on every kick (up to ${c.strobeHz}/s).`;
+  return c.strobeOpen ? `On: flashing on the kicks now (loud part), up to ${c.strobeHz}/s.` : `On: waiting for a loud part or a drop (up to ${c.strobeHz}/s).`;
 }
 function renderControl(c) {
   if (!c || !c.source) return;
@@ -923,14 +923,13 @@ function renderControl(c) {
   const on = !!c.strobeEnabled;
   $("strobeTog").setAttribute("aria-pressed", String(on));
   $("liveStrobe").setAttribute("aria-pressed", String(on));
-  $("liveStrobe").textContent = on ? "FULL STRIP STROBE ON" : "FULL STRIP STROBE OFF";
+  $("liveStrobe").textContent = on ? "STROBE ON" : "STROBE OFF";
   const level = c.strobeLevel === undefined ? 255 : c.strobeLevel;
   for (const id of ["liveStrobeLevel", "advStrobeLevel"]) { if (setRange($(id), level)) $("o_" + id).textContent = pct(level); }
   $("swFlashLooks").setAttribute("aria-pressed", String(c.flashLooks !== 0));
   $("strobeNote").textContent = strobeText(c); $("liveStrobeNote").textContent = strobeText(c);
   const sense = c.strobeSense === undefined ? 255 : c.strobeSense;
   for (const id of ["liveSense", "advSense"]) { if (setRange($(id), sense)) $("o_" + id).textContent = senseLabel(sense); }
-  if (c.kickFlash !== undefined && setRange($("kickFlash"), c.kickFlash)) $("o_kickFlash").textContent = c.kickFlash ? pct(c.kickFlash) : "Off";
   if (c.strobeMaxHz) $("strobeHz").max = c.strobeMaxHz;
   if (setRange($("strobeHz"), c.strobeHz)) $("o_strobeHz").textContent = c.strobeHz;
   $("swStatusLed").setAttribute("aria-pressed", String(!!c.statusLed));
@@ -950,7 +949,6 @@ function renderVisibility() {
   $("feelPanel").hidden = src === "artnet";
   $("colourPanel").hidden = src === "artnet" || src === "hybrid";  // colour comes from SoundSwitch (or the mood)
   $("rowSensitivity").hidden = src === "standalone";  // no audio to respond to
-  $("rowKickFlash").hidden = src === "standalone";
 }
 function renderUpdates(rooms) {
   $("updRows").innerHTML = [1, 2].map(n => {
@@ -1205,8 +1203,6 @@ function wire() {
   $("srcSeg").onclick = (e) => { const b = e.target.closest("button"); if (b) control("source=" + b.dataset.src); };
   $("strobeHz").oninput = (e) => { $("o_strobeHz").textContent = e.target.value; };
   $("strobeHz").onchange = (e) => control("strobeHz=" + e.target.value);
-  $("kickFlash").oninput = (e) => { $("o_kickFlash").textContent = +e.target.value ? pct(+e.target.value) : "Off"; };
-  $("kickFlash").onchange = (e) => control("kickFlash=" + e.target.value);
   $("cap").oninput = (e) => { $("o_cap").textContent = pct(+e.target.value); };
   $("cap").onchange = (e) => control("cap=" + e.target.value);
   $("fallback").onchange = (e) => control("fallback=" + e.target.value);

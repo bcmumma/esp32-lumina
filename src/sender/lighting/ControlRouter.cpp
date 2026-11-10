@@ -383,7 +383,8 @@ void control_apply(AudioLedPacket &p, uint32_t nowMs) {
           if (fxOut.hit) fxPulse++;
           if (!control.beamOn) fxOut.beamLevel = 0;
           if (!control.sparkleOn) fxOut.sparkle = 0;
-          if (control.fxStrobeOn && fxOut.strobe >= 10)
+          // FX Strobe flashes every cell, so like any whole-strip flash it needs the Strobe button.
+          if (control.fxStrobeOn && strobeOpen && fxOut.strobe >= 10)
             for (uint8_t c = 0; c < n; c++) if (cellStrobe[c] < fxOut.strobe) cellStrobe[c] = fxOut.strobe;
         }
       }

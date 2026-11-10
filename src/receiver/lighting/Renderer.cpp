@@ -82,5 +82,4 @@ void render_strand(uint8_t s, const AudioLedPacket &p, bool newBeat) {
     default: render_solid(s, p, st); break;
   }
   apply_kick_flash(s, p);
-  apply_full_strobe(s, p);
 }
