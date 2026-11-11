@@ -209,6 +209,64 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
   .modes { grid-template-columns: 1fr 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* Panel view (?view=live): the Pi touch screen, landscape 1480 × 320 at scale 1. Live controls only,
+   on one screen with no scrolling, in five columns: strobe, looks, moods, brightness + EQ, status.
+   Everything below applies only with body.panel, so phones are unchanged. */
+.pstatus, .pnote { display: none; }
+body.panel { padding: 4px 8px; height: 100vh; overflow: hidden; }
+body.panel .top, body.panel #liveRooms, body.panel .longnote, body.panel #liveCapLine, body.panel #liveStrobePanel h2 { display: none; }
+body.panel #screenLive {
+  margin: 0 !important; max-width: none; height: calc(100vh - 8px);
+  grid-template-columns: 270px 450px 240px 260px minmax(0, 1fr); grid-template-rows: auto 1fr; gap: 8px;
+}
+body.panel #screenLive > .panel { padding: 8px; gap: 6px; min-height: 0; min-width: 0; align-content: start; }
+body.panel #liveStrobePanel { grid-column: 1; grid-row: 1 / 3; }
+body.panel #liveLooksPanel { grid-column: 2; grid-row: 1 / 3; }
+body.panel #liveMoodPanel { grid-column: 3; grid-row: 1 / 3; }
+body.panel #liveBrightPanel { grid-column: 4; grid-row: 1; grid-template-columns: 1fr auto; align-items: center; }
+body.panel #liveBrightPanel > input { grid-column: 1 / -1; }
+body.panel #liveBrightPanel > .row:last-child { grid-row: 1; grid-column: 2; }
+body.panel #liveBrightPanel .big { font-size: 24px; }
+body.panel #liveEqPanel { grid-column: 4; grid-row: 2; }
+/* The EQ only works on the split looks; on the others it stays in place, dimmed, so nothing jumps. */
+body.panel #liveEqPanel[hidden] { display: grid !important; opacity: .3; pointer-events: none; }
+body.panel .pnote { display: inline; }
+body.panel .pstatus { display: grid; grid-column: 5; grid-row: 1 / 3; }
+/* Touch: buttons and slider thumbs about 48 px or more; sliders keep sending on release, as on phones. */
+body.panel .btn { min-height: 44px; padding: 8px 14px; }
+body.panel .btn.small { min-height: 44px; min-width: 56px; }
+body.panel #liveEqPanel .sl { grid-template-columns: 40px minmax(0, 1fr) 46px; }
+body.panel .sl { grid-template-columns: 78px minmax(0, 1fr) 54px; gap: 6px; min-height: 40px; }
+body.panel .sl label { font-size: 13px; line-height: 1.2; }
+body.panel #screenLive input[type=range] { -webkit-appearance: none; appearance: none; height: 14px; border-radius: 7px; background: var(--panel-2); border: 1px solid var(--line); }
+body.panel #screenLive input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 36px; height: 36px; border-radius: 50%; background: var(--accent); border: 3px solid var(--bg); }
+body.panel #screenLive input[type=range]::-moz-range-thumb { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); border: 3px solid var(--bg); }
+body.panel .bigstrobe { min-height: 64px; font-size: 22px; }
+body.panel #liveStrobeNote { font-size: 12px; line-height: 1.3; min-height: 31px; }
+body.panel #liveStrobeCols { grid-template-columns: repeat(5, 1fr); }
+body.panel #liveStrobeCols .sw { aspect-ratio: auto; height: 44px; border-radius: 12px; }
+body.panel .livemodes { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, 118px); gap: 8px; }
+body.panel .livemodes .mode { min-height: 0; padding: 10px; align-content: space-between; }
+body.panel .livemodes .mode > span { display: none; }
+body.panel .livemodes .mode b { font-size: 19px; }
+body.panel #liveModeNote { font-size: 12px; min-height: 16px; }
+body.panel #liveModeNote[hidden] { display: block !important; visibility: hidden; }
+body.panel #liveMoods { grid-template-columns: 1fr 1fr; gap: 6px; }
+body.panel .moodbtn { min-height: 48px; padding: 6px 8px; gap: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.panel .moodbtn i { height: 8px; }
+body.panel .meters { height: 64px; }
+.prow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.proom { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 5px 9px; display: grid; gap: 1px; }
+.proom .phead { display: flex; justify-content: space-between; font: 600 12px var(--display); letter-spacing: .08em; color: var(--muted); }
+.proom .pvals { display: flex; gap: 12px; align-items: baseline; }
+.pbig { font: 600 21px/1.15 var(--mono); font-variant-numeric: tabular-nums; }
+.pbig small { font: 500 12px var(--body); color: var(--muted); }
+.pbig.ok { color: var(--live); }
+.pbig.warn { color: var(--accent); }
+.pbig.bad { color: var(--warn); }
+/* Panel view only (the script adds it): an invisible corner; three taps switch the layout */
+.pswitch { position: fixed; right: 0; bottom: 0; width: 64px; height: 64px; z-index: 50; touch-action: manipulation; }
 </style>
 </head>
 <body>
@@ -229,44 +287,51 @@ input[type=number], select { background: var(--bg); border: 1px solid var(--line
 
 <!-- Live: the DJ page. Everything here applies to the whole rig. -->
 <main class="wrap" id="screenLive" style="margin-top:14px">
-  <section class="panel">
+  <section class="panel" id="liveBrightPanel">
     <div class="row" style="justify-content:space-between"><h2>Brightness</h2><span class="big num" id="liveBrightPct">–</span></div>
     <input type="range" class="fat" id="liveBright" min="0" max="255" aria-label="Brightness">
     <div class="row" style="justify-content:space-between"><p class="capline" id="liveCapLine"></p>
       <button class="btn black" id="liveBlackout" aria-pressed="false" onclick="toggleBlackout()">Blackout</button></div>
   </section>
 
-  <section class="panel">
+  <section class="panel" id="liveLooksPanel">
     <div class="row" style="justify-content:space-between"><h2>Looks</h2><span class="note" id="liveSrcNote"></span></div>
     <div class="livemodes" id="liveModes"></div>
     <p class="note" id="liveModeNote" hidden></p>
   </section>
 
   <section class="panel" id="liveEqPanel" hidden>
-    <div class="row" style="justify-content:space-between"><h2>EQ</h2><button class="btn small" id="liveEqFlat">Flat</button></div>
+    <div class="row" style="justify-content:space-between"><h2>EQ <span class="pnote">· split looks</span></h2><button class="btn small" id="liveEqFlat">Flat</button></div>
     <div class="sl" id="liveEqRow0"><label for="liveEq0">Bass</label><input type="range" id="liveEq0" min="0" max="255"><output class="num" id="o_liveEq0"></output></div>
     <div class="sl" id="liveEqRow1"><label for="liveEq1">Mid</label><input type="range" id="liveEq1" min="0" max="255"><output class="num" id="o_liveEq1"></output></div>
     <div class="sl" id="liveEqRow2"><label for="liveEq2">High</label><input type="range" id="liveEq2" min="0" max="255"><output class="num" id="o_liveEq2"></output></div>
-    <p class="note">How hard each meter reacts in the split looks (DnB Split, DnB Split Original, Split Mirror, Split Strobe). 100% is how they were before.</p>
+    <p class="note longnote">How hard each meter reacts in the split looks (DnB Split, DnB Split Original, Split Mirror, Split Strobe). 100% is how they were before.</p>
   </section>
 
-  <section class="panel">
+  <section class="panel" id="liveMoodPanel">
     <h2>Colour mood</h2>
     <div class="moods" id="liveMoods"></div>
   </section>
 
-  <section class="panel">
+  <section class="panel" id="liveStrobePanel">
     <button class="bigstrobe" id="liveStrobe" aria-pressed="false" onclick="toggleStrobe()">STROBE OFF</button>
     <p class="note" id="liveStrobeNote"></p>
     <div class="sl"><label for="liveStrobeLevel">Strobe brightness</label><input type="range" id="liveStrobeLevel" min="0" max="255"><output class="num" id="o_liveStrobeLevel"></output></div>
     <h2>Strobe colour</h2>
     <div class="swatches" id="liveStrobeCols"></div>
     <div class="sl"><label for="liveSense">Sensitivity</label><input type="range" id="liveSense" min="0" max="255"><output class="num" id="o_liveSense"></output></div>
-    <p class="note">Strobe on: the whole strip flashes on every kick, over any look (and the Strobe and Drop Strobe looks run). Strobe off: nothing flashes the whole strip; looks like Hyper Strobe keep only their own small flashes. Sensitivity: further left, Strobe flashes only on drops and the loudest parts; Always flashes on every kick while it's on. Brightness applies to every flash. Strobe colour is the colour of the whole-strip flash; the flash looks take their colour from the mood.</p>
-    <p class="warnnote">Flashing at about 3–30 flashes per second can trigger seizures in people with photosensitive epilepsy. Strobe is off after every restart. Setup → Power &amp; safety → Flashing looks stops all flashing.</p>
+    <p class="note longnote">Strobe on: the whole strip flashes on every kick, over any look (and the Strobe and Drop Strobe looks run). Strobe off: nothing flashes the whole strip; looks like Hyper Strobe keep only their own small flashes. Sensitivity: further left, Strobe flashes only on drops and the loudest parts; Always flashes on every kick while it's on. Brightness applies to every flash. Strobe colour is the colour of the whole-strip flash; the flash looks take their colour from the mood.</p>
+    <p class="warnnote longnote">Flashing at about 3–30 flashes per second can trigger seizures in people with photosensitive epilepsy. Strobe is off after every restart. Setup → Power &amp; safety → Flashing looks stops all flashing.</p>
   </section>
 
   <div class="rooms" id="liveRooms"></div>
+
+  <!-- Panel view only (?view=live): source, kick, meters and the rooms' signal and loss. -->
+  <section class="panel pstatus" id="panelStatus">
+    <div class="prow" id="panelTop"></div>
+    <div id="panelMeters"></div>
+    <div id="panelRooms" style="display:grid;gap:6px"></div>
+  </section>
 </main>
 
 <!-- Advanced: every option (was the Show screen). -->
@@ -614,6 +679,8 @@ let led = null, cfg = null, ctl = null;
 let target = "all", genre = "club", lastPulse = null, kickTimer = null, preBlackout = null;
 let screen = "live";
 let lastLocalChange = 0;
+// Panel view (?view=live): the Pi touch screen. Live controls only; Advanced and Setup can't be reached.
+const PANEL = new URLSearchParams(location.search).get("view") === "live";
 
 // ---------- networking ----------
 function call(path) {
@@ -959,6 +1026,22 @@ function renderRooms(rooms) {
     : `<span><span class="dot bad"></span>Room ${r.room} offline (${Math.round(r.ageMs / 1000)} s)</span>`).join("")
     || `<span class="note">No room receiver has checked in since Lumina started.</span>`;
   $("roomsLine").innerHTML = html; $("liveRooms").innerHTML = html;
+  if (PANEL) $("panelRooms").innerHTML = panelRoomsHtml(rooms);
+}
+// Panel: each room's signal and loss, large and coloured (green fine, amber watch, red poor).
+// Thresholds: signal -70 / -80 dBm; loss 1% / 3% (room 2's target is under 1%).
+const sigClass = (dbm) => dbm >= -70 ? "ok" : dbm >= -80 ? "warn" : "bad";
+const lossClass = (permille) => permille < 10 ? "ok" : permille < 30 ? "warn" : "bad";
+function panelRoomsHtml(rooms) {
+  return [1, 2].map(n => {
+    const r = rooms.find(x => x.room === n);
+    const head = (right) => `<div class="phead"><span>ROOM ${n}</span><span>${right}</span></div>`;
+    if (!r || !r.seen) return `<div class="proom">${head("not seen")}<div class="pvals"><span class="pbig">–</span></div></div>`;
+    if (!r.online) return `<div class="proom">${head(`${Math.round(r.ageMs / 1000)} s ago`)}<div class="pvals"><span class="pbig bad">OFFLINE</span></div></div>`;
+    return `<div class="proom">${head(`${r.fps} fps`)}<div class="pvals">` +
+      `<span class="pbig ${sigClass(r.rssi)}">${r.rssi}<small> dBm</small></span>` +
+      `<span class="pbig ${lossClass(r.lossPermille)}">${(r.lossPermille / 10).toFixed(1)}<small>% loss</small></span></div></div>`;
+  }).join("");
 }
 function renderMeters(j) {
   const bars = { mBass: j.bass, mMid: j.mid, mTreble: j.treble, mLeft: j.left, mRight: j.right };
@@ -1147,13 +1230,41 @@ function cleanBaseline() {
   });
 }
 function showScreen(name) {
+  if (PANEL) name = "live";
   screen = name;
   $("screenLive").hidden = name !== "live"; $("screenAdv").hidden = name !== "adv"; $("screenSetup").hidden = name !== "setup";
   $("tabLive").setAttribute("aria-pressed", String(name === "live"));
   $("tabAdv").setAttribute("aria-pressed", String(name === "adv"));
   $("tabSetup").setAttribute("aria-pressed", String(name === "setup"));
-  try { localStorage.setItem("lumina.screen", name); } catch (e) {}
+  if (!PANEL) try { localStorage.setItem("lumina.screen", name); } catch (e) {}
   window.scrollTo(0, 0);
+}
+// Panel view (?view=live): Live only, in one of two layouts, remembered in this browser.
+//  "3": the touch panel's own three-column CSS (a local extension on the Pi) styles the page; the default.
+//  "5": this page's five columns. Hide the header and tabs (CSS), and move the source chip, kick light,
+//       save note and meters into the status column. The Advanced screen that held the meters can't be shown.
+// Three taps in the bottom-right corner within 1.5 s switch layouts and reload the page.
+function panelLayout() {
+  try { return localStorage.getItem("lumina.panelLayout") === "5" ? "5" : "3"; } catch (e) { return "3"; }
+}
+function setupPanel() {
+  if (panelLayout() === "5") {
+    document.body.classList.add("panel");
+    $("panelTop").append($("srcDot").parentElement, $("kick"), $("saveChip"));
+    $("panelMeters").append(document.querySelector("#screenAdv .meters"));
+  }
+  const corner = document.createElement("div");
+  corner.className = "pswitch";
+  let taps = [];
+  corner.addEventListener("pointerup", () => {
+    const now = Date.now();
+    taps = taps.filter((t) => now - t < 1500).concat(now);
+    if (taps.length < 3) return;
+    try { localStorage.setItem("lumina.panelLayout", panelLayout() === "5" ? "3" : "5"); } catch (e) {}
+    location.reload();
+  });
+  document.body.append(corner);
+  showScreen("live");
 }
 
 // ---------- wire inputs ----------
@@ -1273,7 +1384,8 @@ async function pollLive() {
 }
 
 buildStatic(); buildGenres(); wire();
-try { const s = localStorage.getItem("lumina.screen"); if (s === "adv" || s === "setup") showScreen(s); } catch (e) {}
+if (PANEL) setupPanel();
+else try { const s = localStorage.getItem("lumina.screen"); if (s === "adv" || s === "setup") showScreen(s); } catch (e) {}
 loadFixtures();
 loadFeel();
 loadUi();

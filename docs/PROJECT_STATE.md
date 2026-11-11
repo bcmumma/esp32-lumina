@@ -1,6 +1,6 @@
 # Project State
 
-_Last updated: 2026-11-09_
+_Last updated: 2026-11-11_
 
 ## Current
 
@@ -53,6 +53,8 @@ A change request, not a phase: the DJs who will run the lights asked for these. 
 - [x] Strobe fix (owner report, 2026-11-09: the whole strip flashed on every look with Strobe off, and Strobe on was far too flashy). Cause: Kick Flash (saved at 95%) went through the flash gate that now follows Flashing looks, and the button added a steady full-strip strobe at the max rate. Now whole-strip flashes need the Strobe button: on, the strip flashes on every kick (strobe colour and brightness, sensitivity, max rate); off, nothing flashes the whole strip and flash looks keep only their small flashes. Strobe, Drop Strobe, Beat Strobe and SoundSwitch's FX Strobe also need the button; the steady overlay and the Kick flash slider are gone. Rooms updated over Wi-Fi (both back, drawing at 31 / 61 fps) *(Claude)*
 - [x] S3 flashed with `a653ab7` (2026-11-09): page shows STROBE ON/OFF, no Kick flash slider; FX Strobe waits for the button. Its native USB socket can't flash it (GPIO20 is the PCM1808 MCLK); use the UART socket *(Claude)*
 - [x] Flash looks take their colour from the look and its mood, not the strobe colour (owner, 2026-11-09): Hyper Strobe, White Lightning, Strobe, Drop Strobe, Beat Strobe, the Club bursts and Split Strobe's tips. Strobe colour stays on the Strobe button's whole-strip flash and the SoundSwitch kick looks. Rooms updated over Wi-Fi; the S3's page wording waits for its next USB update *(Claude)*
+- [x] Touch panel view (owner change request, 2026-11-11): `?view=live` shows only Live, in one of two layouts. The default is the panel's own three-column CSS (a local extension on the Pi, not in this repo); the other is five columns built into the page (Strobe | 8 looks | moods | brightness + EQ | meters + rooms), without the seizure warning. Three taps in the bottom-right corner switch layouts; phones are unchanged. Page 83,674 → 91,582 bytes; build warning-free; S3 flashed over UART; panel switch and phone page checked *(Claude; owner)*
+- [ ] 30-minute soak with the panel and one phone, rooms on: `loopUs`, `httpUs`, `minHeap` and room loss against the Phase 16 baseline *(Claude, once the rooms are powered)*
 - [ ] Owner: check on the lights: Strobe off = no whole-strip flashes on any look; Strobe on = a flash on each kick; then DnB Split Original, the EQ, strobe brightness *(owner)*
 - [ ] Owner/DJ look check: the six Club modes, moods, strobe colour, spaced cells, and strobe sensitivity through a real breakdown and drop *(owner)*
 - [ ] Owner: the S3 RGB LED: move PCM1808 OUT to GPIO38 (then Claude switches `PIN_DIN`), open the board's RGB jumper, or cover it *(owner)*
